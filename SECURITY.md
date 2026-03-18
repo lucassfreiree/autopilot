@@ -33,6 +33,7 @@ This product is designed to support:
 - dependency and filesystem scan in CI
 - code review for export-rule changes
 - signed release artifacts when packaging is added
+- automatic sync must target a dedicated sync branch and open a PR into `main`, not push directly to `main`
 
 ## Incident rule
 

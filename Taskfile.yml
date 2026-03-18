@@ -9,6 +9,18 @@ tasks:
     cmds:
       - pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/export-product-snapshot.ps1 -SourceRoot $env:LOCAL_AUTOPILOT_ROOT -ProductRoot .
 
+  sync-pr:
+    cmds:
+      - pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/sync-product-pr.ps1 -SourceRoot $env:LOCAL_AUTOPILOT_ROOT -ProductRoot .
+
   watch:
     cmds:
       - pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/watch-product-sync.ps1 -SourceRoot $env:LOCAL_AUTOPILOT_ROOT -ProductRoot .
+
+  watch-sync-pr:
+    cmds:
+      - pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/watch-product-sync.ps1 -SourceRoot $env:LOCAL_AUTOPILOT_ROOT -ProductRoot . -Mode sync-pr
+
+  install-sync-task:
+    cmds:
+      - pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/install-product-sync-task.ps1 -SourceRoot $env:LOCAL_AUTOPILOT_ROOT -ProductRoot .

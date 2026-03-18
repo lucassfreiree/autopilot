@@ -81,8 +81,10 @@ Use the export scripts in `scripts/` and the allowlist in `config/` to move only
 Use:
 
 - `scripts/export-product-snapshot.ps1`
+- `scripts/sync-product-pr.ps1`
 - `scripts/watch-product-sync.ps1`
 - `scripts/validate-product-export.ps1`
+- `scripts/install-product-sync-task.ps1`
 
 The intended flow is:
 
@@ -91,7 +93,9 @@ The intended flow is:
 3. sanitize private content
 4. block secrets and private markers
 5. validate the product repo tree
-6. open a controlled PR in GitHub
+6. commit into `sync/autopilot`
+7. push the sync branch
+8. create or update a pull request into `main`
 
 ## GitHub guidance
 
@@ -99,6 +103,7 @@ The intended flow is:
 - If a PAT is temporarily required, use a fine-grained token with minimal scope and short expiration.
 - Never store credentials in this repository.
 - Treat any token exposed in chat, logs, shell history, or screenshots as compromised and rotate it.
+- Use `GITHUB_PR_TOKEN` or `GITHUB_TOKEN` only as runtime environment variables when PR automation must call the GitHub API.
 
 ## First practical steps
 
@@ -108,3 +113,4 @@ The intended flow is:
 4. Tune the allowlist and redaction rules in `config/`.
 5. Start with docs, contracts, packaging, and the export pipeline before moving business logic.
 6. Replace corporate-specific names, URLs, and workflows with generic product concepts.
+7. Run `task sync-pr` for one-shot promotion or `task install-sync-task` to install the watcher-backed routine.

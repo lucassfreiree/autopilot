@@ -11,3 +11,4 @@
 - [ ] docs were updated when architecture or workflow changed
 - [ ] export rules were reviewed if sync behavior changed
 - [ ] local runtime details were generalized before commit
+- [ ] sync branch changes are safe to merge into main

@@ -4,7 +4,9 @@ param(
     [string]$SourceRoot = "",
     [Parameter(Mandatory = $false)]
     [string]$ProductRoot = "",
-    [int]$DebounceSeconds = 30
+    [int]$DebounceSeconds = 30,
+    [ValidateSet("export", "sync-pr")]
+    [string]$Mode = "export"
 )
 
 Set-StrictMode -Version Latest
@@ -26,7 +28,11 @@ if ([string]::IsNullOrWhiteSpace($SourceRoot)) {
 $SourceRoot = (Resolve-Path $SourceRoot).Path
 $ProductRoot = (Resolve-Path $ProductRoot).Path
 
-$exportScript = Join-Path $repoRoot "scripts/export-product-snapshot.ps1"
+$runnerScript = if ($Mode -eq "sync-pr") {
+    Join-Path $repoRoot "scripts/sync-product-pr.ps1"
+} else {
+    Join-Path $repoRoot "scripts/export-product-snapshot.ps1"
+}
 $pending = $false
 $lastEventAt = Get-Date
 
@@ -50,6 +56,7 @@ $subscriptions = @(
 Write-Host "Watching local runtime for product-worthy changes..."
 Write-Host "SourceRoot: $SourceRoot"
 Write-Host "ProductRoot: $ProductRoot"
+Write-Host "Mode: $Mode"
 
 try {
     while ($true) {
@@ -65,8 +72,8 @@ try {
         }
 
         $pending = $false
-        Write-Host "Change detected. Running sanitized export..."
-        & $exportScript -SourceRoot $SourceRoot -ProductRoot $ProductRoot
+        Write-Host "Change detected. Running product sync pipeline..."
+        & $runnerScript -SourceRoot $SourceRoot -ProductRoot $ProductRoot
     }
 }
 finally {
