@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "description": "Allowlist-based export from local Autopilot runtime into the product repository.",
+  "textFileExtensions": [
+    ".md",
+    ".txt",
+    ".ps1",
+    ".cmd",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".sh"
+  ],
+  "excludeGlobs": [
+    ".git/**",
+    "node_modules/**",
+    "cache/**",
+    "repos/**",
+    "reports/**",
+    "logs/**",
+    "state/**",
+    "secrets/**",
+    "**/*.secure.txt",
+    "**/*.sqlite",
+    "**/*.sqlite-*",
+    "**/*.zip",
+    "**/*.tar",
+    "**/*.tgz",
+    "**/*.log"
+  ],
+  "pathRedactions": [
+    {
+      "pattern": "C:\\\\Users\\\\[^\\\\\\r\\n]+",
+      "replacement": "<LOCAL_USER_HOME>"
+    },
+    {
+      "pattern": "OneDrive - [^\\\\\\r\\n]+",
+      "replacement": "<CORPORATE_ONEDRIVE>"
+    },
+    {
+      "pattern": "Banco do Brasil",
+      "replacement": "<CUSTOMER_NAME>"
+    },
+    {
+      "pattern": "docker\\.binarios\\.intranet\\.[^\\s\"']+",
+      "replacement": "<PRIVATE_REGISTRY>"
+    },
+    {
+      "pattern": "https://github\\.com/[A-Za-z0-9_.-]+/",
+      "replacement": "https://github.com/<OWNER>/"
+    },
+    {
+      "pattern": "https://github\\.com\\.mcas\\.ms/[A-Za-z0-9_.-]+/",
+      "replacement": "https://github.com/<OWNER>/"
+    }
+  ],
+  "blockedContentPatterns": [
+    {
+      "name": "classic_github_pat",
+      "pattern": "ghp_[A-Za-z0-9]{20,}"
+    },
+    {
+      "name": "fine_grained_github_pat",
+      "pattern": "github_pat_[A-Za-z0-9_]{20,}"
+    },
+    {
+      "name": "private_key",
+      "pattern": "-----BEGIN [A-Z ]*PRIVATE KEY-----"
+    },
+    {
+      "name": "private_corporate_domain",
+      "pattern": "(?i)(\\.intranet\\.|\\.mcas\\.ms|\\.bb\\.com\\.br)"
+    }
+  ],
+  "allowlist": [
+    {
+      "source": "README.md",
+      "target": "reference/local-autopilot/README.md",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "source": "docs",
+      "target": "reference/local-autopilot/docs",
+      "mode": "mirror",
+      "sanitize": true
+    },
+    {
+      "source": "prompts",
+      "target": "reference/local-autopilot/prompts",
+      "mode": "mirror",
+      "sanitize": true
+    },
+    {
+      "source": "controller-release-autopilot.ps1",
+      "target": "reference/local-autopilot/scripts/controller-release-autopilot.ps1",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "source": "prepare-controller-main.ps1",
+      "target": "reference/local-autopilot/scripts/prepare-controller-main.ps1",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "source": "preflight-controller-ci.ps1",
+      "target": "reference/local-autopilot/scripts/preflight-controller-ci.ps1",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "source": "export-portable-kit.ps1",
+      "target": "reference/local-autopilot/scripts/export-portable-kit.ps1",
+      "mode": "copy",
+      "sanitize": true
+    }
+  ]
+}
