@@ -114,3 +114,4 @@ The intended flow is:
 5. Start with docs, contracts, packaging, and the export pipeline before moving business logic.
 6. Replace corporate-specific names, URLs, and workflows with generic product concepts.
 7. Run `task sync-pr` for one-shot promotion or `task install-sync-task` to install the watcher-backed routine.
+8. If Task Scheduler registration is blocked by local permissions, the installer falls back to the user's Startup folder automatically.

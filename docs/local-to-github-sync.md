@@ -66,3 +66,8 @@ Recommended defaults:
 - automation branch: `sync/autopilot`
 - watcher mode: `sync-pr`
 - merge policy: review and merge PR, never direct write to `main` from the local watcher
+
+## Windows persistence fallback
+
+If Task Scheduler registration is denied by the local machine policy, install the watcher through the current user's Startup folder.
+This still keeps the automation persistent across logons without requiring elevated privileges.
