@@ -214,6 +214,25 @@ function Invoke-GitHubApi {
     return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $headers -ContentType "application/json" -Body ($Body | ConvertTo-Json -Depth 10)
 }
 
+function Invoke-GitCommitFromMessage {
+    param(
+        [string]$Title,
+        [string[]]$BodyLines
+    )
+
+    $messagePath = [System.IO.Path]::GetTempFileName()
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+    try {
+        $messageLines = @($Title, "") + @($BodyLines)
+        [System.IO.File]::WriteAllText($messagePath, ($messageLines -join [Environment]::NewLine), $utf8NoBom)
+        Invoke-Git -GitArgs @("commit", "--file", $messagePath)
+    }
+    finally {
+        Remove-Item -Path $messagePath -ErrorAction SilentlyContinue
+    }
+}
+
 function Create-Or-UpdatePullRequest {
     param(
         [string]$Owner,
@@ -296,22 +315,22 @@ try {
     $changedFiles = @($staged -split "\r?\n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
     $commitMessage = "{0} ({1})" -f $CommitPrefix, $timestamp
-    $commitBody = @(
+    $changedFileLines = @($changedFiles | ForEach-Object { "- $_" })
+    $commitBodyLines = @(
         "Automated promotion from local Autopilot via allowlist export and sanitization.",
         "",
         "Persistent root: $(if ($PersistentRoot) { $PersistentRoot } else { '(not resolved)' })",
         "Workspace root: $(if ($WorkspaceRoot) { $WorkspaceRoot } else { '(not resolved)' })",
         "",
-        "Changed files:",
-        ($changedFiles | ForEach-Object { "- $_" })
-    ) -join [Environment]::NewLine
+        "Changed files:"
+    ) + $changedFileLines
 
-    Invoke-Git -GitArgs @("commit", "-m", $commitMessage, "-m", $commitBody)
+    Invoke-GitCommitFromMessage -Title $commitMessage -BodyLines $commitBodyLines
     Invoke-Git -GitArgs @("push", "-u", "origin", $SyncBranch, "--force-with-lease")
 
     if (-not $SkipPullRequest) {
         $prTitle = $commitMessage
-        $prBody = @(
+        $prBodyLines = @(
             "## Automated Product Sync",
             "",
             "This pull request was generated automatically from the local Autopilot runtime.",
@@ -320,14 +339,15 @@ try {
             "- Persistent root: $(if ($PersistentRoot) { $PersistentRoot } else { '(not resolved)' })",
             "- Workspace root: $(if ($WorkspaceRoot) { $WorkspaceRoot } else { '(not resolved)' })",
             "",
-            "### Changed files",
-            ($changedFiles | ForEach-Object { "- $_" }),
+            "### Changed files"
+        ) + $changedFileLines + @(
             "",
             "### Safety gates",
             "- allowlist export applied",
             "- sanitization applied",
             "- repository validation passed"
-        ) -join [Environment]::NewLine
+        )
+        $prBody = $prBodyLines -join [Environment]::NewLine
 
         Create-Or-UpdatePullRequest -Owner $origin.owner -Repo $origin.repo -BaseBranchName $BaseBranch -SyncBranchName $SyncBranch -Title $prTitle -Body $prBody
     }
