@@ -78,6 +78,59 @@ function Resolve-OptionalPath {
     return (Resolve-Path $Path).Path
 }
 
+function Get-CleanupRoots {
+    param([string]$ResolvedMapPath)
+
+    $map = Get-Content $ResolvedMapPath -Raw | ConvertFrom-Json
+    $roots = New-Object System.Collections.Generic.HashSet[string]([System.StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($entry in $map.allowlist) {
+        if ([string]::IsNullOrWhiteSpace([string]$entry.target)) {
+            continue
+        }
+
+        $normalized = ([string]$entry.target).Replace("/", "\").TrimStart("\")
+        $firstSegment = ($normalized -split "\\")[0]
+        if (-not [string]::IsNullOrWhiteSpace($firstSegment)) {
+            [void]$roots.Add($firstSegment)
+        }
+    }
+
+    [void]$roots.Add("var")
+    return @($roots)
+}
+
+function Remove-UntrackedGeneratedRoot {
+    param([string]$RelativePath)
+
+    if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+        return
+    }
+
+    $trackedEntries = Invoke-Git -GitArgs @("ls-files", "--", $RelativePath)
+    if (-not [string]::IsNullOrWhiteSpace($trackedEntries)) {
+        return
+    }
+
+    $fullPath = Join-Path (Get-Location) $RelativePath
+    if (-not (Test-Path -LiteralPath $fullPath)) {
+        return
+    }
+
+    $item = Get-Item -LiteralPath $fullPath -Force
+    if ($item -is [System.IO.DirectoryInfo]) {
+        $quotedPath = '"' + $fullPath + '"'
+        $deleteProcess = Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", "if exist $quotedPath rmdir /s /q $quotedPath") -NoNewWindow -Wait -PassThru
+        if ($deleteProcess.ExitCode -ne 0 -and (Test-Path -LiteralPath $fullPath)) {
+            throw "Failed to remove generated directory: $RelativePath"
+        }
+
+        return
+    }
+
+    [System.IO.File]::Delete($fullPath)
+}
+
 function Invoke-Git {
     param([string[]]$GitArgs)
 
@@ -208,6 +261,7 @@ $WorkspaceRoot = Resolve-OptionalPath -Path $WorkspaceRoot
 $MapPath = (Resolve-Path $MapPath).Path
 $RulesPath = (Resolve-Path $RulesPath).Path
 $exportScript = Join-Path $repoRoot "scripts/export-product-snapshot.ps1"
+$cleanupRoots = Get-CleanupRoots -ResolvedMapPath $MapPath
 
 Push-Location $ProductRoot
 $originalBranch = Invoke-Git -GitArgs @("branch", "--show-current")
@@ -282,6 +336,10 @@ finally {
     try {
         if (-not [string]::IsNullOrWhiteSpace($originalBranch)) {
             Invoke-Git -GitArgs @("checkout", $originalBranch) | Out-Null
+        }
+
+        foreach ($cleanupRoot in $cleanupRoots) {
+            Remove-UntrackedGeneratedRoot -RelativePath $cleanupRoot
         }
     }
     finally {

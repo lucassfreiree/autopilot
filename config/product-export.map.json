@@ -56,6 +56,10 @@
       "replacement": "<CUSTOMER_NAME>"
     },
     {
+      "pattern": "(?i)[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9-]+\\.)*bb\\.com\\.br",
+      "replacement": "<PRIVATE_EMAIL>"
+    },
+    {
       "pattern": "docker\\.binarios\\.intranet\\.[^\\s\"']+",
       "replacement": "<PRIVATE_REGISTRY>"
     },
@@ -66,6 +70,18 @@
     {
       "pattern": "https://github\\.com\\.mcas\\.ms/[A-Za-z0-9_.-]+/",
       "replacement": "https://github.com/<OWNER>/"
+    },
+    {
+      "pattern": "(?i)(?:https?://)?[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)*\\.mcas\\.ms[^\\s\"']*",
+      "replacement": "<PRIVATE_GITHUB_MIRROR_URL>"
+    },
+    {
+      "pattern": "(?i)(?:https?://)?[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)*\\.intranet\\.[^\\s\"']*",
+      "replacement": "<PRIVATE_INTERNAL_URL>"
+    },
+    {
+      "pattern": "(?i)(?:https?://)?[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)*\\.bb\\.com\\.br[^\\s\"']*",
+      "replacement": "<PRIVATE_CORPORATE_URL>"
     }
   ],
   "blockedContentPatterns": [
