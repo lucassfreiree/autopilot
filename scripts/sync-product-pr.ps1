@@ -81,12 +81,32 @@ function Resolve-OptionalPath {
 function Invoke-Git {
     param([string[]]$GitArgs)
 
-    $output = & git @GitArgs 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw ("git {0}`n{1}" -f ($GitArgs -join " "), ($output -join [Environment]::NewLine))
-    }
+    $stdoutPath = [System.IO.Path]::GetTempFileName()
+    $stderrPath = [System.IO.Path]::GetTempFileName()
 
-    return ($output -join [Environment]::NewLine).Trim()
+    try {
+        $process = Start-Process -FilePath "git" -ArgumentList $GitArgs -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+        $stdout = @()
+        $stderr = @()
+
+        if (Test-Path $stdoutPath) {
+            $stdout = Get-Content -Path $stdoutPath
+        }
+
+        if (Test-Path $stderrPath) {
+            $stderr = Get-Content -Path $stderrPath
+        }
+
+        $combined = @($stdout + $stderr | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        if ($process.ExitCode -ne 0) {
+            throw ("git {0}`n{1}" -f ($GitArgs -join " "), ($combined -join [Environment]::NewLine))
+        }
+
+        return ($combined -join [Environment]::NewLine).Trim()
+    }
+    finally {
+        Remove-Item -Path $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
+    }
 }
 
 function Get-OriginMetadata {
@@ -188,6 +208,8 @@ $WorkspaceRoot = Resolve-OptionalPath -Path $WorkspaceRoot
 $MapPath = (Resolve-Path $MapPath).Path
 $RulesPath = (Resolve-Path $RulesPath).Path
 $exportScript = Join-Path $repoRoot "scripts/export-product-snapshot.ps1"
+
+Push-Location $ProductRoot
 $originalBranch = Invoke-Git -GitArgs @("branch", "--show-current")
 
 if ($WhatIf) {
@@ -257,7 +279,12 @@ try {
     }
 }
 finally {
-    if (-not [string]::IsNullOrWhiteSpace($originalBranch)) {
-        Invoke-Git -GitArgs @("checkout", $originalBranch) | Out-Null
+    try {
+        if (-not [string]::IsNullOrWhiteSpace($originalBranch)) {
+            Invoke-Git -GitArgs @("checkout", $originalBranch) | Out-Null
+        }
+    }
+    finally {
+        Pop-Location
     }
 }
