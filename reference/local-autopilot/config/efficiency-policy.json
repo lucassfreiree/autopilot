@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "opportunisticMinHours": 6,
+  "busyTaskMaxAgeHours": 12,
+  "reportRoot": "reports\\efficiency",
+  "stateFile": "state\\efficiency-state.json",
+  "archiveRoot": "reports\\efficiency\\archives",
+  "retention": {
+    "targets": [
+      { "path": "reports\\audit", "keepRecent": 5, "maxAgeDays": 21, "archive": true },
+      { "path": "reports\\audit-agent", "keepRecent": 5, "maxAgeDays": 21, "archive": true },
+      { "path": "reports\\ci-failure-probes", "keepRecent": 3, "maxAgeDays": 21, "archive": true },
+      { "path": "reports\\ci-failure-probes-agent", "keepRecent": 3, "maxAgeDays": 21, "archive": true },
+      { "path": "reports\\github-actions", "keepRecent": 5, "maxAgeDays": 21, "archive": true },
+      { "path": "reports\\github-actions-agent", "keepRecent": 5, "maxAgeDays": 21, "archive": true },
+      { "path": "reports\\argocd", "keepRecent": 0, "maxAgeDays": 30, "archive": true }
+    ]
+  },
+  "logs": {
+    "maxBytes": 1048576,
+    "files": [
+      "state\\agent-autosync.log",
+      "state\\local-bridge-worker\\worker.log",
+      "logs\\gdrive-backup.log"
+    ]
+  },
+  "workspace": {
+    "root": "C:\\Users\\jlimafreire\\<CORPORATE_ONEDRIVE>\\AUTOMACAO",
+    "eventsPath": "ai-sync\\EVENTS.jsonl",
+    "eventsKeepLines": 500,
+    "eventArchiveKeepFiles": 10
+  },
+  "emptyDirRoots": [
+    "reports",
+    "cache\\ci-failure-probes\\worktrees",
+    "cache\\ci-failure-probes-agent\\worktrees"
+  ],
+  "tokenEconomy": {
+    "heavyDocLines": 200,
+    "rareDocLines": 400,
+    "alwaysRead": [
+      "AGENTS.md",
+      "state\\agent-tasks.json or state\\agent-project-tasks.json"
+    ],
+    "readOnDemand": [
+      "docs\\agent-shared-learnings.md",
+      "docs\\flow-overview.md",
+      "docs\\agent-coordination-protocol.md"
+    ],
+    "rarelyRead": [
+      "docs\\gemini-controller-release-guide.md"
+    ]
+  }
+}
