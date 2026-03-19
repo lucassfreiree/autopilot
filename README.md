@@ -76,6 +76,11 @@ Never push the following from local runtime into the product repository:
 
 Use the export scripts in `scripts/` and the allowlist in `config/` to move only sanitized, reusable product assets into the product repository.
 
+By default the sync tooling resolves two local sources:
+
+- persistent runtime root from `PERSISTENT_AUTOPILOT_ROOT`, `LOCAL_AUTOPILOT_ROOT`, or `BB_DEVOPS_AUTOPILOT_HOME`
+- workspace root from `WORKSPACE_AUTOPILOT_ROOT` or the parent directory of the product repository
+
 ## Automatic local-to-product sync
 
 Use:
@@ -88,7 +93,7 @@ Use:
 
 The intended flow is:
 
-1. watch the local Autopilot source root
+1. watch the local Autopilot persistent root and workspace root
 2. export only allowlisted files
 3. sanitize private content
 4. block secrets and private markers
@@ -109,9 +114,10 @@ The intended flow is:
 
 1. Create a new public or private GitHub repository for the product.
 2. Copy this template into that repository.
-3. Configure the local source root and product repo root through environment variables.
+3. Configure the persistent runtime root, workspace root, and product repo root through environment variables when you need explicit overrides.
 4. Tune the allowlist and redaction rules in `config/`.
 5. Start with docs, contracts, packaging, and the export pipeline before moving business logic.
 6. Replace corporate-specific names, URLs, and workflows with generic product concepts.
 7. Run `task sync-pr` for one-shot promotion or `task install-sync-task` to install the watcher-backed routine.
 8. If Task Scheduler registration is blocked by local permissions, the installer falls back to the user's Startup folder automatically.
+9. The watcher ignores noisy runtime paths such as `reports/`, `state/`, `logs/`, `cache/`, `repos/`, and workspace `ai-sync/` to avoid unnecessary sync churn.

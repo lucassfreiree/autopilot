@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "description": "Allowlist-based export from local Autopilot runtime into the product repository.",
   "textFileExtensions": [
     ".md",
@@ -29,6 +29,19 @@
     "**/*.tgz",
     "**/*.log"
   ],
+  "watchIgnorePrefixes": {
+    "persistent": [
+      "cache",
+      "repos",
+      "reports",
+      "logs",
+      "state",
+      "secrets"
+    ],
+    "workspace": [
+      "ai-sync"
+    ]
+  },
   "pathRedactions": [
     {
       "pattern": "C:\\\\Users\\\\[^\\\\\\r\\n]+",
@@ -75,44 +88,114 @@
   ],
   "allowlist": [
     {
+      "sourceRoot": "persistent",
       "source": "README.md",
       "target": "reference/local-autopilot/README.md",
       "mode": "copy",
       "sanitize": true
     },
     {
+      "sourceRoot": "persistent",
       "source": "docs",
       "target": "reference/local-autopilot/docs",
       "mode": "mirror",
       "sanitize": true
     },
     {
+      "sourceRoot": "persistent",
       "source": "prompts",
       "target": "reference/local-autopilot/prompts",
       "mode": "mirror",
       "sanitize": true
     },
     {
+      "sourceRoot": "persistent",
       "source": "controller-release-autopilot.ps1",
       "target": "reference/local-autopilot/scripts/controller-release-autopilot.ps1",
       "mode": "copy",
       "sanitize": true
     },
     {
+      "sourceRoot": "persistent",
       "source": "prepare-controller-main.ps1",
       "target": "reference/local-autopilot/scripts/prepare-controller-main.ps1",
       "mode": "copy",
       "sanitize": true
     },
     {
+      "sourceRoot": "persistent",
       "source": "preflight-controller-ci.ps1",
       "target": "reference/local-autopilot/scripts/preflight-controller-ci.ps1",
       "mode": "copy",
       "sanitize": true
     },
     {
+      "sourceRoot": "persistent",
       "source": "export-portable-kit.ps1",
       "target": "reference/local-autopilot/scripts/export-portable-kit.ps1",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "persistent",
+      "source": "autopilot-efficiency.ps1",
+      "target": "reference/local-autopilot/scripts/autopilot-efficiency.ps1",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "persistent",
+      "source": "autopilot-efficiency.cmd",
+      "target": "reference/local-autopilot/scripts/autopilot-efficiency.cmd",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "persistent",
+      "source": "install-autopilot-efficiency.ps1",
+      "target": "reference/local-autopilot/scripts/install-autopilot-efficiency.ps1",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "persistent",
+      "source": "remove-autopilot-efficiency.ps1",
+      "target": "reference/local-autopilot/scripts/remove-autopilot-efficiency.ps1",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "persistent",
+      "source": "efficiency-policy.json",
+      "target": "reference/local-autopilot/config/efficiency-policy.json",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "workspace",
+      "source": "AGENTS.md",
+      "target": "reference/local-autopilot/workspace-sync/AGENTS.md",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "workspace",
+      "source": "CLAUDE.md",
+      "target": "reference/local-autopilot/workspace-sync/CLAUDE.md",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "workspace",
+      "source": "GEMINI.md",
+      "target": "reference/local-autopilot/workspace-sync/GEMINI.md",
+      "mode": "copy",
+      "sanitize": true
+    },
+    {
+      "sourceRoot": "workspace",
+      "source": "scripts/ai-sync.ps1",
+      "target": "reference/local-autopilot/workspace-sync/ai-sync.ps1",
       "mode": "copy",
       "sanitize": true
     }

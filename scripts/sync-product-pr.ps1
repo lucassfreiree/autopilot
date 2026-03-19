@@ -3,6 +3,10 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$SourceRoot = "",
     [Parameter(Mandatory = $false)]
+    [string]$PersistentRoot = "",
+    [Parameter(Mandatory = $false)]
+    [string]$WorkspaceRoot = "",
+    [Parameter(Mandatory = $false)]
     [string]$ProductRoot = "",
     [Parameter(Mandatory = $false)]
     [string]$MapPath = "",
@@ -19,12 +23,30 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-if ([string]::IsNullOrWhiteSpace($SourceRoot)) {
-    $SourceRoot = $env:LOCAL_AUTOPILOT_ROOT
-}
-
 if ([string]::IsNullOrWhiteSpace($ProductRoot)) {
     $ProductRoot = $repoRoot
+}
+
+$ProductRoot = (Resolve-Path $ProductRoot).Path
+
+if ([string]::IsNullOrWhiteSpace($PersistentRoot)) {
+    if (-not [string]::IsNullOrWhiteSpace($SourceRoot)) {
+        $PersistentRoot = $SourceRoot
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:LOCAL_AUTOPILOT_ROOT)) {
+        $PersistentRoot = $env:LOCAL_AUTOPILOT_ROOT
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:PERSISTENT_AUTOPILOT_ROOT)) {
+        $PersistentRoot = $env:PERSISTENT_AUTOPILOT_ROOT
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:BB_DEVOPS_AUTOPILOT_HOME)) {
+        $PersistentRoot = $env:BB_DEVOPS_AUTOPILOT_HOME
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($WorkspaceRoot)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:WORKSPACE_AUTOPILOT_ROOT)) {
+        $WorkspaceRoot = $env:WORKSPACE_AUTOPILOT_ROOT
+    } else {
+        $WorkspaceRoot = Split-Path -Parent $ProductRoot
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($MapPath)) {
@@ -41,6 +63,19 @@ if ([string]::IsNullOrWhiteSpace($SyncBranch)) {
     } else {
         $SyncBranch = "sync/autopilot"
     }
+}
+
+function Resolve-OptionalPath {
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    if (-not (Test-Path $Path)) {
+        return $null
+    }
+
+    return (Resolve-Path $Path).Path
 }
 
 function Invoke-Git {
@@ -66,9 +101,9 @@ function Get-OriginMetadata {
     }
 
     return [pscustomobject]@{
-        url   = $remoteUrl
+        url = $remoteUrl
         owner = $match.Groups["owner"].Value
-        repo  = $match.Groups["repo"].Value
+        repo = $match.Groups["repo"].Value
     }
 }
 
@@ -93,10 +128,10 @@ function Invoke-GitHubApi {
     )
 
     $headers = @{
-        Authorization         = "Bearer $Token"
-        Accept                = "application/vnd.github+json"
+        Authorization = "Bearer $Token"
+        Accept = "application/vnd.github+json"
         "X-GitHub-Api-Version" = "2022-11-28"
-        "User-Agent"          = "autopilot-product-sync"
+        "User-Agent" = "autopilot-product-sync"
     }
 
     if ($null -eq $Body) {
@@ -130,7 +165,7 @@ function Create-Or-UpdatePullRequest {
         $prNumber = $existing[0].number
         $updated = Invoke-GitHubApi -Method "PATCH" -Uri "https://api.github.com/repos/$Owner/$Repo/pulls/$prNumber" -Token $token -Body @{
             title = $Title
-            body  = $Body
+            body = $Body
         }
 
         Write-Host ("Updated pull request #{0}: {1}" -f $updated.number, $updated.html_url)
@@ -138,29 +173,25 @@ function Create-Or-UpdatePullRequest {
     }
 
     $created = Invoke-GitHubApi -Method "POST" -Uri "https://api.github.com/repos/$Owner/$Repo/pulls" -Token $token -Body @{
-        title               = $Title
-        head                = $SyncBranchName
-        base                = $BaseBranchName
-        body                = $Body
+        title = $Title
+        head = $SyncBranchName
+        base = $BaseBranchName
+        body = $Body
         maintainer_can_modify = $true
     }
 
     Write-Host ("Created pull request #{0}: {1}" -f $created.number, $created.html_url)
 }
 
-if ([string]::IsNullOrWhiteSpace($SourceRoot)) {
-    throw "SourceRoot is required. Use -SourceRoot or set LOCAL_AUTOPILOT_ROOT."
-}
-
-$SourceRoot = (Resolve-Path $SourceRoot).Path
-$ProductRoot = (Resolve-Path $ProductRoot).Path
+$PersistentRoot = Resolve-OptionalPath -Path $PersistentRoot
+$WorkspaceRoot = Resolve-OptionalPath -Path $WorkspaceRoot
 $MapPath = (Resolve-Path $MapPath).Path
 $RulesPath = (Resolve-Path $RulesPath).Path
 $exportScript = Join-Path $repoRoot "scripts/export-product-snapshot.ps1"
 $originalBranch = Invoke-Git -GitArgs @("branch", "--show-current")
 
 if ($WhatIf) {
-    & $exportScript -SourceRoot $SourceRoot -ProductRoot $ProductRoot -MapPath $MapPath -RulesPath $RulesPath -WhatIf -SkipValidation
+    & $exportScript -PersistentRoot $PersistentRoot -WorkspaceRoot $WorkspaceRoot -ProductRoot $ProductRoot -MapPath $MapPath -RulesPath $RulesPath -WhatIf -SkipValidation
     Write-Host ("Would push branch '{0}' and create or update a PR into '{1}'." -f $SyncBranch, $BaseBranch)
     exit 0
 }
@@ -177,7 +208,7 @@ try {
     Invoke-Git -GitArgs @("pull", "--ff-only", "origin", $BaseBranch)
     Invoke-Git -GitArgs @("checkout", "-B", $SyncBranch, "origin/$BaseBranch")
 
-    & $exportScript -SourceRoot $SourceRoot -ProductRoot $ProductRoot -MapPath $MapPath -RulesPath $RulesPath
+    & $exportScript -PersistentRoot $PersistentRoot -WorkspaceRoot $WorkspaceRoot -ProductRoot $ProductRoot -MapPath $MapPath -RulesPath $RulesPath
 
     Invoke-Git -GitArgs @("add", ".")
     $staged = Invoke-Git -GitArgs @("diff", "--cached", "--name-only")
@@ -189,13 +220,15 @@ try {
     $changedFiles = @($staged -split "\r?\n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
     $commitMessage = "{0} ({1})" -f $CommitPrefix, $timestamp
-    $bodyLines = @(
+    $commitBody = @(
         "Automated promotion from local Autopilot via allowlist export and sanitization.",
+        "",
+        "Persistent root: $(if ($PersistentRoot) { $PersistentRoot } else { '(not resolved)' })",
+        "Workspace root: $(if ($WorkspaceRoot) { $WorkspaceRoot } else { '(not resolved)' })",
         "",
         "Changed files:",
         ($changedFiles | ForEach-Object { "- $_" })
-    )
-    $commitBody = $bodyLines -join [Environment]::NewLine
+    ) -join [Environment]::NewLine
 
     Invoke-Git -GitArgs @("commit", "-m", $commitMessage, "-m", $commitBody)
     Invoke-Git -GitArgs @("push", "-u", "origin", $SyncBranch, "--force-with-lease")
@@ -206,6 +239,10 @@ try {
             "## Automated Product Sync",
             "",
             "This pull request was generated automatically from the local Autopilot runtime.",
+            "",
+            "### Source Roots",
+            "- Persistent root: $(if ($PersistentRoot) { $PersistentRoot } else { '(not resolved)' })",
+            "- Workspace root: $(if ($WorkspaceRoot) { $WorkspaceRoot } else { '(not resolved)' })",
             "",
             "### Changed files",
             ($changedFiles | ForEach-Object { "- $_" }),

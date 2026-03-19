@@ -3,6 +3,10 @@ param(
     [Parameter(Mandatory = $false)]
     [string]$SourceRoot = "",
     [Parameter(Mandatory = $false)]
+    [string]$PersistentRoot = "",
+    [Parameter(Mandatory = $false)]
+    [string]$WorkspaceRoot = "",
+    [Parameter(Mandatory = $false)]
     [string]$ProductRoot = "",
     [Parameter(Mandatory = $false)]
     [string]$MapPath = "",
@@ -16,12 +20,30 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-if ([string]::IsNullOrWhiteSpace($SourceRoot)) {
-    $SourceRoot = $env:LOCAL_AUTOPILOT_ROOT
-}
-
 if ([string]::IsNullOrWhiteSpace($ProductRoot)) {
     $ProductRoot = $repoRoot
+}
+
+$ProductRoot = (Resolve-Path $ProductRoot).Path
+
+if ([string]::IsNullOrWhiteSpace($PersistentRoot)) {
+    if (-not [string]::IsNullOrWhiteSpace($SourceRoot)) {
+        $PersistentRoot = $SourceRoot
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:LOCAL_AUTOPILOT_ROOT)) {
+        $PersistentRoot = $env:LOCAL_AUTOPILOT_ROOT
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:PERSISTENT_AUTOPILOT_ROOT)) {
+        $PersistentRoot = $env:PERSISTENT_AUTOPILOT_ROOT
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:BB_DEVOPS_AUTOPILOT_HOME)) {
+        $PersistentRoot = $env:BB_DEVOPS_AUTOPILOT_HOME
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($WorkspaceRoot)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:WORKSPACE_AUTOPILOT_ROOT)) {
+        $WorkspaceRoot = $env:WORKSPACE_AUTOPILOT_ROOT
+    } else {
+        $WorkspaceRoot = Split-Path -Parent $ProductRoot
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($MapPath)) {
@@ -107,12 +129,56 @@ function Assert-BlockedPatternsAbsent {
     }
 }
 
-if ([string]::IsNullOrWhiteSpace($SourceRoot)) {
-    throw "SourceRoot is required. Use -SourceRoot or set LOCAL_AUTOPILOT_ROOT."
+function Resolve-OptionalPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    if (-not (Test-Path $Path)) {
+        return $null
+    }
+
+    return (Resolve-Path $Path).Path
 }
 
-$SourceRoot = (Resolve-Path $SourceRoot).Path
-$ProductRoot = (Resolve-Path $ProductRoot).Path
+function Resolve-EntrySourceBase {
+    param(
+        [object]$Entry,
+        [string]$ResolvedPersistentRoot,
+        [string]$ResolvedWorkspaceRoot
+    )
+
+    $sourceKind = if ($Entry.PSObject.Properties.Name -contains "sourceRoot" -and -not [string]::IsNullOrWhiteSpace([string]$Entry.sourceRoot)) {
+        [string]$Entry.sourceRoot
+    } else {
+        "persistent"
+    }
+
+    switch ($sourceKind.ToLowerInvariant()) {
+        "workspace" {
+            if ([string]::IsNullOrWhiteSpace($ResolvedWorkspaceRoot)) {
+                throw "Allowlist entry '$($Entry.source)' requires WorkspaceRoot, but it was not resolved."
+            }
+
+            return $ResolvedWorkspaceRoot
+        }
+        "persistent" {
+            if ([string]::IsNullOrWhiteSpace($ResolvedPersistentRoot)) {
+                throw "Allowlist entry '$($Entry.source)' requires PersistentRoot, but it was not resolved."
+            }
+
+            return $ResolvedPersistentRoot
+        }
+        default {
+            throw "Unknown sourceRoot '$sourceKind' in allowlist entry '$($Entry.source)'."
+        }
+    }
+}
+
+$PersistentRoot = Resolve-OptionalPath -Path $PersistentRoot
+$WorkspaceRoot = Resolve-OptionalPath -Path $WorkspaceRoot
 $MapPath = (Resolve-Path $MapPath).Path
 $RulesPath = (Resolve-Path $RulesPath).Path
 
@@ -124,7 +190,8 @@ Ensure-Directory -Path $reportRoot
 $copied = New-Object System.Collections.Generic.List[object]
 
 foreach ($entry in $map.allowlist) {
-    $sourcePath = Join-Path $SourceRoot $entry.source
+    $entryRoot = Resolve-EntrySourceBase -Entry $entry -ResolvedPersistentRoot $PersistentRoot -ResolvedWorkspaceRoot $WorkspaceRoot
+    $sourcePath = Join-Path $entryRoot $entry.source
     $targetPath = Join-Path $ProductRoot $entry.target
 
     if (-not (Test-Path $sourcePath)) {
@@ -150,7 +217,8 @@ foreach ($entry in $map.allowlist) {
                 [void]$copied.Add(@{
                     source = $file.FullName
                     target = $destinationFile
-                    mode   = "whatif"
+                    sourceRoot = $entryRoot
+                    mode = "whatif"
                 })
                 continue
             }
@@ -167,6 +235,7 @@ foreach ($entry in $map.allowlist) {
             [void]$copied.Add(@{
                 source = $file.FullName
                 target = $destinationFile
+                sourceRoot = $entryRoot
             })
         }
     } else {
@@ -177,7 +246,8 @@ foreach ($entry in $map.allowlist) {
             [void]$copied.Add(@{
                 source = $sourcePath
                 target = $targetPath
-                mode   = "whatif"
+                sourceRoot = $entryRoot
+                mode = "whatif"
             })
             continue
         }
@@ -194,13 +264,15 @@ foreach ($entry in $map.allowlist) {
         [void]$copied.Add(@{
             source = $sourcePath
             target = $targetPath
+            sourceRoot = $entryRoot
         })
     }
 }
 
 $report = [pscustomobject]@{
     generatedAt = (Get-Date).ToString("o")
-    sourceRoot  = $SourceRoot
+    persistentRoot = $PersistentRoot
+    workspaceRoot = $WorkspaceRoot
     productRoot = $ProductRoot
     copiedFiles = $copied
 }

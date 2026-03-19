@@ -10,7 +10,7 @@ Use a local watcher plus exporter instead of pushing directly from the operation
 
 Flow:
 
-1. local watcher detects changes in the local Autopilot root
+1. local watcher detects changes in the persistent Autopilot root and the workspace root
 2. exporter reads `config/product-export.map.json`
 3. only allowlisted files are copied
 4. content redactions are applied
@@ -26,6 +26,7 @@ Flow:
 - GitHub repository stays reusable and clean
 - propagation is auditable
 - security gates run before publication
+- noisy local paths can be ignored before export, reducing wasted sync runs and wasted tokens
 
 ## GitHub authentication recommendation
 
@@ -66,6 +67,10 @@ Recommended defaults:
 - automation branch: `sync/autopilot`
 - watcher mode: `sync-pr`
 - merge policy: review and merge PR, never direct write to `main` from the local watcher
+- source roots:
+  - persistent runtime root: `PERSISTENT_AUTOPILOT_ROOT` or `BB_DEVOPS_AUTOPILOT_HOME`
+  - workspace root: `WORKSPACE_AUTOPILOT_ROOT` or the parent of the product repository
+- allowlist entries can declare which source root they come from, so product promotion can combine persistent runtime assets with workspace coordination assets safely
 
 ## Windows persistence fallback
 
