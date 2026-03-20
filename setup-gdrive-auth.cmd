@@ -2,7 +2,7 @@
 setlocal
 
 set RCLONE=<USER_HOME>\AppData\Local\Microsoft\WinGet\Packages\Rclone.Rclone_Microsoft.Winget.Source_8wekyb3d8bbwe\rclone-v1.73.2-windows-amd64\rclone.exe
-set AUTOPILOT=<SAFE_ROOT>
+set AUTOPILOT=C:\Users\jlimafreire\AppData\Roaming\Microsoft\DevOps\core
 set REMOTE=gdrive
 set FOLDER_ID=1Vx0vXKGkZcj7jRv5dThLti4MlTHk6eo9
 set FOLDER_URL=https://drive.google.com/drive/u/1/folders/1Vx0vXKGkZcj7jRv5dThLti4MlTHk6eo9

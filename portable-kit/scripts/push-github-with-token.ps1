@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "token-utils.ps1")
 
 # Token via GitHub OAuth Device Flow — no local storage, no Credential Manager
-$authScript = '<SAFE_ROOT>\..\bin\auth.ps1'
+$authScript = 'C:\Users\jlimafreire\AppData\Roaming\Microsoft\DevOps\bin\auth.ps1'
 $token = (& $authScript -Silent)
 if (-not $token) {
   throw "GitHub authentication failed. Run $authScript to authenticate."

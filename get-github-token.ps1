@@ -4,7 +4,7 @@
 
 param([string]$Hostname = "github.com")
 
-$authScript = '<SAFE_ROOT>\..\bin\auth.ps1'
+$authScript = 'C:\Users\jlimafreire\AppData\Roaming\Microsoft\DevOps\bin\auth.ps1'
 if (-not (Test-Path $authScript)) {
   Write-Error "Auth script not found: $authScript"
   exit 1

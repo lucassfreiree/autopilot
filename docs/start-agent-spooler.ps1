@@ -1,5 +1,5 @@
-﻿$spoolDir = "<SAFE_ROOT>\spooler"
-$autosyncScript = "<SAFE_ROOT>\agent-autosync.ps1"
+﻿$spoolDir = "C:\Users\jlimafreire\AppData\Roaming\Microsoft\DevOps\core\spooler"
+$autosyncScript = "C:\Users\jlimafreire\AppData\Roaming\Microsoft\DevOps\core\agent-autosync.ps1"
 $powershellExe = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
 if (-not (Test-Path $powershellExe)) {
     $powershellExe = "powershell.exe"
