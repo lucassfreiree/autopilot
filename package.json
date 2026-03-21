@@ -1,0 +1,10 @@
+{
+  "name": "sim-agent",
+  "version": "1.0.0",
+  "description": "Simulated agent for E2E autopilot testing",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Tests passed\" && exit 0",
+    "build": "echo \"Build ok\" && exit 0"
+  }
+}
