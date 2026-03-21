@@ -1,7 +1,7 @@
 # ===========================================================
 # REPO:  lucassfreiree/autopilot
 # PATH:  .github/workflows/bootstrap.yml
-# RETRY: com BBVINET_TOKEN
+# RETRY: SSO authorized
 # ===========================================================
 name: "Bootstrap: Setup Completo"
 
