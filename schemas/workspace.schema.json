@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lucassfreiree/autopilot/schemas/workspace.schema.json",
+  "title": "Autopilot Workspace",
+  "type": "object",
+  "required": ["schemaVersion", "workspaceId", "createdAt"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "workspaceId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$" },
+    "displayName": { "type": "string", "maxLength": 100 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "controller": {
+      "type": "object",
+      "properties": {
+        "sourceRepo": { "type": "string" },
+        "deployRepo": { "type": "string" },
+        "deployBranch": { "type": "string", "default": "main" },
+        "deployValuesPath": { "type": "string" },
+        "ciWorkflowName": { "type": "string" },
+        "imagePattern": { "type": "string" }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "properties": {
+        "sourceRepo": { "type": "string" },
+        "deployRepo": { "type": "string" },
+        "deployBranch": { "type": "string", "default": "main" },
+        "deployValuesPath": { "type": "string" },
+        "capRepo": { "type": "string" },
+        "capBranch": { "type": "string", "default": "main" },
+        "capValuesPath": { "type": "string" },
+        "ciWorkflowName": { "type": "string" },
+        "imagePattern": { "type": "string" }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "promotionTarget": { "type": "string", "enum": ["deploy", "cap", "both"], "default": "both" },
+        "autoRelease": { "type": "boolean", "default": true },
+        "lockTimeoutMinutes": { "type": "integer", "default": 30 },
+        "healthCheckEnabled": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

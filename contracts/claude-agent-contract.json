@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "contractId": "claude-agent-contract",
+  "extends": "shared-agent-contract",
+  "agent": "claude",
+  "capabilities": [
+    "architecture-analysis",
+    "code-review",
+    "workflow-authoring",
+    "release-orchestration",
+    "ci-failure-analysis",
+    "handoff-creation",
+    "improvement-recording"
+  ],
+  "tools": {
+    "primary": "claude-code-cli",
+    "github": "mcp-server-github",
+    "editor": "github.dev"
+  },
+  "instructions": {
+    "stateAccess": "Use MCP GitHub tools or gh CLI to read/write state on autopilot-state branch",
+    "lockProtocol": "Acquire lock via state file creation, check for existing lock first",
+    "releaseProtocol": "Read workspace.json for repo config, never hardcode repos or paths",
+    "handoffProtocol": "Create handoff JSON in workspace handoffs/ dir, set toAgent field",
+    "auditProtocol": "Append audit entry after every state-mutating operation"
+  },
+  "contextFiles": [
+    "CLAUDE.md",
+    "contracts/shared-agent-contract.json",
+    "schemas/*.schema.json"
+  ]
+}
