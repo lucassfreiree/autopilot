@@ -1,0 +1,19 @@
+# Simulated deploy values
+replicaCount: 1
+
+image:
+  repository: registry.example.com/sim-agent
+  tag: "0.0.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
