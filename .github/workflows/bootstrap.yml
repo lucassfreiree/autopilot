@@ -30,6 +30,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
+          exec 2> /tmp/step1-err.log
           REPO="lucassfreiree/autopilot"
           echo "Verificando se branch ja existe..."
           if gh api "repos/$REPO/git/refs/heads/autopilot-state" --silent 2>/dev/null; then
@@ -72,6 +73,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
+          exec 2> /tmp/step2-err.log
           TARGET_REPO="bbvinet/psc-sre-automacao-agent"
           TARGET_PATH=".github/workflows/release-autopilot.yml"
           CONTENT=$(cat .github/workflows/release-autopilot.yml)
@@ -101,6 +103,7 @@ jobs:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
           SECRET_VALUE: ${{ secrets.BBVINET_TOKEN }}
         run: |
+          exec 2> /tmp/step3-err.log
           TARGET_REPO="bbvinet/psc-sre-automacao-agent"
           echo "$SECRET_VALUE" | gh secret set RELEASE_TOKEN \
             --repo "$TARGET_REPO"
@@ -112,6 +115,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
+          exec 2> /tmp/step4-err.log
           TARGET_REPO="lucassfreiree/autopilot"
           TARGET_PATH=".github/workflows/health-check.yml"
           CONTENT=$(cat .github/workflows/health-check.yml)
@@ -147,20 +151,35 @@ jobs:
             STATUS="failure"
           fi
           RUN_URL="https://github.com/lucassfreiree/autopilot/actions/runs/${{ github.run_id }}"
-          cat > /tmp/issue-body.txt << ISSUEEOF
-          ## Bootstrap Run #${{ github.run_number }}
-
-          | Etapa | Resultado |
-          |-------|-----------|
-          | 1/4 - Branch autopilot-state | ${S1} |
-          | 2/4 - release-autopilot.yml agent | ${S2} |
-          | 3/4 - Secret RELEASE_TOKEN | ${S3} |
-          | 4/4 - health-check.yml | ${S4} |
-
-          **Run:** ${RUN_URL}
-          **Commit:** \`${{ github.sha }}\`
-          ISSUEEOF
-          sed -i 's/^          //' /tmp/issue-body.txt
+          ERR1=$(cat /tmp/step1-err.log 2>/dev/null | tail -10 || echo "n/a")
+          ERR2=$(cat /tmp/step2-err.log 2>/dev/null | tail -10 || echo "n/a")
+          ERR3=$(cat /tmp/step3-err.log 2>/dev/null | tail -10 || echo "n/a")
+          ERR4=$(cat /tmp/step4-err.log 2>/dev/null | tail -10 || echo "n/a")
+          {
+            echo "## Bootstrap Run #${{ github.run_number }}"
+            echo ""
+            echo "| Etapa | Resultado |"
+            echo "|-------|-----------|"
+            echo "| 1/4 - Branch autopilot-state | ${S1} |"
+            echo "| 2/4 - release-autopilot.yml agent | ${S2} |"
+            echo "| 3/4 - Secret RELEASE_TOKEN | ${S3} |"
+            echo "| 4/4 - health-check.yml | ${S4} |"
+            echo ""
+            echo "**Run:** ${RUN_URL}"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            for i in 1 2 3 4; do
+              SVAR="S${i}"
+              OUTCOME="${!SVAR}"
+              if [ "$OUTCOME" = "failure" ]; then
+                ERRVAR="ERR${i}"
+                echo ""
+                echo "### Step ${i} error log:"
+                echo '```'
+                echo "${!ERRVAR}"
+                echo '```'
+              fi
+            done
+          } > /tmp/issue-body.txt
           gh issue create \
             --repo lucassfreiree/autopilot \
             --title "Bootstrap #${{ github.run_number }} - ${STATUS} [s1:${S1} s2:${S2} s3:${S3} s4:${S4}]" \
