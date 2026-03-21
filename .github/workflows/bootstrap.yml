@@ -17,17 +17,12 @@ name: "Bootstrap: Setup Completo"
 
 on:
   workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'Digite EXECUTAR para confirmar'
-        required: true
 
 permissions:
   contents: write
 
 jobs:
   bootstrap:
-    if: ${{ github.event.inputs.confirm == 'EXECUTAR' }}
     runs-on: ubuntu-latest
 
     steps:
