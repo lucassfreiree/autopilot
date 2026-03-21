@@ -6,5 +6,6 @@
   "acquiredBy": "e2e-test-release",
   "runId": "e2e-sim-001",
   "expiresAt": "2026-03-21T22:20:00Z",
-  "released": false
+  "released": true,
+  "releasedAt": "2026-03-21T21:51:00Z"
 }
