@@ -143,7 +143,7 @@ jobs:
           fi
           echo "health-check.yml criado em $TARGET_REPO"
 
-      # ── REPORT: posta resultado na issue #10 ───────────────
+      # ── REPORT: posta resultado numa issue ──────────────────
       - name: Reportar resultado
         if: always()
         env:
@@ -151,20 +151,16 @@ jobs:
         run: |
           STATUS="${{ job.status }}"
           RUN_URL="https://github.com/lucassfreiree/autopilot/actions/runs/${{ github.run_id }}"
-          BODY="## Bootstrap Run #${{ github.run_number }} - ${STATUS}\n\n"
-          BODY+="**Commit:** ${{ github.sha }}\n"
-          BODY+="**Run:** ${RUN_URL}\n"
-          BODY+="**Status:** ${STATUS}\n"
-          BODY+="**Timestamp:** $(date -u '+%Y-%m-%d %H:%M UTC')\n"
+          BODY="## Bootstrap Run #${{ github.run_number }}"
+          BODY="${BODY}\n\n**Status:** ${STATUS}"
+          BODY="${BODY}\n**Commit:** \`${{ github.sha }}\`"
+          BODY="${BODY}\n**Run:** ${RUN_URL}"
+          BODY="${BODY}\n**Timestamp:** $(date -u '+%Y-%m-%d %H:%M UTC')"
+          printf '%b' "$BODY" > /tmp/issue-body.txt
           gh issue create \
             --repo lucassfreiree/autopilot \
             --title "Bootstrap Run #${{ github.run_number }} - ${STATUS}" \
-            --body "$(echo -e "$BODY")" \
-            --label "bootstrap-report" 2>/dev/null || \
-          gh issue comment 10 \
-            --repo lucassfreiree/autopilot \
-            --body "$(echo -e "$BODY")" 2>/dev/null || \
-          echo "Nao foi possivel reportar via issue. Status: ${STATUS}"
+            --body-file /tmp/issue-body.txt || true
 
       # ── RESUMO FINAL ────────────────────────────────────────
       - name: Resumo final
