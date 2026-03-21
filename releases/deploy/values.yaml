@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: registry.example.com/sim-agent
-  tag: "0.0.0"
+  tag: "1.1.0-d6e1476"
   pullPolicy: IfNotPresent
 
 service:
