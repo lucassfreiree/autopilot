@@ -67,7 +67,7 @@ jobs:
             -f "content=$README_B64"
           echo "Branch autopilot-state criado com sucesso."
 
-      - name: "2/4 - Push release-autopilot.yml no repo do agent"
+      - name: "2/4 - Criar PR com release-autopilot.yml no repo do agent"
         id: step2
         continue-on-error: true
         env:
@@ -76,25 +76,45 @@ jobs:
           exec 2> /tmp/step2-err.log
           TARGET_REPO="bbvinet/psc-sre-automacao-agent"
           TARGET_PATH=".github/workflows/release-autopilot.yml"
+          BRANCH_NAME="autopilot/add-release-workflow"
           CONTENT=$(cat .github/workflows/release-autopilot.yml)
           ENCODED=$(echo "$CONTENT" | base64 -w0)
-          EXISTING=$(gh api "repos/$TARGET_REPO/contents/$TARGET_PATH" \
+          EXISTING_PR=$(gh api "repos/$TARGET_REPO/pulls?head=bbvinet:$BRANCH_NAME&state=open" \
+            --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
+            echo "PR #$EXISTING_PR ja existe. Pulando."
+            echo "PR: https://github.com/$TARGET_REPO/pull/$EXISTING_PR"
+            exit 0
+          fi
+          MAIN_SHA=$(gh api "repos/$TARGET_REPO/git/refs/heads/main" --jq '.object.sha')
+          gh api "repos/$TARGET_REPO/git/refs" \
+            --method POST \
+            -f "ref=refs/heads/$BRANCH_NAME" \
+            -f "sha=$MAIN_SHA" 2>/dev/null || true
+          EXISTING_FILE=$(gh api "repos/$TARGET_REPO/contents/$TARGET_PATH?ref=$BRANCH_NAME" \
             --jq '.sha' 2>/dev/null || echo "")
-          if [ -n "$EXISTING" ]; then
-            echo "Arquivo ja existe. Atualizando..."
+          if [ -n "$EXISTING_FILE" ] && [ "$EXISTING_FILE" != "null" ]; then
             gh api "repos/$TARGET_REPO/contents/$TARGET_PATH" \
               --method PUT \
-              -f "message=chore: update release-autopilot workflow [autopilot bootstrap]" \
+              -f "branch=$BRANCH_NAME" \
+              -f "message=chore: update release-autopilot workflow [autopilot]" \
               -f "content=$ENCODED" \
-              -f "sha=$EXISTING"
+              -f "sha=$EXISTING_FILE"
           else
-            echo "Criando arquivo novo..."
             gh api "repos/$TARGET_REPO/contents/$TARGET_PATH" \
               --method PUT \
-              -f "message=chore: add release-autopilot workflow [autopilot bootstrap]" \
+              -f "branch=$BRANCH_NAME" \
+              -f "message=chore: add release-autopilot workflow [autopilot]" \
               -f "content=$ENCODED"
           fi
-          echo "release-autopilot.yml criado em $TARGET_REPO"
+          PR_URL=$(gh api "repos/$TARGET_REPO/pulls" \
+            --method POST \
+            -f "title=chore: add Autopilot release workflow" \
+            -f "head=$BRANCH_NAME" \
+            -f "base=main" \
+            -f "body=Workflow criado automaticamente pelo Autopilot bootstrap. Dispara release apos CI passar em main." \
+            --jq '.html_url')
+          echo "PR criado: $PR_URL"
 
       - name: "3/4 - Configurar secret RELEASE_TOKEN no repo do agent"
         id: step3
