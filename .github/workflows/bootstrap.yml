@@ -1,17 +1,6 @@
 # ===========================================================
 # REPO:  lucassfreiree/autopilot
 # PATH:  .github/workflows/bootstrap.yml
-#
-# EXECUTA UMA UNICA VEZ e configura tudo automaticamente:
-#   1. Cria branch autopilot-state com JSONs de estado
-#   2. Faz push do release-autopilot.yml no repo do agent (bbvinet)
-#   3. Configura o secret RELEASE_TOKEN no repo do agent (bbvinet)
-#   4. Faz push do health-check.yml neste repo
-#
-# PRE-REQUISITOS (unicos passos manuais):
-#   Secrets neste repo (lucassfreiree/autopilot):
-#     RELEASE_TOKEN  - token pessoal
-#     BBVINET_TOKEN  - token bbvinet
 # ===========================================================
 name: "Bootstrap: Setup Completo"
 
@@ -31,16 +20,15 @@ jobs:
 
     steps:
 
-      # ── Checkout do repo para ler os arquivos de workflow ──
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── ETAPA 1: branch autopilot-state ────────────────────
       - name: "1/4 - Criar branch autopilot-state"
+        id: step1
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          set -euo pipefail
           REPO="lucassfreiree/autopilot"
           echo "Verificando se branch ja existe..."
           if gh api "repos/$REPO/git/refs/heads/autopilot-state" --silent 2>/dev/null; then
@@ -69,7 +57,7 @@ jobs:
             -f "branch=autopilot-state" \
             -f "message=chore: add agent-state.json [skip ci]" \
             -f "content=$AGENT_B64"
-          README_B64=$(printf '%s' "# autopilot-state\n\nBranch de estado persistente do BBDevOpsAutopilot - tenant bbvinet.\n**Nao edite manualmente.**" | base64 -w0)
+          README_B64=$(printf '%s' "# autopilot-state" | base64 -w0)
           gh api "repos/$REPO/contents/README.md" \
             --method PUT \
             -f "branch=autopilot-state" \
@@ -77,12 +65,12 @@ jobs:
             -f "content=$README_B64"
           echo "Branch autopilot-state criado com sucesso."
 
-      # ── ETAPA 2: push release-autopilot.yml no agent ───────
       - name: "2/4 - Push release-autopilot.yml no repo do agent"
+        id: step2
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
-          set -euo pipefail
           TARGET_REPO="bbvinet/psc-sre-automacao-agent"
           TARGET_PATH=".github/workflows/release-autopilot.yml"
           CONTENT=$(cat .github/workflows/release-autopilot.yml)
@@ -105,24 +93,24 @@ jobs:
           fi
           echo "release-autopilot.yml criado em $TARGET_REPO"
 
-      # ── ETAPA 3: configurar secret no repo do agent ─────────
       - name: "3/4 - Configurar secret RELEASE_TOKEN no repo do agent"
+        id: step3
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
           SECRET_VALUE: ${{ secrets.BBVINET_TOKEN }}
         run: |
-          set -euo pipefail
           TARGET_REPO="bbvinet/psc-sre-automacao-agent"
           echo "$SECRET_VALUE" | gh secret set RELEASE_TOKEN \
             --repo "$TARGET_REPO"
           echo "Secret RELEASE_TOKEN configurado em $TARGET_REPO"
 
-      # ── ETAPA 4: push health-check.yml neste repo ───────────
       - name: "4/4 - Push health-check.yml neste repo"
+        id: step4
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          set -euo pipefail
           TARGET_REPO="lucassfreiree/autopilot"
           TARGET_PATH=".github/workflows/health-check.yml"
           CONTENT=$(cat .github/workflows/health-check.yml)
@@ -143,34 +131,47 @@ jobs:
           fi
           echo "health-check.yml criado em $TARGET_REPO"
 
-      # ── REPORT: posta resultado numa issue ──────────────────
       - name: Reportar resultado
         if: always()
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          STATUS="${{ job.status }}"
+          S1="${{ steps.step1.outcome }}"
+          S2="${{ steps.step2.outcome }}"
+          S3="${{ steps.step3.outcome }}"
+          S4="${{ steps.step4.outcome }}"
+          if [ "$S1" = "success" ] && [ "$S2" = "success" ] && [ "$S3" = "success" ] && [ "$S4" = "success" ]; then
+            STATUS="success"
+          else
+            STATUS="failure"
+          fi
           RUN_URL="https://github.com/lucassfreiree/autopilot/actions/runs/${{ github.run_id }}"
-          BODY="## Bootstrap Run #${{ github.run_number }}"
-          BODY="${BODY}\n\n**Status:** ${STATUS}"
-          BODY="${BODY}\n**Commit:** \`${{ github.sha }}\`"
-          BODY="${BODY}\n**Run:** ${RUN_URL}"
-          BODY="${BODY}\n**Timestamp:** $(date -u '+%Y-%m-%d %H:%M UTC')"
-          printf '%b' "$BODY" > /tmp/issue-body.txt
+          cat > /tmp/issue-body.txt << ISSUEEOF
+          ## Bootstrap Run #${{ github.run_number }}
+
+          | Etapa | Resultado |
+          |-------|-----------|
+          | 1/4 - Branch autopilot-state | ${S1} |
+          | 2/4 - release-autopilot.yml agent | ${S2} |
+          | 3/4 - Secret RELEASE_TOKEN | ${S3} |
+          | 4/4 - health-check.yml | ${S4} |
+
+          **Run:** ${RUN_URL}
+          **Commit:** \`${{ github.sha }}\`
+          ISSUEEOF
+          sed -i 's/^          //' /tmp/issue-body.txt
           gh issue create \
             --repo lucassfreiree/autopilot \
-            --title "Bootstrap Run #${{ github.run_number }} - ${STATUS}" \
+            --title "Bootstrap #${{ github.run_number }} - ${STATUS} [s1:${S1} s2:${S2} s3:${S3} s4:${S4}]" \
             --body-file /tmp/issue-body.txt || true
 
-      # ── RESUMO FINAL ────────────────────────────────────────
-      - name: Resumo final
-        if: success()
+      - name: Falhar se algum step falhou
+        if: always()
         run: |
-          echo "## Bootstrap Concluido" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Etapa | Resultado |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-------|-----------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Branch autopilot-state | OK |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| release-autopilot.yml no agent | OK |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Secret RELEASE_TOKEN no agent | OK |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| health-check.yml no autopilot | OK |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.step1.outcome }}" = "failure" ] || \
+             [ "${{ steps.step2.outcome }}" = "failure" ] || \
+             [ "${{ steps.step3.outcome }}" = "failure" ] || \
+             [ "${{ steps.step4.outcome }}" = "failure" ]; then
+            echo "Um ou mais steps falharam. Veja a issue criada."
+            exit 1
+          fi
