@@ -17,9 +17,13 @@ name: "Bootstrap: Setup Completo"
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/bootstrap.yml']
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   bootstrap:
@@ -65,7 +69,7 @@ jobs:
             -f "branch=autopilot-state" \
             -f "message=chore: add agent-state.json [skip ci]" \
             -f "content=$AGENT_B64"
-          README_B64=$(echo "# autopilot-state\n\nBranch de estado persistente do BBDevOpsAutopilot - tenant bbvinet.\n**Nao edite manualmente.**" | base64 -w0)
+          README_B64=$(printf '%s' "# autopilot-state\n\nBranch de estado persistente do BBDevOpsAutopilot - tenant bbvinet.\n**Nao edite manualmente.**" | base64 -w0)
           gh api "repos/$REPO/contents/README.md" \
             --method PUT \
             -f "branch=autopilot-state" \
@@ -139,14 +143,38 @@ jobs:
           fi
           echo "health-check.yml criado em $TARGET_REPO"
 
+      # ── REPORT: posta resultado na issue #10 ───────────────
+      - name: Reportar resultado
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          STATUS="${{ job.status }}"
+          RUN_URL="https://github.com/lucassfreiree/autopilot/actions/runs/${{ github.run_id }}"
+          BODY="## Bootstrap Run #${{ github.run_number }} - ${STATUS}\n\n"
+          BODY+="**Commit:** ${{ github.sha }}\n"
+          BODY+="**Run:** ${RUN_URL}\n"
+          BODY+="**Status:** ${STATUS}\n"
+          BODY+="**Timestamp:** $(date -u '+%Y-%m-%d %H:%M UTC')\n"
+          gh issue create \
+            --repo lucassfreiree/autopilot \
+            --title "Bootstrap Run #${{ github.run_number }} - ${STATUS}" \
+            --body "$(echo -e "$BODY")" \
+            --label "bootstrap-report" 2>/dev/null || \
+          gh issue comment 10 \
+            --repo lucassfreiree/autopilot \
+            --body "$(echo -e "$BODY")" 2>/dev/null || \
+          echo "Nao foi possivel reportar via issue. Status: ${STATUS}"
+
       # ── RESUMO FINAL ────────────────────────────────────────
       - name: Resumo final
+        if: success()
         run: |
           echo "## Bootstrap Concluido" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Etapa | Resultado |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|-----------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Branch autopilot-state | Criado |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| release-autopilot.yml no agent | Criado |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Secret RELEASE_TOKEN no agent | Configurado |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| health-check.yml no autopilot | Criado |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch autopilot-state | OK |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| release-autopilot.yml no agent | OK |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Secret RELEASE_TOKEN no agent | OK |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| health-check.yml no autopilot | OK |" >> "$GITHUB_STEP_SUMMARY"
