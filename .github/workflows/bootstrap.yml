@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   bootstrap:
-    if: github.event.inputs.confirm == 'EXECUTAR'
+    if: ${{ github.event.inputs.confirm == 'EXECUTAR' }}
     runs-on: ubuntu-latest
 
     steps:
