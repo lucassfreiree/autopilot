@@ -51,31 +51,10 @@ jobs:
             BASE_SHA=$(gh api "repos/lucassfreiree/autopilot/git/refs/heads/main" \
               --jq '.object.sha')
             echo "Base SHA: $BASE_SHA"
+            printf '%s\n' '{"base_tree":"","tree":[{"path":"state/controller-state.json","mode":"100644","type":"blob","content":"{\"schemaVersion\":1,\"tenantId\":\"bbvinet\",\"component\":\"psc-sre-automacao-controller\",\"initialized\":true,\"lastReleasedSha\":\"\",\"lastTag\":\"\",\"updatedAt\":\"\",\"runId\":\"\",\"note\":\"Controller via GitLab interno\"}"},{"path":"state/agent-state.json","mode":"100644","type":"blob","content":"{\"schemaVersion\":1,\"tenantId\":\"bbvinet\",\"component\":\"psc-sre-automacao-agent\",\"initialized\":true,\"lastReleasedSha\":\"\",\"lastTag\":\"\",\"updatedAt\":\"\",\"runId\":\"\"}"},{"path":"README.md","mode":"100644","type":"blob","content":"# autopilot-state\n\nBranch de estado persistente do BBDevOpsAutopilot.\n**Nao edite manualmente.**"}]}' > /tmp/tree.json
             TREE=$(gh api "repos/lucassfreiree/autopilot/git/trees" \
               --method POST \
-              --input <(jq -n '{
-                "base_tree": "",
-                "tree": [
-                  {
-                    "path": "state/controller-state.json",
-                    "mode": "100644",
-                    "type": "blob",
-                    "content": "{\"schemaVersion\":1,\"tenantId\":\"bbvinet\",\"component\":\"psc-sre-automacao-controller\",\"initialized\":true,\"lastReleasedSha\":\"\",\"lastTag\":\"\",\"updatedAt\":\"\",\"runId\":\"\",\"note\":\"Controller via GitLab interno - promocao manual por ora\"}"
-                  },
-                  {
-                    "path": "state/agent-state.json",
-                    "mode": "100644",
-                    "type": "blob",
-                    "content": "{\"schemaVersion\":1,\"tenantId\":\"bbvinet\",\"component\":\"psc-sre-automacao-agent\",\"initialized\":true,\"lastReleasedSha\":\"\",\"lastTag\":\"\",\"updatedAt\":\"\",\"runId\":\"\"}"
-                  },
-                  {
-                    "path": "README.md",
-                    "mode": "100644",
-                    "type": "blob",
-                    "content": "# autopilot-state\n\nBranch de estado persistente do BBDevOpsAutopilot - tenant bbvinet.\n**Nao edite manualmente.**"
-                  }
-                ]
-              }') \
+              --input /tmp/tree.json \
               --jq '.sha')
             echo "Tree SHA: $TREE"
             COMMIT=$(gh api "repos/lucassfreiree/autopilot/git/commits" \
