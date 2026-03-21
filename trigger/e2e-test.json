@@ -1,7 +1,6 @@
 {
   "workspace_id": "ws-default",
-  "component": "agent",
   "dry_run": "false",
-  "run": 2,
-  "note": "v2: read CI from main HEAD, no test branch push, cleanup leftover branches"
+  "run": 3,
+  "note": "v3: push to main, wait CI, promote CAP"
 }
