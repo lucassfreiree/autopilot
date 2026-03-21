@@ -2,16 +2,16 @@
 # REPO:  lucassfreiree/autopilot
 # PATH:  .github/workflows/bootstrap.yml
 #
-# EXECUTA UMA ÚNICA VEZ e configura tudo automaticamente:
+# EXECUTA UMA UNICA VEZ e configura tudo automaticamente:
 #   1. Cria branch autopilot-state com JSONs de estado
 #   2. Faz push do release-autopilot.yml no repo do agent (bbvinet)
 #   3. Configura o secret RELEASE_TOKEN no repo do agent (bbvinet)
 #   4. Faz push do health-check.yml neste repo
 #
-# PRÉ-REQUISITOS (únicos passos manuais):
+# PRE-REQUISITOS (unicos passos manuais):
 #   Secrets neste repo (lucassfreiree/autopilot):
-#     RELEASE_TOKEN  → token pessoal (ghp_LXUEiELBs...)
-#     BBVINET_TOKEN  → token bbvinet  (ghp_BqQYNYIx...)
+#     RELEASE_TOKEN  - token pessoal
+#     BBVINET_TOKEN  - token bbvinet
 # ===========================================================
 name: "Bootstrap: Setup Completo"
 
@@ -32,312 +32,78 @@ jobs:
 
     steps:
 
+      # ── Checkout do repo para ler os arquivos de workflow ──
+      - name: Checkout
+        uses: actions/checkout@v4
+
       # ── ETAPA 1: branch autopilot-state ────────────────────
-      - name: "1/4 · Criar branch autopilot-state"
+      - name: "1/4 - Criar branch autopilot-state"
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          echo "Verificando se branch já existe..."
+          echo "Verificando se branch ja existe..."
           if git ls-remote --exit-code --heads \
             "https://x-access-token:${GH_TOKEN}@github.com/lucassfreiree/autopilot.git" \
             autopilot-state 2>/dev/null; then
-            echo "Branch autopilot-state já existe. Pulando."
+            echo "Branch autopilot-state ja existe. Pulando."
           else
             echo "Criando branch autopilot-state..."
-
-            # Usa a API do GitHub para criar o branch com os arquivos de estado
-            # de uma vez só, sem precisar de git clone
-
-            # Cria state/controller-state.json
-            CTRL=$(echo '{
-              "schemaVersion": 1,
-              "tenantId": "bbvinet",
-              "component": "psc-sre-automacao-controller",
-              "initialized": true,
-              "lastReleasedSha": "",
-              "lastTag": "",
-              "updatedAt": "",
-              "runId": "",
-              "note": "Controller via GitLab interno — promoção manual por ora"
-            }' | base64 -w0)
-
-            # Cria state/agent-state.json
-            AGENT=$(echo '{
-              "schemaVersion": 1,
-              "tenantId": "bbvinet",
-              "component": "psc-sre-automacao-agent",
-              "initialized": true,
-              "lastReleasedSha": "",
-              "lastTag": "",
-              "updatedAt": "",
-              "runId": ""
-            }' | base64 -w0)
-
-            # README
-            README=$(echo '# autopilot-state
-
-Branch de estado persistente do BBDevOpsAutopilot — tenant bbvinet.
-**Não edite manualmente.**
-
-## Arquivos
-- `state/controller-state.json` — último release do controller
-- `state/agent-state.json`       — último release do agent (PSC SRE)
-' | base64 -w0)
-
-            # Busca SHA do main para usar como base do novo branch
             BASE_SHA=$(gh api "repos/lucassfreiree/autopilot/git/refs/heads/main" \
               --jq '.object.sha')
-
             echo "Base SHA: $BASE_SHA"
-
-            # Cria uma tree com os 3 arquivos
             TREE=$(gh api "repos/lucassfreiree/autopilot/git/trees" \
               --method POST \
-              -f "base_tree=" \
-              -f "tree[][path]=state/controller-state.json" \
-              -f "tree[][mode]=100644" \
-              -f "tree[][type]=blob" \
-              -f "tree[][content]=$(echo '{
-              "schemaVersion": 1,
-              "tenantId": "bbvinet",
-              "component": "psc-sre-automacao-controller",
-              "initialized": true,
-              "lastReleasedSha": "",
-              "lastTag": "",
-              "updatedAt": "",
-              "runId": "",
-              "note": "Controller via GitLab interno - promocao manual por ora"
-            }')" \
-              -f "tree[][path]=state/agent-state.json" \
-              -f "tree[][mode]=100644" \
-              -f "tree[][type]=blob" \
-              -f "tree[][content]=$(echo '{
-              "schemaVersion": 1,
-              "tenantId": "bbvinet",
-              "component": "psc-sre-automacao-agent",
-              "initialized": true,
-              "lastReleasedSha": "",
-              "lastTag": "",
-              "updatedAt": "",
-              "runId": ""
-            }')" \
-              -f "tree[][path]=README.md" \
-              -f "tree[][mode]=100644" \
-              -f "tree[][type]=blob" \
-              -f "tree[][content]=# autopilot-state\n\nBranch de estado persistente do BBDevOpsAutopilot.\n**Nao edite manualmente.**" \
+              --input <(jq -n '{
+                "base_tree": "",
+                "tree": [
+                  {
+                    "path": "state/controller-state.json",
+                    "mode": "100644",
+                    "type": "blob",
+                    "content": "{\"schemaVersion\":1,\"tenantId\":\"bbvinet\",\"component\":\"psc-sre-automacao-controller\",\"initialized\":true,\"lastReleasedSha\":\"\",\"lastTag\":\"\",\"updatedAt\":\"\",\"runId\":\"\",\"note\":\"Controller via GitLab interno - promocao manual por ora\"}"
+                  },
+                  {
+                    "path": "state/agent-state.json",
+                    "mode": "100644",
+                    "type": "blob",
+                    "content": "{\"schemaVersion\":1,\"tenantId\":\"bbvinet\",\"component\":\"psc-sre-automacao-agent\",\"initialized\":true,\"lastReleasedSha\":\"\",\"lastTag\":\"\",\"updatedAt\":\"\",\"runId\":\"\"}"
+                  },
+                  {
+                    "path": "README.md",
+                    "mode": "100644",
+                    "type": "blob",
+                    "content": "# autopilot-state\n\nBranch de estado persistente do BBDevOpsAutopilot - tenant bbvinet.\n**Nao edite manualmente.**"
+                  }
+                ]
+              }') \
               --jq '.sha')
-
             echo "Tree SHA: $TREE"
-
-            # Cria o commit
             COMMIT=$(gh api "repos/lucassfreiree/autopilot/git/commits" \
               --method POST \
               -f "message=chore: init autopilot-state para bbvinet [skip ci]" \
               -f "tree=$TREE" \
               --jq '.sha')
-
             echo "Commit SHA: $COMMIT"
-
-            # Cria o branch apontando para esse commit
             gh api "repos/lucassfreiree/autopilot/git/refs" \
               --method POST \
               -f "ref=refs/heads/autopilot-state" \
               -f "sha=$COMMIT"
-
             echo "Branch autopilot-state criado com sucesso."
           fi
 
       # ── ETAPA 2: push release-autopilot.yml no agent ───────
-      - name: "2/4 · Push release-autopilot.yml → bbvinet/psc-sre-automacao-agent"
+      - name: "2/4 - Push release-autopilot.yml no repo do agent"
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
           TARGET_REPO="bbvinet/psc-sre-automacao-agent"
           TARGET_PATH=".github/workflows/release-autopilot.yml"
-
-          # Conteúdo do workflow do agent
-          CONTENT=$(cat << 'WORKFLOW'
-name: "Autopilot: Agent Release"
-
-on:
-  workflow_run:
-    workflows:
-      - "Esteira de Build NPM"
-    types: [completed]
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      force:
-        description: 'Forcar release mesmo sem CI novo? (true/false)'
-        required: false
-        default: 'false'
-
-concurrency:
-  group: autopilot-agent-release
-  cancel-in-progress: false
-
-jobs:
-  guard:
-    name: CI passou?
-    runs-on: ubuntu-latest
-    outputs:
-      proceed: ${{ steps.chk.outputs.proceed }}
-      sha:     ${{ steps.chk.outputs.sha }}
-    steps:
-      - id: chk
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            SHA=$(git ls-remote \
-              "https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/bbvinet/psc-sre-automacao-agent.git" \
-              refs/heads/main | cut -f1)
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-            echo "sha=$SHA"     >> "$GITHUB_OUTPUT"
-          else
-            CONCLUSION="${{ github.event.workflow_run.conclusion }}"
-            SHA="${{ github.event.workflow_run.head_sha }}"
-            echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-            if [ "$CONCLUSION" = "success" ]; then
-              echo "proceed=true"  >> "$GITHUB_OUTPUT"
-            else
-              echo "proceed=false" >> "$GITHUB_OUTPUT"
-              echo "::notice ::CI nao passou ($CONCLUSION). Release ignorado."
-            fi
-          fi
-
-  release:
-    name: Promote CAP + persist state
-    needs: guard
-    if: needs.guard.outputs.proceed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ler estado persistido
-        id: state
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          WS="lucassfreiree/autopilot"
-          FILE="state/agent-state.json"
-          BRANCH="autopilot-state"
-          CONTENT=$(gh api "repos/$WS/contents/$FILE?ref=$BRANCH" \
-            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
-          FILE_SHA=$(gh api "repos/$WS/contents/$FILE?ref=$BRANCH" \
-            --jq '.sha' 2>/dev/null || echo "")
-          LAST_SHA=$(echo "$CONTENT" | jq -r '.lastReleasedSha // ""')
-          CURRENT_SHA="${{ needs.guard.outputs.sha }}"
-          echo "last_sha=$LAST_SHA"            >> "$GITHUB_OUTPUT"
-          echo "current_sha=$CURRENT_SHA"      >> "$GITHUB_OUTPUT"
-          echo "short_sha=${CURRENT_SHA:0:7}"  >> "$GITHUB_OUTPUT"
-          echo "file_sha=$FILE_SHA"            >> "$GITHUB_OUTPUT"
-          if [ "$LAST_SHA" = "$CURRENT_SHA" ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
-            echo "skip=true"  >> "$GITHUB_OUTPUT"
-            echo "::notice ::SHA ja promovido. Use force=true para forcar."
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Extrair versao
-        id: ver
-        if: steps.state.outputs.skip == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          SHA="${{ steps.state.outputs.current_sha }}"
-          VERSION=$(gh api "repos/bbvinet/psc-sre-automacao-agent/contents/package.json?ref=$SHA" \
-            --jq '.content' | base64 -d | jq -r '.version')
-          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
-            echo "::error ::Nao foi possivel extrair version do package.json"
-            exit 1
-          fi
-          TAG="${VERSION}-${{ steps.state.outputs.short_sha }}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
-          echo "Tag nova: $TAG"
-
-      - name: Checkout CAP repo
-        if: steps.state.outputs.skip == 'false'
-        uses: actions/checkout@v4
-        with:
-          repository: bbvinet/psc_releases_cap_sre-aut-agent
-          ref: main
-          token: ${{ secrets.RELEASE_TOKEN }}
-          path: cap
-
-      - name: Atualizar image tag no CAP values.yaml
-        if: steps.state.outputs.skip == 'false'
-        id: update
-        working-directory: cap
-        run: |
-          TAG="${{ steps.ver.outputs.tag }}"
-          VALUES_FILE="releases/openshift/hml/deploy/values.yaml"
-          if [ ! -f "$VALUES_FILE" ]; then
-            echo "::error ::Arquivo nao encontrado: $VALUES_FILE"
-            exit 1
-          fi
-          echo "--- antes ---"
-          grep -n "psc-sre-automacao-agent:" "$VALUES_FILE"
-          sed -i "s|^\(\s*image: docker\.binarios\.intranet\.bb\.com\.br/bb/psc/psc-sre-automacao-agent:\).*|\1${TAG}|" "$VALUES_FILE"
-          echo "--- depois ---"
-          grep -n "psc-sre-automacao-agent:" "$VALUES_FILE"
-          git config user.name  "autopilot[bot]"
-          git config user.email "autopilot[bot]@users.noreply.github.com"
-          git add "$VALUES_FILE"
-          if git diff --staged --quiet; then
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
-            echo "Tag ja estava atual. Sem alteracao."
-          else
-            git commit -m "chore(release): sre-aut-agent -> ${TAG} [autopilot]"
-            git push origin main
-            echo "pushed=true" >> "$GITHUB_OUTPUT"
-            echo "CAP atualizado: $TAG"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-
-      - name: Salvar estado
-        if: steps.state.outputs.skip == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          WS="lucassfreiree/autopilot"
-          FILE="state/agent-state.json"
-          BRANCH="autopilot-state"
-          FILE_SHA="${{ steps.state.outputs.file_sha }}"
-          NEW_STATE=$(jq -n \
-            --arg sha "${{ steps.state.outputs.current_sha }}" \
-            --arg tag "${{ steps.ver.outputs.tag }}" \
-            --arg ts  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg run "${{ github.run_id }}" \
-            '{schemaVersion:1,tenantId:"bbvinet",component:"sre-aut-agent",lastReleasedSha:$sha,lastTag:$tag,updatedAt:$ts,runId:$run}')
-          ENCODED=$(echo "$NEW_STATE" | base64 -w0)
-          ARGS=(-X PUT -f "branch=$BRANCH"
-            -f "message=chore: agent state -> ${{ steps.ver.outputs.tag }} [skip ci]"
-            -f "content=$ENCODED")
-          [ -n "$FILE_SHA" ] && ARGS+=(-f "sha=$FILE_SHA")
-          gh api "repos/$WS/contents/$FILE" "${ARGS[@]}"
-          echo "Estado persistido."
-
-      - name: Resumo
-        if: always()
-        run: |
-          echo "## Autopilot: Agent Release" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ steps.state.outputs.skip }}" = "true" ]; then
-            echo "Ja promovido anteriormente." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "| Tag | ${{ steps.ver.outputs.tag }} |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| CAP file | releases/openshift/hml/deploy/values.yaml |" >> "$GITHUB_STEP_SUMMARY"
-          fi
-WORKFLOW
-)
-
-          # Verifica se o arquivo já existe (para pegar o sha e fazer update)
+          CONTENT=$(cat .github/workflows/release-autopilot.yml)
           EXISTING=$(gh api "repos/$TARGET_REPO/contents/$TARGET_PATH" \
             --jq '.sha' 2>/dev/null || echo "")
-
           ENCODED=$(echo "$CONTENT" | base64 -w0)
-
           if [ -n "$EXISTING" ]; then
-            echo "Arquivo já existe. Atualizando..."
+            echo "Arquivo ja existe. Atualizando..."
             gh api "repos/$TARGET_REPO/contents/$TARGET_PATH" \
               --method PUT \
               -f "message=chore: update release-autopilot workflow [autopilot bootstrap]" \
@@ -350,130 +116,30 @@ WORKFLOW
               -f "message=chore: add release-autopilot workflow [autopilot bootstrap]" \
               -f "content=$ENCODED"
           fi
-
           echo "release-autopilot.yml criado em $TARGET_REPO"
 
       # ── ETAPA 3: configurar secret no repo do agent ─────────
-      - name: "3/4 · Configurar secret RELEASE_TOKEN no repo do agent"
+      - name: "3/4 - Configurar secret RELEASE_TOKEN no repo do agent"
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
           SECRET_VALUE: ${{ secrets.BBVINET_TOKEN }}
         run: |
           TARGET_REPO="bbvinet/psc-sre-automacao-agent"
-
-          # gh secret set usa a API do GitHub para criptografar e salvar o secret
           echo "$SECRET_VALUE" | gh secret set RELEASE_TOKEN \
-            --repo "$TARGET_REPO" \
-            --body "$SECRET_VALUE"
-
+            --repo "$TARGET_REPO"
           echo "Secret RELEASE_TOKEN configurado em $TARGET_REPO"
 
       # ── ETAPA 4: push health-check.yml neste repo ───────────
-      - name: "4/4 · Push health-check.yml → lucassfreiree/autopilot"
+      - name: "4/4 - Push health-check.yml neste repo"
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           TARGET_REPO="lucassfreiree/autopilot"
           TARGET_PATH=".github/workflows/health-check.yml"
-
-          CONTENT=$(cat << 'HCWORKFLOW'
-name: "Autopilot: Health Check"
-
-on:
-  schedule:
-    - cron: '10 * * * *'
-  workflow_dispatch:
-
-env:
-  STUCK_MIN: 120
-  STATE_BRANCH: autopilot-state
-  WS: lucassfreiree/autopilot
-  AGENT_REPO: bbvinet/psc-sre-automacao-agent
-
-jobs:
-  health:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ler estado do agent
-        id: agent
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          STATE=$(gh api "repos/$WS/contents/state/agent-state.json?ref=$STATE_BRANCH" \
-            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
-          TAG=$(echo "$STATE" | jq -r '.lastTag // ""')
-          SHA=$(echo "$STATE" | jq -r '.lastReleasedSha // ""')
-          TS=$(echo "$STATE"  | jq -r '.updatedAt // ""')
-          echo "tag=$TAG"       >> "$GITHUB_OUTPUT"
-          echo "sha=${SHA:0:8}" >> "$GITHUB_OUTPUT"
-          echo "full_sha=$SHA"  >> "$GITHUB_OUTPUT"
-          if [ -n "$TS" ] && [ "$TS" != "null" ]; then
-            NOW_S=$(date +%s); LAST_S=$(date -d "$TS" +%s 2>/dev/null || echo "$NOW_S")
-            echo "age_h=$(( (NOW_S - LAST_S) / 3600 ))" >> "$GITHUB_OUTPUT"
-          else
-            echo "age_h=-1" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Detectar runs travados
-        id: stuck
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          NOW_S=$(date +%s); THRESH=$(( STUCK_MIN * 60 )); COUNT=0; DETAILS=""
-          while IFS='|' read -r ID NAME CREATED URL; do
-            [ -z "$ID" ] && continue
-            CREATED_S=$(date -d "$CREATED" +%s 2>/dev/null || echo "$NOW_S")
-            AGE=$(( NOW_S - CREATED_S ))
-            if [ "$AGE" -gt "$THRESH" ]; then
-              COUNT=$(( COUNT + 1 ))
-              DETAILS="$DETAILS\n- Run #$ID ($NAME) ha $(( AGE / 60 ))min"
-            fi
-          done < <(gh api "repos/$AGENT_REPO/actions/runs?status=in_progress&per_page=20" \
-            --jq '.workflow_runs[] | "\(.id)|\(.name)|\(.created_at)|\(.html_url)"' 2>/dev/null)
-          echo "count=$COUNT"     >> "$GITHUB_OUTPUT"
-          echo "details=$DETAILS" >> "$GITHUB_OUTPUT"
-
-      - name: Detectar drift
-        id: drift
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          LAST_SHA="${{ steps.agent.outputs.full_sha }}"
-          HEAD_SHA=$(gh api "repos/$AGENT_REPO/commits/main" --jq '.sha' 2>/dev/null || echo "")
-          if [ -z "$HEAD_SHA" ] || [ -z "$LAST_SHA" ]; then
-            echo "status=unknown" >> "$GITHUB_OUTPUT"
-          elif [ "$HEAD_SHA" = "$LAST_SHA" ]; then
-            echo "status=none"    >> "$GITHUB_OUTPUT"
-          else
-            AHEAD=$(gh api "repos/$AGENT_REPO/compare/$LAST_SHA...$HEAD_SHA" \
-              --jq '.ahead_by' 2>/dev/null || echo "?")
-            echo "status=detected" >> "$GITHUB_OUTPUT"
-            echo "ahead=$AHEAD"    >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Resumo
-        run: |
-          STUCK="${{ steps.stuck.outputs.count }}"
-          AGE="${{ steps.agent.outputs.age_h }}"
-          [ "$STUCK" -gt 0 ] 2>/dev/null && ICON="X" || ICON="OK"
-          [ "$AGE" = "-1" ] && AGE_STR="nunca" || AGE_STR="${AGE}h atras"
-          echo "## Health Check bbvinet/agent $(date -u '+%Y-%m-%d %H:%M UTC')" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Tag | ${{ steps.agent.outputs.tag }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| SHA | ${{ steps.agent.outputs.sha }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Atualizado | $AGE_STR |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Drift | ${{ steps.drift.outputs.status }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Runs travados | $STUCK |" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Falhar se critico
-        if: steps.stuck.outputs.count > 0
-        run: exit 1
-HCWORKFLOW
-)
-
+          CONTENT=$(cat .github/workflows/health-check.yml)
           EXISTING=$(gh api "repos/$TARGET_REPO/contents/$TARGET_PATH" \
             --jq '.sha' 2>/dev/null || echo "")
           ENCODED=$(echo "$CONTENT" | base64 -w0)
-
           if [ -n "$EXISTING" ]; then
             gh api "repos/$TARGET_REPO/contents/$TARGET_PATH" \
               --method PUT \
@@ -486,7 +152,6 @@ HCWORKFLOW
               -f "message=chore: add health-check workflow [autopilot bootstrap]" \
               -f "content=$ENCODED"
           fi
-
           echo "health-check.yml criado em $TARGET_REPO"
 
       # ── RESUMO FINAL ────────────────────────────────────────
@@ -500,7 +165,3 @@ HCWORKFLOW
           echo "| release-autopilot.yml no agent | Criado |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Secret RELEASE_TOKEN no agent | Configurado |" >> "$GITHUB_STEP_SUMMARY"
           echo "| health-check.yml no autopilot | Criado |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Proximo passo — teste fim a fim:" >> "$GITHUB_STEP_SUMMARY"
-          echo "Acesse https://github.com/bbvinet/psc-sre-automacao-agent/actions" >> "$GITHUB_STEP_SUMMARY"
-          echo "Clique em **Autopilot: Agent Release** → **Run workflow**" >> "$GITHUB_STEP_SUMMARY"
