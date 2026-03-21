@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autopilot Control Plane</title>
+  <style>
+    :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --yellow: #d29922; --red: #f85149; --blue: #58a6ff; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    header h1 { font-size: 20px; font-weight: 600; }
+    .auth-section { display: flex; gap: 8px; align-items: center; }
+    .auth-section input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 14px; width: 280px; }
+    .auth-section button, .btn { background: var(--blue); color: #fff; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn:hover { opacity: 0.9; }
+    .btn-danger { background: var(--red); }
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+    .tab { padding: 8px 16px; border-radius: 6px 6px 0 0; cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-bottom: none; color: var(--muted); }
+    .tab.active { background: var(--bg); color: var(--text); border-bottom: 1px solid var(--bg); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .card h3 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+    .badge-healthy, .badge-pass { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge-degraded, .badge-warn { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .badge-critical, .badge-fail { background: rgba(248,81,73,0.15); color: var(--red); }
+    .badge-unknown, .badge-skip { background: rgba(139,148,158,0.15); color: var(--muted); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot-green { background: var(--green); }
+    .dot-yellow { background: var(--yellow); }
+    .dot-red { background: var(--red); }
+    .dot-gray { background: var(--muted); }
+    .empty { color: var(--muted); text-align: center; padding: 40px; }
+    .warning-box { background: rgba(210,153,34,0.1); border: 1px solid var(--yellow); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; }
+    .action-target { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    #loading { text-align: center; padding: 60px; color: var(--muted); }
+    footer { text-align: center; padding: 24px 0; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Autopilot Control Plane</h1>
+      <div class="auth-section">
+        <input type="password" id="tokenInput" placeholder="GitHub PAT (sessionStorage only)">
+        <button class="btn" onclick="connect()">Connect</button>
+        <button class="btn btn-danger" onclick="disconnect()" style="display:none" id="disconnectBtn">Disconnect</button>
+      </div>
+    </header>
+
+    <div class="warning-box" id="securityNote">
+      Token is stored in <strong>sessionStorage</strong> only (cleared on tab close). Never use localStorage.
+      For editing, use <a href="https://github.dev/lucassfreiree/autopilot" style="color:var(--blue)">github.dev</a>.
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('product')">Product</div>
+      <div class="tab" onclick="showTab('corporate')">Corporate</div>
+      <div class="tab" onclick="showTab('workspace')">Active Workspace</div>
+    </div>
+
+    <div id="loading" style="display:none">Loading state...</div>
+
+    <!-- PRODUCT TAB -->
+    <div class="panel active" id="panel-product">
+      <div class="grid">
+        <div class="card">
+          <h3>Product Info</h3>
+          <table>
+            <tr><th>Repo</th><td><a href="https://github.com/lucassfreiree/autopilot" style="color:var(--blue)">lucassfreiree/autopilot</a></td></tr>
+            <tr><th>State Branch</th><td>autopilot-state</td></tr>
+            <tr><th>Backup Branch</th><td>autopilot-backups</td></tr>
+            <tr><th>Panel</th><td>GitHub Pages</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Governance</h3>
+          <table>
+            <tr><th>Allowed</th><td>State, audit, schemas, contracts, docs, panel</td></tr>
+            <tr><th>Forbidden</th><td>Corporate code, secrets, kubeconfig, internal URLs</td></tr>
+            <tr><th>Agents</th><td>Claude, ChatGPT, Codex</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Workspaces</h3>
+          <div id="workspaceList" class="empty">Connect to load workspaces</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CORPORATE TAB -->
+    <div class="panel" id="panel-corporate">
+      <div class="grid">
+        <div class="card">
+          <h3>Corporate Repos</h3>
+          <div id="corporateRepos" class="empty">Connect and select a workspace to see corporate repos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKSPACE TAB -->
+    <div class="panel" id="panel-workspace">
+      <div style="margin-bottom:16px">
+        <label style="color:var(--muted);font-size:14px">Workspace:</label>
+        <select id="wsSelect" onchange="loadWorkspace()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;font-size:14px">
+          <option value="">Select...</option>
+        </select>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3><span class="status-dot dot-gray" id="healthDot"></span> Health</h3>
+          <div id="healthContent" class="empty">Select workspace</div>
+        </div>
+        <div class="card">
+          <h3>Controller Release</h3>
+          <div id="controllerContent" class="empty">Select workspace</div>
+        </div>
+        <div class="card">
+          <h3>Agent Release</h3>
+          <div id="agentContent" class="empty">Select workspace</div>
+        </div>
+        <div class="card">
+          <h3>Active Locks</h3>
+          <div id="locksContent" class="empty">Select workspace</div>
+        </div>
+        <div class="card">
+          <h3>Recent Handoffs</h3>
+          <div id="handoffsContent" class="empty">Select workspace</div>
+        </div>
+        <div class="card">
+          <h3>Improvements</h3>
+          <div id="improvementsContent" class="empty">Select workspace</div>
+        </div>
+        <div class="card" style="grid-column: 1 / -1">
+          <h3>Recent Audit</h3>
+          <div id="auditContent" class="empty">Select workspace</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Autopilot Control Plane &mdash; 100% web-only, GitHub-centric, zero local dependencies
+    </footer>
+  </div>
+
+  <script>
+    const REPO = 'lucassfreiree/autopilot';
+    const STATE_BRANCH = 'autopilot-state';
+    const API = 'https://api.github.com';
+
+    function getToken() { return sessionStorage.getItem('autopilot_token'); }
+    function setToken(t) { sessionStorage.setItem('autopilot_token', t); }
+    function clearToken() { sessionStorage.removeItem('autopilot_token'); }
+
+    async function ghGet(path) {
+      const token = getToken();
+      if (!token) return null;
+      const r = await fetch(`${API}/${path}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+      });
+      if (!r.ok) return null;
+      return r.json();
+    }
+
+    async function ghContent(filePath) {
+      const data = await ghGet(`repos/${REPO}/contents/${filePath}?ref=${STATE_BRANCH}`);
+      if (!data || !data.content) return null;
+      return JSON.parse(atob(data.content));
+    }
+
+    async function connect() {
+      const token = document.getElementById('tokenInput').value.trim();
+      if (!token) return;
+      setToken(token);
+      document.getElementById('tokenInput').value = '';
+      document.getElementById('disconnectBtn').style.display = '';
+      await loadWorkspaces();
+    }
+
+    function disconnect() {
+      clearToken();
+      document.getElementById('disconnectBtn').style.display = 'none';
+      document.getElementById('workspaceList').innerHTML = '<div class="empty">Connect to load workspaces</div>';
+      document.getElementById('wsSelect').innerHTML = '<option value="">Select...</option>';
+    }
+
+    function showTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('panel-' + name).classList.add('active');
+    }
+
+    async function loadWorkspaces() {
+      const data = await ghGet(`repos/${REPO}/contents/state/workspaces?ref=${STATE_BRANCH}`);
+      const list = document.getElementById('workspaceList');
+      const sel = document.getElementById('wsSelect');
+      sel.innerHTML = '<option value="">Select...</option>';
+      if (!data || !Array.isArray(data)) {
+        list.innerHTML = '<div class="empty">No workspaces found</div>';
+        return;
+      }
+      const dirs = data.filter(d => d.type === 'dir');
+      let html = '<table><tr><th>Workspace ID</th><th>Actions</th></tr>';
+      dirs.forEach(d => {
+        html += `<tr><td>${d.name}</td><td><button class="btn" onclick="selectWorkspace('${d.name}')">View</button></td></tr>`;
+        sel.innerHTML += `<option value="${d.name}">${d.name}</option>`;
+      });
+      html += '</table>';
+      list.innerHTML = html;
+    }
+
+    function selectWorkspace(wsId) {
+      document.getElementById('wsSelect').value = wsId;
+      document.querySelectorAll('.tab')[2].click();
+      loadWorkspace();
+    }
+
+    function badge(status) {
+      return `<span class="badge badge-${status}">${status}</span>`;
+    }
+
+    function dotColor(status) {
+      if (status === 'healthy' || status === 'pass') return 'dot-green';
+      if (status === 'degraded' || status === 'warn') return 'dot-yellow';
+      if (status === 'critical' || status === 'fail') return 'dot-red';
+      return 'dot-gray';
+    }
+
+    async function loadWorkspace() {
+      const wsId = document.getElementById('wsSelect').value;
+      if (!wsId) return;
+      const wsPath = `state/workspaces/${wsId}`;
+
+      // Health
+      const health = await ghContent(`${wsPath}/health.json`);
+      const healthEl = document.getElementById('healthContent');
+      const healthDot = document.getElementById('healthDot');
+      if (health) {
+        healthDot.className = `status-dot ${dotColor(health.overall)}`;
+        let html = `<p>${badge(health.overall)} &mdash; ${health.checkedAt || 'never'}</p>`;
+        if (health.checks) {
+          html += '<table><tr><th>Check</th><th>Status</th><th>Message</th></tr>';
+          Object.entries(health.checks).forEach(([k, v]) => {
+            html += `<tr><td>${k}</td><td>${badge(v.status)}</td><td>${v.message || ''}</td></tr>`;
+          });
+          html += '</table>';
+        }
+        healthEl.innerHTML = html;
+      } else {
+        healthEl.innerHTML = '<div class="empty">No health data</div>';
+      }
+
+      // Controller
+      const ctrl = await ghContent(`${wsPath}/controller-release-state.json`);
+      const ctrlEl = document.getElementById('controllerContent');
+      if (ctrl && ctrl.lastTag) {
+        ctrlEl.innerHTML = `<table>
+          <tr><th>Tag</th><td>${ctrl.lastTag}</td></tr>
+          <tr><th>SHA</th><td>${(ctrl.lastReleasedSha||'').substring(0,7)}</td></tr>
+          <tr><th>Updated</th><td>${ctrl.updatedAt}</td></tr>
+          <tr><th>Status</th><td>${badge(ctrl.status)}</td></tr>
+        </table>`;
+      } else { ctrlEl.innerHTML = '<div class="empty">Never released</div>'; }
+
+      // Agent
+      const agent = await ghContent(`${wsPath}/agent-release-state.json`);
+      const agentEl = document.getElementById('agentContent');
+      if (agent && agent.lastTag) {
+        agentEl.innerHTML = `<table>
+          <tr><th>Tag</th><td>${agent.lastTag}</td></tr>
+          <tr><th>SHA</th><td>${(agent.lastReleasedSha||'').substring(0,7)}</td></tr>
+          <tr><th>Updated</th><td>${agent.updatedAt}</td></tr>
+          <tr><th>Status</th><td>${badge(agent.status)}</td></tr>
+        </table>`;
+      } else { agentEl.innerHTML = '<div class="empty">Never released</div>'; }
+
+      // Workspace config for corporate tab
+      const wsConfig = await ghContent(`${wsPath}/workspace.json`);
+      if (wsConfig) {
+        const corpEl = document.getElementById('corporateRepos');
+        let html = '<table><tr><th>Component</th><th>Source</th><th>Deploy</th><th>CAP</th></tr>';
+        html += `<tr><td>Controller</td><td>${wsConfig.controller?.sourceRepo || '-'}</td><td>${wsConfig.controller?.deployRepo || '-'}</td><td>-</td></tr>`;
+        html += `<tr><td>Agent</td><td>${wsConfig.agent?.sourceRepo || '-'}</td><td>${wsConfig.agent?.deployRepo || '-'}</td><td>${wsConfig.agent?.capRepo || '-'}</td></tr>`;
+        html += '</table>';
+        html += `<div class="action-target" style="margin-top:12px">Workspace: ${wsId} | Promotion: ${wsConfig.settings?.promotionTarget || 'both'}</div>`;
+        corpEl.innerHTML = html;
+      }
+
+      // Locks
+      const locks = await ghGet(`repos/${REPO}/contents/${wsPath}/locks?ref=${STATE_BRANCH}`);
+      const locksEl = document.getElementById('locksContent');
+      if (locks && Array.isArray(locks) && locks.length > 0) {
+        let html = '<table><tr><th>Lock</th><th>Acquired</th><th>Status</th></tr>';
+        for (const f of locks.filter(x => x.name.endsWith('.json'))) {
+          const lc = await ghContent(`${wsPath}/locks/${f.name}`);
+          if (lc) html += `<tr><td>${lc.operation}</td><td>${lc.acquiredAt}</td><td>${lc.released ? badge('pass') : badge('warn')}</td></tr>`;
+        }
+        html += '</table>';
+        locksEl.innerHTML = html;
+      } else { locksEl.innerHTML = '<div class="empty">No active locks</div>'; }
+
+      // Handoffs
+      const handoffs = await ghGet(`repos/${REPO}/contents/${wsPath}/handoffs?ref=${STATE_BRANCH}`);
+      const handoffsEl = document.getElementById('handoffsContent');
+      if (handoffs && Array.isArray(handoffs) && handoffs.length > 0) {
+        let html = '<table><tr><th>From</th><th>To</th><th>Status</th><th>Created</th></tr>';
+        for (const f of handoffs.filter(x => x.name.endsWith('.json')).slice(-5)) {
+          const h = await ghContent(`${wsPath}/handoffs/${f.name}`);
+          if (h) html += `<tr><td>${h.fromAgent}</td><td>${h.toAgent}</td><td>${badge(h.status)}</td><td>${h.createdAt}</td></tr>`;
+        }
+        html += '</table>';
+        handoffsEl.innerHTML = html;
+      } else { handoffsEl.innerHTML = '<div class="empty">No handoffs</div>'; }
+
+      // Improvements
+      const imps = await ghGet(`repos/${REPO}/contents/${wsPath}/improvements?ref=${STATE_BRANCH}`);
+      const impsEl = document.getElementById('improvementsContent');
+      if (imps && Array.isArray(imps) && imps.length > 0) {
+        let html = '<table><tr><th>Category</th><th>Status</th><th>Description</th></tr>';
+        for (const f of imps.filter(x => x.name.endsWith('.json')).slice(-5)) {
+          const i = await ghContent(`${wsPath}/improvements/${f.name}`);
+          if (i) html += `<tr><td>${i.category}</td><td>${badge(i.status)}</td><td>${i.description}</td></tr>`;
+        }
+        html += '</table>';
+        impsEl.innerHTML = html;
+      } else { impsEl.innerHTML = '<div class="empty">No improvements</div>'; }
+
+      // Audit
+      const audit = await ghGet(`repos/${REPO}/contents/${wsPath}/audit?ref=${STATE_BRANCH}`);
+      const auditEl = document.getElementById('auditContent');
+      if (audit && Array.isArray(audit) && audit.length > 0) {
+        let html = '<table><tr><th>Operation</th><th>Timestamp</th><th>Run ID</th></tr>';
+        for (const f of audit.filter(x => x.name.endsWith('.json')).slice(-10).reverse()) {
+          const a = await ghContent(`${wsPath}/audit/${f.name}`);
+          if (a) html += `<tr><td>${a.operation}</td><td>${a.timestamp}</td><td>${a.runId || '-'}</td></tr>`;
+        }
+        html += '</table>';
+        auditEl.innerHTML = html;
+      } else { auditEl.innerHTML = '<div class="empty">No audit records</div>'; }
+    }
+
+    // Auto-connect if token exists in session
+    if (getToken()) {
+      document.getElementById('disconnectBtn').style.display = '';
+      loadWorkspaces();
+    }
+  </script>
+</body>
+</html>

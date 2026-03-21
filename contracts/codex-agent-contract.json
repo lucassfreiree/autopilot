@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "contractId": "codex-agent-contract",
+  "extends": "shared-agent-contract",
+  "agent": "codex",
+  "capabilities": [
+    "code-implementation",
+    "code-refactoring",
+    "bulk-changes",
+    "test-execution",
+    "ci-monitoring",
+    "handoff-consumption"
+  ],
+  "tools": {
+    "primary": "codex-web",
+    "github": "gh-cli",
+    "editor": "github.dev"
+  },
+  "instructions": {
+    "stateAccess": "Use gh CLI to read/write state on autopilot-state branch",
+    "lockProtocol": "Check locks/ directory via gh api before starting operations",
+    "releaseProtocol": "Follow workspace.json config, use gh CLI for API operations",
+    "handoffProtocol": "Read pending handoffs via gh api, update status on completion",
+    "auditProtocol": "Record actions via gh api to audit directory"
+  },
+  "contextFiles": [
+    "contracts/shared-agent-contract.json",
+    "schemas/*.schema.json"
+  ]
+}

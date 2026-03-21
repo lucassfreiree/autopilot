@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "contractId": "shared-agent-contract",
+  "description": "Shared contract for all AI agents operating the Autopilot control plane",
+  "stateLocation": {
+    "repo": "lucassfreiree/autopilot",
+    "branch": "autopilot-state",
+    "workspacePath": "state/workspaces/{workspace_id}/"
+  },
+  "backupLocation": {
+    "repo": "lucassfreiree/autopilot",
+    "branch": "autopilot-backups"
+  },
+  "schemas": {
+    "workspace": "schemas/workspace.schema.json",
+    "releaseState": "schemas/release-state.schema.json",
+    "lock": "schemas/lock.schema.json",
+    "handoff": "schemas/handoff.schema.json",
+    "improvement": "schemas/improvement.schema.json",
+    "healthState": "schemas/health-state.schema.json"
+  },
+  "operations": {
+    "readState": {
+      "method": "GET",
+      "endpoint": "repos/{repo}/contents/{path}?ref=autopilot-state",
+      "decode": "base64"
+    },
+    "writeState": {
+      "method": "PUT",
+      "endpoint": "repos/{repo}/contents/{path}",
+      "params": { "branch": "autopilot-state", "message": "chore: {description} [skip ci]" },
+      "requireLock": true
+    },
+    "acquireLock": {
+      "method": "PUT",
+      "endpoint": "repos/{repo}/contents/state/workspaces/{workspace_id}/locks/{operation}.json",
+      "params": { "branch": "autopilot-state" },
+      "conflictBehavior": "fail-if-exists"
+    },
+    "releaseLock": {
+      "method": "PUT",
+      "endpoint": "repos/{repo}/contents/state/workspaces/{workspace_id}/locks/{operation}.json",
+      "params": { "branch": "autopilot-state" },
+      "action": "update-released-field"
+    }
+  },
+  "rules": [
+    "Never store corporate secrets in the autopilot repo",
+    "Never store corporate code in the autopilot repo",
+    "Always use workspace_id, never hardcode tenant/org names",
+    "Always acquire lock before writing release state",
+    "Always release lock after operation completes or fails",
+    "Always write audit entry after any state mutation",
+    "Never use regex to edit YAML - use structured tooling",
+    "Never hardcode branch names - read from workspace.json",
+    "State is the source of truth, not agent memory"
+  ],
+  "governance": {
+    "personalRepo": {
+      "allowed": ["state", "audit", "schemas", "contracts", "templates", "docs", "workflows", "panel"],
+      "forbidden": ["corporate-code", "secrets", "kubeconfig", "internal-urls", "customer-data"]
+    },
+    "corporateRepos": {
+      "allowed": ["release-workflows", "ci-workflows"],
+      "forbidden": ["personal-data", "autopilot-state", "audit-logs"]
+    }
+  }
+}
