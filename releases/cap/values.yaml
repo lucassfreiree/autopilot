@@ -1,0 +1,11 @@
+# Simulated CAP values
+replicaCount: 2
+
+image:
+  repository: registry.example.com/sim-agent
+  tag: "0.0.0"
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8080
