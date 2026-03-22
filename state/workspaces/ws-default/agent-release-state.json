@@ -2,24 +2,13 @@
   "schemaVersion": 2,
   "workspaceId": "ws-default",
   "component": "agent",
-  "lastReleasedSha": "9a6651faf1a8ad9a35ad53d3024cd0c41f82cfdd",
-  "lastTag": "2.1.4",
-  "lastVersion": "2.1.4",
-  "updatedAt": "2026-03-22T11:33:16Z",
-  "runId": "23402089111",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23402089111",
-  "promotions": [
-    {
-      "target": "cap",
-      "repo": "bbvinet/psc_releases_cap_sre-aut-agent",
-      "branch": "main",
-      "path": "releases/openshift/hml/deploy/values.yaml",
-      "tag": "2.1.4",
-      "sha": "9a6651faf1a8ad9a35ad53d3024cd0c41f82cfdd",
-      "timestamp": "2026-03-22T11:33:16Z",
-      "status": "success"
-    }
-  ],
+  "lastReleasedSha": "d003d5972e9d1775647a135b2ced825ec452b211",
+  "lastTag": "2.1.8",
+  "lastVersion": "2.1.8",
+  "updatedAt": "2026-03-22T12:07:20Z",
+  "runId": "23402671098",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23402671098",
+  "promotions": [],
   "ciResult": "failure",
-  "status": "promoted"
+  "status": "ci-failed"
 }
