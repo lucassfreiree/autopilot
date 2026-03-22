@@ -1,6 +1,6 @@
 {
   "workspace_id": "ws-default",
   "component": "agent",
-  "files": "src/services/automation-http.service.ts",
-  "run": 2
+  "files": "package.json",
+  "run": 3
 }
