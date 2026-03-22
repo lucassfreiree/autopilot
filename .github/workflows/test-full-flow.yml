@@ -1,0 +1,388 @@
+name: "Test: Full Flow (Controller + Agent)"
+
+on:
+  push:
+    branches: [main]
+    paths: ['trigger/full-test.json']
+  workflow_dispatch:
+    inputs:
+      workspace_id:
+        description: "Workspace ID"
+        required: true
+        default: "ws-default"
+      test_type:
+        description: "Test type"
+        required: true
+        type: choice
+        options:
+          - both
+          - controller-only
+          - agent-only
+      include_lint_error:
+        description: "Include lint error test"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: full-flow-test
+  cancel-in-progress: false
+
+env:
+  AUTOPILOT_REPO: lucassfreiree/autopilot
+  STATE_BRANCH: autopilot-state
+
+jobs:
+  setup:
+    name: "Read config"
+    runs-on: ubuntu-latest
+    outputs:
+      ws_id: ${{ steps.cfg.outputs.ws_id }}
+      ws_path: ${{ steps.cfg.outputs.ws_path }}
+      test_type: ${{ steps.cfg.outputs.test_type }}
+      include_lint: ${{ steps.cfg.outputs.include_lint }}
+      controller_repo: ${{ steps.cfg.outputs.controller_repo }}
+      agent_repo: ${{ steps.cfg.outputs.agent_repo }}
+      cap_repo: ${{ steps.cfg.outputs.cap_repo }}
+      cap_branch: ${{ steps.cfg.outputs.cap_branch }}
+      cap_values: ${{ steps.cfg.outputs.cap_values }}
+      image_pattern: ${{ steps.cfg.outputs.image_pattern }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Config
+        id: cfg
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ -f trigger/full-test.json ]; then
+            WS_ID=$(jq -r '.workspace_id // "ws-default"' trigger/full-test.json)
+            TEST_TYPE=$(jq -r '.test_type // "both"' trigger/full-test.json)
+            INCLUDE_LINT=$(jq -r '.include_lint_error // "false"' trigger/full-test.json)
+          else
+            WS_ID="${{ github.event.inputs.workspace_id || 'ws-default' }}"
+            TEST_TYPE="${{ github.event.inputs.test_type || 'both' }}"
+            INCLUDE_LINT="${{ github.event.inputs.include_lint_error || 'false' }}"
+          fi
+          WS_PATH="state/workspaces/${WS_ID}"
+          WS_JSON=$(gh api "repos/$AUTOPILOT_REPO/contents/${WS_PATH}/workspace.json?ref=$STATE_BRANCH" \
+            --jq '.content' | base64 -d)
+          echo "ws_id=$WS_ID" >> "$GITHUB_OUTPUT"
+          echo "ws_path=$WS_PATH" >> "$GITHUB_OUTPUT"
+          echo "test_type=$TEST_TYPE" >> "$GITHUB_OUTPUT"
+          echo "include_lint=$INCLUDE_LINT" >> "$GITHUB_OUTPUT"
+          echo "controller_repo=$(echo "$WS_JSON" | jq -r '.controller.sourceRepo')" >> "$GITHUB_OUTPUT"
+          echo "agent_repo=$(echo "$WS_JSON" | jq -r '.agent.sourceRepo')" >> "$GITHUB_OUTPUT"
+          echo "cap_repo=$(echo "$WS_JSON" | jq -r '.agent.capRepo')" >> "$GITHUB_OUTPUT"
+          echo "cap_branch=$(echo "$WS_JSON" | jq -r '.agent.capBranch // "main"')" >> "$GITHUB_OUTPUT"
+          echo "cap_values=$(echo "$WS_JSON" | jq -r '.agent.capValuesPath')" >> "$GITHUB_OUTPUT"
+          echo "image_pattern=$(echo "$WS_JSON" | jq -r '.agent.imagePattern')" >> "$GITHUB_OUTPUT"
+          echo "## Config" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Workspace | $WS_ID |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Test type | $TEST_TYPE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Controller | $(echo "$WS_JSON" | jq -r '.controller.sourceRepo') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Agent | $(echo "$WS_JSON" | jq -r '.agent.sourceRepo') |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| CAP | $(echo "$WS_JSON" | jq -r '.agent.capRepo') |" >> "$GITHUB_STEP_SUMMARY"
+
+  controller:
+    name: "Controller flow"
+    needs: setup
+    if: needs.setup.outputs.test_type == 'both' || needs.setup.outputs.test_type == 'controller-only'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Clone controller"
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          echo "=== Cloning ${{ needs.setup.outputs.controller_repo }} ==="
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${{ needs.setup.outputs.controller_repo }}.git" /tmp/controller
+          cd /tmp/controller
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          echo "HEAD: $(git rev-parse --short HEAD)"
+          echo "Files:"
+          ls -la
+
+      - name: "Bump version"
+        working-directory: /tmp/controller
+        run: |
+          if [ -f package.json ]; then
+            CURRENT=$(jq -r '.version' package.json)
+            IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
+            if [ "$PAT" -ge 9 ]; then
+              NEW="${MAJ}.$((MIN+1)).0"
+            else
+              NEW="${MAJ}.${MIN}.$((PAT+1))"
+            fi
+            jq --arg v "$NEW" '.version = $v' package.json > /tmp/p.json && mv /tmp/p.json package.json
+            echo "Version: $CURRENT -> $NEW"
+            echo "version=$NEW" >> "$GITHUB_ENV"
+          else
+            echo "No package.json. Adding test file."
+            echo "// test: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> src/test-marker.ts
+            echo "version=test" >> "$GITHUB_ENV"
+          fi
+
+      - name: "Commit and push"
+        working-directory: /tmp/controller
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes"
+            echo "pushed=false" >> "$GITHUB_ENV"
+          else
+            git commit -m "chore: bump controller version to ${{ env.version }}"
+            git push origin main
+            echo "pushed=true" >> "$GITHUB_ENV"
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+            echo "Push OK: $(git rev-parse --short HEAD)"
+          fi
+
+      - name: "Wait for CI"
+        if: env.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          SHA="${{ env.sha }}"
+          REPO="${{ needs.setup.outputs.controller_repo }}"
+          echo "Waiting for CI on $SHA..."
+
+          # Wait up to 3 min for checks to appear
+          FOUND=false
+          for i in $(seq 1 36); do
+            sleep 5
+            COUNT=$(gh api "repos/$REPO/commits/$SHA/check-runs" --jq '.total_count' 2>/dev/null || echo "0")
+            if [ "$COUNT" -gt 0 ]; then FOUND=true; break; fi
+            echo "  Waiting for checks... ($i)"
+          done
+
+          if [ "$FOUND" = "false" ]; then
+            echo "::warning ::No CI checks in 3 min."
+            echo "ci_result=no-ci" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          # Wait up to 20 min for completion
+          for i in $(seq 1 120); do
+            sleep 10
+            DATA=$(gh api "repos/$REPO/commits/$SHA/check-runs" \
+              --jq '{t:.total_count, c:[.check_runs[]|select(.status=="completed")]|length, s:[.check_runs[]|select(.conclusion=="success")]|length, f:[.check_runs[]|select(.conclusion=="failure")]|length}' 2>/dev/null || echo '{}')
+            T=$(echo "$DATA"|jq -r '.t//0'); C=$(echo "$DATA"|jq -r '.c//0')
+            S=$(echo "$DATA"|jq -r '.s//0'); F=$(echo "$DATA"|jq -r '.f//0')
+            echo "  CI: $C/$T (ok=$S fail=$F) [$i]"
+            if [ "$T" -gt 0 ] && [ "$C" -eq "$T" ]; then
+              if [ "$F" -gt 0 ]; then
+                echo "ci_result=failure" >> "$GITHUB_ENV"
+              else
+                echo "ci_result=success" >> "$GITHUB_ENV"
+              fi
+              break
+            fi
+          done
+          echo "Controller CI: ${{ env.ci_result }}"
+
+      - name: "Summary"
+        run: |
+          echo "## Controller" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Step | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | ${{ env.version }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Push | ${{ env.pushed }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| CI | ${{ env.ci_result || 'n/a' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA | ${{ env.sha || 'n/a' }} |" >> "$GITHUB_STEP_SUMMARY"
+
+  agent:
+    name: "Agent flow"
+    needs: setup
+    if: needs.setup.outputs.test_type == 'both' || needs.setup.outputs.test_type == 'agent-only'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Clone agent"
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          echo "=== Cloning ${{ needs.setup.outputs.agent_repo }} ==="
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${{ needs.setup.outputs.agent_repo }}.git" /tmp/agent
+          cd /tmp/agent
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          echo "HEAD: $(git rev-parse --short HEAD)"
+
+      - name: "Bump version"
+        working-directory: /tmp/agent
+        run: |
+          CURRENT=$(jq -r '.version' package.json)
+          IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
+          if [ "$PAT" -ge 9 ]; then
+            NEW="${MAJ}.$((MIN+1)).0"
+          else
+            NEW="${MAJ}.${MIN}.$((PAT+1))"
+          fi
+          jq --arg v "$NEW" '.version = $v' package.json > /tmp/p.json && mv /tmp/p.json package.json
+          echo "Version: $CURRENT -> $NEW"
+          echo "version=$NEW" >> "$GITHUB_ENV"
+          echo "old_version=$CURRENT" >> "$GITHUB_ENV"
+
+      - name: "Commit and push"
+        working-directory: /tmp/agent
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          git add package.json
+          git commit -m "chore: bump agent version to ${{ env.version }}"
+          git push origin main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          echo "Push OK: $(git rev-parse --short HEAD)"
+
+      - name: "Wait for CI"
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          SHA="${{ env.sha }}"
+          REPO="${{ needs.setup.outputs.agent_repo }}"
+          echo "Waiting for CI on $SHA..."
+          FOUND=false
+          for i in $(seq 1 36); do
+            sleep 5
+            COUNT=$(gh api "repos/$REPO/commits/$SHA/check-runs" --jq '.total_count' 2>/dev/null || echo "0")
+            if [ "$COUNT" -gt 0 ]; then FOUND=true; break; fi
+            echo "  Waiting... ($i)"
+          done
+          if [ "$FOUND" = "false" ]; then
+            echo "::warning ::No CI checks in 3 min."
+            echo "ci_result=no-ci" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          CI_RESULT="pending"
+          for i in $(seq 1 120); do
+            sleep 10
+            DATA=$(gh api "repos/$REPO/commits/$SHA/check-runs" \
+              --jq '{t:.total_count, c:[.check_runs[]|select(.status=="completed")]|length, s:[.check_runs[]|select(.conclusion=="success")]|length, f:[.check_runs[]|select(.conclusion=="failure")]|length}' 2>/dev/null || echo '{}')
+            T=$(echo "$DATA"|jq -r '.t//0'); C=$(echo "$DATA"|jq -r '.c//0')
+            S=$(echo "$DATA"|jq -r '.s//0'); F=$(echo "$DATA"|jq -r '.f//0')
+            echo "  CI: $C/$T (ok=$S fail=$F) [$i]"
+            if [ "$T" -gt 0 ] && [ "$C" -eq "$T" ]; then
+              if [ "$F" -gt 0 ]; then CI_RESULT="failure"; else CI_RESULT="success"; fi
+              break
+            fi
+          done
+          [ "$CI_RESULT" = "pending" ] && CI_RESULT="timeout"
+          echo "ci_result=$CI_RESULT" >> "$GITHUB_ENV"
+          echo "Agent CI: $CI_RESULT"
+
+      - name: "Promote to CAP"
+        if: env.ci_result != 'timeout'
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          CAP_REPO="${{ needs.setup.outputs.cap_repo }}"
+          CAP_BRANCH="${{ needs.setup.outputs.cap_branch }}"
+          CAP_VALUES="${{ needs.setup.outputs.cap_values }}"
+          IMAGE_PATTERN="${{ needs.setup.outputs.image_pattern }}"
+          TAG="${{ env.version }}-${{ env.short_sha }}"
+          echo "Promoting $TAG to $CAP_REPO"
+
+          if [ -z "$CAP_REPO" ] || [ "$CAP_REPO" = "null" ]; then
+            echo "No CAP repo configured"
+            echo "promoted=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          VALUES=$(gh api "repos/$CAP_REPO/contents/${CAP_VALUES}?ref=$CAP_BRANCH" --jq '.content' | base64 -d)
+          VSHA=$(gh api "repos/$CAP_REPO/contents/${CAP_VALUES}?ref=$CAP_BRANCH" --jq '.sha')
+
+          echo "=== Current values.yaml ==="
+          echo "$VALUES"
+
+          UPDATED=$(echo "$VALUES" | sed "s|\(${IMAGE_PATTERN}\).*|\1${TAG}|")
+          if [ "$VALUES" = "$UPDATED" ]; then
+            UPDATED=$(echo "$VALUES" | sed "s|^\(\s*tag:\s*\).*|\1\"${TAG}\"|")
+          fi
+
+          if [ "$VALUES" = "$UPDATED" ]; then
+            echo "::warning ::Pattern didn't match"
+            echo "promoted=false" >> "$GITHUB_ENV"
+          else
+            echo "=== Updated values.yaml ==="
+            echo "$UPDATED"
+            gh api "repos/$CAP_REPO/contents/${CAP_VALUES}" --method PUT \
+              -f "branch=$CAP_BRANCH" \
+              -f "message=chore(release): agent -> ${TAG}" \
+              -f "content=$(echo "$UPDATED" | base64 -w0)" \
+              -f "sha=$VSHA"
+            echo "promoted=true" >> "$GITHUB_ENV"
+            echo "tag=$TAG" >> "$GITHUB_ENV"
+          fi
+
+      - name: "Save state"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          WS_PATH="${{ needs.setup.outputs.ws_path }}"
+          FILE="${WS_PATH}/agent-release-state.json"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TAG="${{ env.tag || env.version }}"
+          FSHA=$(gh api "repos/$AUTOPILOT_REPO/contents/${FILE}?ref=$STATE_BRANCH" --jq '.sha' 2>/dev/null || echo "")
+          PROMO='[]'
+          if [ "${{ env.promoted }}" = "true" ]; then
+            PROMO=$(jq -n --arg r "${{ needs.setup.outputs.cap_repo }}" --arg b "${{ needs.setup.outputs.cap_branch }}" \
+              --arg p "${{ needs.setup.outputs.cap_values }}" --arg t "$TAG" --arg s "${{ env.sha }}" --arg ts "$NOW" \
+              '[{target:"cap",repo:$r,branch:$b,path:$p,tag:$t,sha:$s,timestamp:$ts,status:"success"}]')
+          fi
+          STATE=$(jq -n --arg ws "${{ needs.setup.outputs.ws_id }}" --arg sha "${{ env.sha }}" --arg tag "$TAG" \
+            --arg ver "${{ env.version }}" --arg ts "$NOW" --arg run "${{ github.run_id }}" \
+            --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --argjson promo "$PROMO" --arg ci "${{ env.ci_result }}" \
+            '{schemaVersion:2,workspaceId:$ws,component:"agent",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,promotions:$promo,ciResult:$ci,status:"promoted"}')
+          ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: agent -> $TAG [skip ci]" -f "content=$(echo "$STATE"|base64 -w0)")
+          [ -n "$FSHA" ] && [ "$FSHA" != "null" ] && ARGS+=(-f "sha=$FSHA")
+          gh api "repos/$AUTOPILOT_REPO/contents/${FILE}" --method PUT "${ARGS[@]}"
+
+      - name: "Summary"
+        if: always()
+        run: |
+          echo "## Agent" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Step | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | ${{ env.old_version }} -> ${{ env.version }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA | ${{ env.short_sha }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| CI | ${{ env.ci_result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Promoted | ${{ env.promoted || 'false' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tag | ${{ env.tag || 'n/a' }} |" >> "$GITHUB_STEP_SUMMARY"
+
+  audit:
+    name: "Record audit"
+    needs: [setup, controller, agent]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Audit"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SN=$(echo "$NOW" | tr ':' '-')
+          WS_PATH="${{ needs.setup.outputs.ws_path }}"
+          AUDIT=$(jq -n \
+            --arg ws "${{ needs.setup.outputs.ws_id }}" \
+            --arg ts "$NOW" \
+            --arg run "${{ github.run_id }}" \
+            --arg type "${{ needs.setup.outputs.test_type }}" \
+            --arg ctrl "${{ needs.controller.result }}" \
+            --arg agent "${{ needs.agent.result }}" \
+            '{operation:"full-flow-test",workspaceId:$ws,timestamp:$ts,runId:$run,testType:$type,controllerResult:$ctrl,agentResult:$agent}')
+          gh api "repos/$AUTOPILOT_REPO/contents/${WS_PATH}/audit/full-test-${SN}.json" \
+            --method PUT -f "branch=$STATE_BRANCH" -f "message=audit: full-flow-test [skip ci]" \
+            -f "content=$(echo "$AUDIT" | base64 -w0)" 2>/dev/null || true
+          echo "## Audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "Recorded at $NOW" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Job | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Controller | ${{ needs.controller.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Agent | ${{ needs.agent.result }} |" >> "$GITHUB_STEP_SUMMARY"
