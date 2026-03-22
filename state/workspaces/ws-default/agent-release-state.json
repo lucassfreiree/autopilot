@@ -2,13 +2,16 @@
   "schemaVersion": 2,
   "workspaceId": "ws-default",
   "component": "agent",
-  "lastReleasedSha": "128ac2cf9cbf71a3eecbd22d621acc4a2355f4fe",
+  "lastReleasedSha": "191ad36bfeede12dfb83324574aa02510747a433",
   "lastTag": "2.2.2",
-  "lastVersion": "2.2.2",
-  "updatedAt": "2026-03-22T14:57:43Z",
-  "runId": "23405630499",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23405630499",
-  "promotions": [],
+  "updatedAt": "2026-03-22T19:06:26Z",
+  "runId": "23410204144",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23410204144",
   "ciResult": "failure",
-  "status": "ci-failed"
+  "status": "promoted-preexisting-ci-fail",
+  "changeType": "source-code",
+  "commitMessage": "feat: add agent health utility (autopilot pipeline test)",
+  "promoted": true,
+  "preExistingFailure": true,
+  "gateDecision": "pass-preexisting"
 }
