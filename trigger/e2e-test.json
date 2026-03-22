@@ -1,6 +1,6 @@
 {
   "workspace_id": "ws-default",
   "dry_run": "false",
-  "run": 5,
-  "note": "v5: gate step, no exit 0, separate CI output from gate decision"
+  "run": 6,
+  "note": "v6: single step, zero inter-step output issues"
 }
