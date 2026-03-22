@@ -2,12 +2,12 @@
   "schemaVersion": 2,
   "workspaceId": "ws-default",
   "component": "controller",
-  "lastReleasedSha": "048ceea411e8298ff513ac7595e633ff080b02fe",
-  "lastTag": "3.4.5",
-  "lastVersion": "3.4.5",
-  "updatedAt": "2026-03-22T11:34:51Z",
-  "runId": "23402089111",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23402089111",
+  "lastReleasedSha": "a6c4e69be8718d949f93b486f06de6bb9db11e5f",
+  "lastTag": "3.4.9",
+  "lastVersion": "3.4.9",
+  "updatedAt": "2026-03-22T12:09:16Z",
+  "runId": "23402671098",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23402671098",
   "ciResult": "failure",
-  "status": "tested"
+  "status": "ci-failed"
 }
