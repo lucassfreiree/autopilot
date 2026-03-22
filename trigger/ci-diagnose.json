@@ -1,7 +1,7 @@
 {
   "workspace_id": "ws-default",
-  "component": "controller",
-  "commit_sha": "",
-  "note": "Diagnose CI failures in controller repo",
-  "run": 3
+  "component": "agent",
+  "commit_sha": "191ad36bfeede12dfb83324574aa02510747a433",
+  "note": "Diagnose CI failures in agent repo (Esteira NPM #148)",
+  "run": 5
 }
