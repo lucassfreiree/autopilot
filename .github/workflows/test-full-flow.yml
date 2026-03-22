@@ -106,25 +106,56 @@ jobs:
           echo "Files:"
           ls -la
 
-      - name: "Bump version"
+      - name: "Bump version (all files)"
         working-directory: /tmp/controller
         run: |
-          if [ -f package.json ]; then
-            CURRENT=$(jq -r '.version' package.json)
-            IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
-            if [ "$PAT" -ge 9 ]; then
-              NEW="${MAJ}.$((MIN+1)).0"
-            else
-              NEW="${MAJ}.${MIN}.$((PAT+1))"
-            fi
-            jq --arg v "$NEW" '.version = $v' package.json > /tmp/p.json && mv /tmp/p.json package.json
-            echo "Version: $CURRENT -> $NEW"
-            echo "version=$NEW" >> "$GITHUB_ENV"
-          else
-            echo "No package.json. Adding test file."
-            echo "// test: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> src/test-marker.ts
+          if [ ! -f package.json ]; then
+            echo "No package.json found"
             echo "version=test" >> "$GITHUB_ENV"
+            exit 0
           fi
+          CURRENT=$(jq -r '.version' package.json)
+          IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
+          if [ "$PAT" -ge 9 ]; then
+            NEW="${MAJ}.$((MIN+1)).0"
+          else
+            NEW="${MAJ}.${MIN}.$((PAT+1))"
+          fi
+          echo "Version: $CURRENT -> $NEW"
+          echo "version=$NEW" >> "$GITHUB_ENV"
+          echo "old_version=$CURRENT" >> "$GITHUB_ENV"
+
+          # 1. package.json
+          jq --arg v "$NEW" '.version = $v' package.json > /tmp/p.json && mv /tmp/p.json package.json
+          echo "  Updated: package.json"
+
+          # 2. package-lock.json
+          if [ -f package-lock.json ]; then
+            jq --arg v "$NEW" '.version = $v | if .packages[""] then .packages[""].version = $v else . end' package-lock.json > /tmp/pl.json && mv /tmp/pl.json package-lock.json
+            echo "  Updated: package-lock.json"
+          fi
+
+          # 3. makeswagger / Makefile / any file with version
+          for F in makeswagger Makefile makefile; do
+            if [ -f "$F" ]; then
+              if grep -q "$CURRENT" "$F"; then
+                sed -i "s|$CURRENT|$NEW|g" "$F"
+                echo "  Updated: $F"
+              fi
+            fi
+          done
+
+          # 4. Any swagger/openapi spec files
+          for F in $(find . -maxdepth 2 -name "swagger*" -o -name "openapi*" 2>/dev/null); do
+            if grep -q "$CURRENT" "$F"; then
+              sed -i "s|$CURRENT|$NEW|g" "$F"
+              echo "  Updated: $F"
+            fi
+          done
+
+          # Report all version references
+          echo "=== Version references ==="
+          grep -rn "$NEW" --include="*.json" --include="Makefile" --include="makeswagger" --include="*.yaml" --include="*.yml" . 2>/dev/null | head -20 || true
 
       - name: "Commit and push"
         working-directory: /tmp/controller
@@ -241,7 +272,7 @@ jobs:
           git config user.email "github-actions@github.com"
           echo "HEAD: $(git rev-parse --short HEAD)"
 
-      - name: "Bump version"
+      - name: "Bump version (all files)"
         working-directory: /tmp/agent
         run: |
           CURRENT=$(jq -r '.version' package.json)
@@ -251,18 +282,48 @@ jobs:
           else
             NEW="${MAJ}.${MIN}.$((PAT+1))"
           fi
-          jq --arg v "$NEW" '.version = $v' package.json > /tmp/p.json && mv /tmp/p.json package.json
           echo "Version: $CURRENT -> $NEW"
           echo "version=$NEW" >> "$GITHUB_ENV"
           echo "old_version=$CURRENT" >> "$GITHUB_ENV"
+
+          # 1. package.json
+          jq --arg v "$NEW" '.version = $v' package.json > /tmp/p.json && mv /tmp/p.json package.json
+          echo "  Updated: package.json"
+
+          # 2. package-lock.json
+          if [ -f package-lock.json ]; then
+            jq --arg v "$NEW" '.version = $v | if .packages[""] then .packages[""].version = $v else . end' package-lock.json > /tmp/pl.json && mv /tmp/pl.json package-lock.json
+            echo "  Updated: package-lock.json"
+          fi
+
+          # 3. makeswagger / Makefile
+          for F in makeswagger Makefile makefile; do
+            if [ -f "$F" ]; then
+              if grep -q "$CURRENT" "$F"; then
+                sed -i "s|$CURRENT|$NEW|g" "$F"
+                echo "  Updated: $F"
+              fi
+            fi
+          done
+
+          # 4. swagger/openapi specs
+          for F in $(find . -maxdepth 2 -name "swagger*" -o -name "openapi*" 2>/dev/null); do
+            if grep -q "$CURRENT" "$F"; then
+              sed -i "s|$CURRENT|$NEW|g" "$F"
+              echo "  Updated: $F"
+            fi
+          done
+
+          echo "=== Version references ==="
+          grep -rn "$NEW" --include="*.json" --include="Makefile" --include="makeswagger" --include="*.yaml" --include="*.yml" . 2>/dev/null | head -20 || true
 
       - name: "Commit and push"
         working-directory: /tmp/agent
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
-          git add package.json
-          git commit -m "chore: bump agent version to ${{ env.version }}"
+          git add -A
+          git commit -m "chore: bump agent version ${{ env.old_version }} -> ${{ env.version }}"
           git push origin main
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
