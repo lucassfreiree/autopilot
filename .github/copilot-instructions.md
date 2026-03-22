@@ -31,7 +31,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ (1 files)
-  audit/ (39 files)
+  audit/ (41 files)
   improvements/ (1 files)
   metrics/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
   handoffs/ (1 files)
@@ -134,6 +134,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/{FILE
 | apply-source-change.yml | Apply Source Code Change | trigger file, manual |
 | backup-state.yml | Backup State | scheduled, manual |
 | bootstrap.yml | Bootstrap: Full Setup | manual |
+| ci-diagnose.yml | CI Diagnose: Fetch Error Logs | manual |
 | ci-failure-analysis.yml | CI Failure Analysis | manual |
 | cleanup-branches.yml | Cleanup: Stale Branches | scheduled, manual, PR |
 | continuous-improvement.yml | Continuous Improvement | scheduled, trigger file, manual |
@@ -166,6 +167,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/{FILE
 | alert-notify.yml | severity, title, body |
 | apply-source-change.yml | workspace_id, component, change_type, target_path, file_content, commit_message, skip_ci_wait, promote |
 | bootstrap.yml | workspace_id |
+| ci-diagnose.yml | workspace_id, component, commit_sha |
 | ci-failure-analysis.yml | workspace_id, component, run_id |
 | continuous-improvement.yml | workspace_id, auto_fix, scope |
 | drift-correction.yml | workspace_id, dry_run |
@@ -230,4 +232,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/{FILE
 | Handoff to Codex | Dispatch `enqueue-agent-handoff.yml`, `to_agent=codex` |
 
 ---
-*Last synced: 2026-03-22T18:00:27Z | Run: 23409065410*
+*Last synced: 2026-03-22T18:08:43Z | Run: 23409222189*
