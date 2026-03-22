@@ -31,7 +31,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ (1 files)
-  audit/ (36 files)
+  audit/ (38 files)
   improvements/ (1 files)
   metrics/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
   handoffs/ (1 files)
@@ -51,7 +51,7 @@ Edit a trigger file on `main` branch, bump the `run` field.
 | `trigger/agent-sync.json` | agent-sync.yml | context, task, workspace_id |
 | `trigger/e2e-test.json` | test-corporate-flow.yml | dry_run, workspace_id |
 | `trigger/fix-and-validate.json` | fix-and-validate.yml | workspace_id |
-| `trigger/fix-ci.json` | sync-copilot-prompt.yml | note, workspace_id |
+| `trigger/fix-ci.json` | sync-copilot-prompt.yml | component, note, workspace_id |
 | `trigger/full-test.json` | test-full-flow.yml | include_lint_error, test_type, workspace_id |
 | `trigger/improvement.json` | continuous-improvement.yml | auto_fix, scope, workspace_id |
 | `trigger/source-change.json` | sync-copilot-prompt.yml | change_type, commit_message, component, file_content, promote, skip_ci_wait, target_path, workspace_id |
@@ -171,7 +171,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/{FILE
 | drift-correction.yml | workspace_id, dry_run |
 | enqueue-agent-handoff.yml | workspace_id, from_agent, to_agent, component, summary, next_steps, priority |
 | fix-and-validate.yml | workspace_id |
-| fix-corporate-ci.yml | workspace_id |
+| fix-corporate-ci.yml | workspace_id, component |
 | health-check.yml | workspace_id |
 | langchain-orchestrator.yml | workspace_id, task, context |
 | record-improvement.yml | workspace_id, category, description, source, recorded_by |
@@ -230,4 +230,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/{FILE
 | Handoff to Codex | Dispatch `enqueue-agent-handoff.yml`, `to_agent=codex` |
 
 ---
-*Last synced: 2026-03-22T17:04:48Z | Run: 23408031509*
+*Last synced: 2026-03-22T17:58:02Z | Run: 23409019410*
