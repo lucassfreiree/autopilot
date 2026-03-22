@@ -68,7 +68,7 @@ jobs:
 
           # ── 3. Install deps ──────────────────────────────────
           echo "=== Installing dependencies ==="
-          npm ci 2>/dev/null || npm install 2>/dev/null || true
+          npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts 2>/dev/null || true
 
           CHANGES_MADE=false
 

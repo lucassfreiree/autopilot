@@ -129,31 +129,56 @@ jobs:
             fi
           done
 
-          # ── 6. Try to get workflow run logs ──
+          # ── 6. Fetch CI logs from corporate repo and save ──
           echo ""
           echo "=== Workflow Runs for this SHA ==="
-          RUNS=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/runs?head_sha=$SHA&per_page=5" \
-            --jq '.workflow_runs[] | "\(.id) | \(.name) | \(.status) | \(.conclusion // "running")"' 2>/dev/null || echo "No workflow runs found")
-          echo "$RUNS"
+          RUNS_JSON=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/runs?head_sha=$SHA&per_page=5" 2>/dev/null || echo '{"workflow_runs":[]}')
+          echo "$RUNS_JSON" | jq -r '.workflow_runs[] | "\(.id) | \(.name) | \(.status) | \(.conclusion // "running")"' 2>/dev/null || echo "No runs found"
 
-          # Get failed run logs
-          FAILED_RUN_ID=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/runs?head_sha=$SHA&per_page=5" \
-            --jq '[.workflow_runs[] | select(.conclusion == "failure")] | .[0].id // empty' 2>/dev/null || echo "")
+          CI_LOGS=""
+          CI_JOBS_INFO=""
+
+          # Get ALL run IDs (not just failed - some may still be running)
+          FAILED_RUN_ID=$(echo "$RUNS_JSON" | jq -r '[.workflow_runs[] | select(.conclusion == "failure")] | .[0].id // empty' 2>/dev/null || echo "")
 
           if [ -n "$FAILED_RUN_ID" ]; then
             echo ""
-            echo "=== Failed Run Jobs (ID: $FAILED_RUN_ID) ==="
-            GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/runs/$FAILED_RUN_ID/jobs" \
-              --jq '.jobs[] | "[\(.conclusion // .status)] \(.name)\n  Steps: \([.steps[] | "[\(.conclusion // .status)] \(.name)"] | join(" → "))"' 2>/dev/null || echo "Could not fetch jobs"
+            echo "=== Failed Run (ID: $FAILED_RUN_ID) ==="
 
-            echo ""
-            echo "=== Failed Run Logs (last 200 lines) ==="
-            FAILED_JOB_ID=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/runs/$FAILED_RUN_ID/jobs" \
-              --jq '[.jobs[] | select(.conclusion == "failure")] | .[0].id // empty' 2>/dev/null || echo "")
+            # Get jobs with steps
+            JOBS_DATA=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/runs/$FAILED_RUN_ID/jobs" 2>/dev/null || echo '{"jobs":[]}')
+            CI_JOBS_INFO=$(echo "$JOBS_DATA" | jq -c '[.jobs[] | {name, status, conclusion, steps: [.steps[] | {name, status, conclusion}]}]' 2>/dev/null || echo "[]")
+            echo "$JOBS_DATA" | jq -r '.jobs[] | "[\(.conclusion // .status)] \(.name)"' 2>/dev/null
 
-            if [ -n "$FAILED_JOB_ID" ]; then
-              GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/jobs/$FAILED_JOB_ID/logs" 2>/dev/null | tail -200 || echo "Could not fetch logs (may require admin access)"
-            fi
+            # Get logs for EACH failed job
+            echo "$JOBS_DATA" | jq -c '.jobs[] | select(.conclusion == "failure")' 2>/dev/null | while read -r JOB; do
+              JOB_ID=$(echo "$JOB" | jq -r '.id')
+              JOB_NAME=$(echo "$JOB" | jq -r '.name')
+              echo ""
+              echo "=== Logs: $JOB_NAME (job $JOB_ID) ==="
+
+              # Download logs (returns plain text)
+              JOB_LOGS=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/$SOURCE_REPO/actions/jobs/$JOB_ID/logs" 2>/dev/null || echo "Could not fetch logs")
+              echo "$JOB_LOGS" | tail -200
+
+              # Save logs to a separate file in state
+              LOG_FILE="${WS_PATH}/ci-logs-${COMPONENT}-${JOB_ID}.txt"
+              LOG_CONTENT=$(echo "$JOB_LOGS" | tail -500 | base64 -w0)
+
+              EXISTING_LOG_SHA=$(GH_TOKEN="$RELEASE_TOKEN" gh api \
+                "repos/$AUTOPILOT_REPO/contents/${LOG_FILE}?ref=$STATE_BRANCH" \
+                --jq '.sha' 2>/dev/null || echo "")
+
+              LOG_ARGS=(-f "branch=$STATE_BRANCH" \
+                -f "message=diag: CI logs $COMPONENT job $JOB_ID [skip ci]" \
+                -f "content=$LOG_CONTENT")
+              [ -n "$EXISTING_LOG_SHA" ] && [ "$EXISTING_LOG_SHA" != "null" ] && LOG_ARGS+=(-f "sha=$EXISTING_LOG_SHA")
+
+              GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/contents/${LOG_FILE}" \
+                --method PUT "${LOG_ARGS[@]}" > /dev/null 2>&1 && echo "Logs saved to $LOG_FILE" || echo "::warning ::Failed to save logs"
+            done
+          else
+            echo "No failed runs found for this SHA"
           fi
 
           # ── 7. Clone and try to reproduce locally ──
