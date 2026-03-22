@@ -164,7 +164,8 @@ jobs:
           git checkout "$SHA" 2>/dev/null || true
 
           echo "--- package.json scripts ---"
-          jq -r '.scripts | to_entries[] | "  \(.key): \(.value)"' package.json 2>/dev/null || echo "No package.json"
+          SCRIPTS_OUTPUT=$(jq -r '.scripts | to_entries[] | "  \(.key): \(.value)"' package.json 2>/dev/null || echo "No package.json")
+          echo "$SCRIPTS_OUTPUT"
 
           echo ""
           echo "--- Installing deps ---"
@@ -172,19 +173,32 @@ jobs:
 
           echo ""
           echo "--- Running lint ---"
-          npx eslint src/ --format json 2>/dev/null | jq '[.[] | select(.errorCount > 0) | {file: .filePath | split("/") | .[-2:] | join("/"), errors: .errorCount, rules: [.messages[] | select(.severity==2) | .ruleId] | unique}]' 2>/dev/null || echo "Lint check failed or not available"
+          LINT_RESULT=$(npx eslint src/ --format json 2>/dev/null || echo "[]")
+          LINT_ERRORS=$(echo "$LINT_RESULT" | jq '[.[] | select(.errorCount > 0) | {file: .filePath | split("/") | .[-2:] | join("/"), errors: .errorCount, rules: [.messages[] | select(.severity==2) | .ruleId] | unique}]' 2>/dev/null || echo "[]")
+          echo "$LINT_ERRORS" | jq '.' 2>/dev/null || echo "Lint not available"
 
           echo ""
           echo "--- Running build ---"
-          npm run build 2>&1 | tail -50 || echo "Build failed or not available"
+          BUILD_OUTPUT=$(npm run build 2>&1 | tail -80 || echo "Build failed or not available")
+          echo "$BUILD_OUTPUT"
+          BUILD_SUCCESS="true"
+          echo "$BUILD_OUTPUT" | grep -qi "error\|ERR!" && BUILD_SUCCESS="false" || true
 
           echo ""
           echo "--- Running test ---"
-          npm test 2>&1 | tail -50 || echo "Tests failed or not available"
+          TEST_OUTPUT=$(timeout 120 npm test 2>&1 | tail -80 || echo "Tests failed, timed out, or not available")
+          echo "$TEST_OUTPUT"
+          TEST_SUCCESS="true"
+          echo "$TEST_OUTPUT" | grep -qi "error\|FAIL" && TEST_SUCCESS="false" || true
 
-          # ── 8. Save diagnosis to state ──
+          # ── 8. Save FULL diagnosis to state ──
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           DIAG_FILE="${WS_PATH}/ci-diagnosis-${COMPONENT}.json"
+
+          LINT_ERRORS_JSON=$(echo "$LINT_ERRORS" | jq -c '.' 2>/dev/null || echo "[]")
+          BUILD_LOG_JSON=$(echo "$BUILD_OUTPUT" | tail -30 | jq -Rs '.' 2>/dev/null || echo '""')
+          TEST_LOG_JSON=$(echo "$TEST_OUTPUT" | tail -30 | jq -Rs '.' 2>/dev/null || echo '""')
+          SCRIPTS_JSON=$(echo "$SCRIPTS_OUTPUT" | jq -Rs '.' 2>/dev/null || echo '""')
 
           DIAG_JSON=$(jq -n \
             --arg ws "$WS_ID" \
@@ -196,17 +210,24 @@ jobs:
             --arg ts "$NOW" \
             --arg run_id "${{ github.run_id }}" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg build_ok "$BUILD_SUCCESS" \
+            --arg test_ok "$TEST_SUCCESS" \
+            --argjson lint "$LINT_ERRORS_JSON" \
+            --argjson build_log "$BUILD_LOG_JSON" \
+            --argjson test_log "$TEST_LOG_JSON" \
+            --argjson scripts "$SCRIPTS_JSON" \
             '{
-              workspaceId: $ws,
-              component: $comp,
-              sourceRepo: $repo,
-              commitSha: $sha,
-              commitMessage: $msg,
-              commitAuthor: $author,
-              diagnosedAt: $ts,
-              runId: $run_id,
-              runUrl: $run_url,
-              note: "Check workflow run logs for full diagnosis output"
+              workspaceId: $ws, component: $comp, sourceRepo: $repo,
+              commitSha: $sha, commitMessage: $msg, commitAuthor: $author,
+              diagnosedAt: $ts, runId: $run_id, runUrl: $run_url,
+              reproduction: {
+                scripts: $scripts,
+                lintErrors: $lint,
+                buildSuccess: ($build_ok == "true"),
+                buildLog: $build_log,
+                testSuccess: ($test_ok == "true"),
+                testLog: $test_log
+              }
             }')
 
           EXISTING_SHA=$(GH_TOKEN="$RELEASE_TOKEN" gh api \
@@ -214,7 +235,7 @@ jobs:
             --jq '.sha' 2>/dev/null || echo "")
 
           ARGS=(-f "branch=$STATE_BRANCH" \
-            -f "message=diag: CI diagnosis for $COMPONENT [skip ci]" \
+            -f "message=diag: CI diagnosis $COMPONENT (full) [skip ci]" \
             -f "content=$(echo "$DIAG_JSON" | base64 -w0)")
           [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" != "null" ] && ARGS+=(-f "sha=$EXISTING_SHA")
 
@@ -222,7 +243,7 @@ jobs:
             --method PUT "${ARGS[@]}" > /dev/null 2>&1 || echo "::warning ::Failed to save diagnosis"
 
           echo ""
-          echo "=== Diagnosis saved to $DIAG_FILE ==="
+          echo "=== FULL diagnosis saved to $DIAG_FILE ==="
 
           # ── Summary ──
           echo "## CI Diagnosis: $COMPONENT" >> "$GITHUB_STEP_SUMMARY"
@@ -231,5 +252,7 @@ jobs:
           echo "| Repo | \`$SOURCE_REPO\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${SHA:0:12}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Message | $COMMIT_MSG |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Author | $COMMIT_AUTHOR |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Build | $BUILD_SUCCESS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tests | $TEST_SUCCESS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Lint Errors | $(echo "$LINT_ERRORS" | jq 'length' 2>/dev/null || echo '?') files |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Diagnosed | $NOW |" >> "$GITHUB_STEP_SUMMARY"
