@@ -177,5 +177,12 @@ To prevent conflicts:
 - Never silently swallow errors with `|| true` — always log first
 
 ## Agent Compatibility
-This architecture is operable by Claude, ChatGPT, and Codex web.
+This architecture is operable by Claude, ChatGPT, Codex, and GitHub Copilot.
 See `contracts/` for per-agent instructions.
+
+| Agent | Contract | Prompt File | Primary Role |
+|-------|----------|-------------|--------------|
+| Claude Code | `contracts/claude-agent-contract.json` | `CLAUDE.md` | Architecture, workflows, complex implementations |
+| Codex | `contracts/codex-agent-contract.json` | — | Code implementation, refactoring, bulk changes |
+| ChatGPT | `contracts/chatgpt-agent-contract.json` | — | Documentation, triage, handoff consumption |
+| **Copilot** | `contracts/copilot-agent-contract.json` | `.github/copilot-instructions.md` | Dispatch, review, coordination between agents |
