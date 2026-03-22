@@ -18,6 +18,32 @@ Zero local dependencies. 100% GitHub-native.
 - `panel/` — GitHub Pages control plane UI
 - `compliance/` — Data governance policies
 - `trigger/` — Trigger input files for workflow dispatch (bumping `run` field triggers the workflow)
+- `integrations/` — External tool integrations (LangChain, Kubernetes, n8n)
+
+## Integrations (all zero-cost, open-source)
+
+### LangChain (`integrations/langchain/`)
+Intelligent agent orchestration replacing rigid shell-script decision trees.
+- `orchestrator.py` — Main LangChain agent with tool-calling loop
+- `tools.py` — Custom tools (read state, trigger workflows, create handoffs)
+- `memory.py` — RAG memory from autopilot-state branch
+- Workflow: `langchain-orchestrator.yml` (runs in GitHub Actions)
+- Tasks: `analyze-ci-failure`, `smart-release`, `triage-handoff`, `health-response`
+
+### Kubernetes (`integrations/kubernetes/`)
+K8s manifests for self-hosted infrastructure (deploy on any free cluster).
+- `namespace.yml` — Workspace namespace + resource quotas
+- `runner-deployment.yml` — Self-hosted GitHub Actions runner
+- `cronjobs.yml` — Health check, improvement scan, backup, lock GC
+- `kustomization.yml` — Deploy all: `kubectl apply -k integrations/kubernetes/`
+
+### n8n (`integrations/n8n/`)
+Visual automation and external integrations (100% self-hosted, open-source).
+- `docker-compose.yml` — Run locally: `docker compose up -d`
+- `workflows/ci-failure-alert.json` — CI failure → Slack + auto-fix
+- `workflows/release-notify.json` — Release complete → Slack
+- `workflows/health-monitor.json` — Periodic health → alert if degraded
+- `workflows/approval-gate.json` — Interactive Slack approval for releases
 
 ## Rules
 1. Never store corporate code, secrets, or internal URLs in this repo
@@ -103,6 +129,7 @@ state/workspaces/<workspace_id>/
 | deploy-panel.yml | Deploy GitHub Pages panel |
 | enqueue-agent-handoff.yml | Create agent handoff |
 | record-improvement.yml | Record improvements |
+| langchain-orchestrator.yml | Intelligent agent orchestration via LangChain + Claude |
 
 ### Trigger Files
 | File | Triggers Workflow |
