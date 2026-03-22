@@ -229,12 +229,15 @@ jobs:
           SHORT="${SHA:0:7}"
           VER="${{ env.version }}"
           TAG="${VER}"
+          CI_RES="${{ env.ci_result }}"
+          [ -z "$CI_RES" ] && CI_RES="unknown"
+          if [ "$CI_RES" = "success" ]; then STATUS="promoted"; else STATUS="ci-failed"; fi
           FSHA=$(gh api "repos/$AUTOPILOT_REPO/contents/${FILE}?ref=$STATE_BRANCH" --jq '.sha' 2>/dev/null || echo "")
           STATE=$(jq -n --arg ws "${{ needs.setup.outputs.ws_id }}" --arg sha "$SHA" --arg tag "$TAG" \
             --arg ver "$VER" --arg ts "$NOW" --arg run "${{ github.run_id }}" \
             --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --arg ci "${{ env.ci_result || 'n/a' }}" \
-            'if $ci == "success" then "promoted" else "ci-failed" end as $status | {schemaVersion:2,workspaceId:$ws,component:"controller",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,ciResult:$ci,status:$status}')
+            --arg ci "$CI_RES" --arg st "$STATUS" \
+            '{schemaVersion:2,workspaceId:$ws,component:"controller",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,ciResult:$ci,status:$st}')
           ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: controller -> $TAG [skip ci]" -f "content=$(echo "$STATE"|base64 -w0)")
           [ -n "$FSHA" ] && [ "$FSHA" != "null" ] && ARGS+=(-f "sha=$FSHA")
           gh api "repos/$AUTOPILOT_REPO/contents/${FILE}" --method PUT "${ARGS[@]}"
@@ -418,7 +421,11 @@ jobs:
           WS_PATH="${{ needs.setup.outputs.ws_path }}"
           FILE="${WS_PATH}/agent-release-state.json"
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          TAG="${{ env.tag || env.version }}"
+          TAG="${{ env.tag }}"
+          [ -z "$TAG" ] && TAG="${{ env.version }}"
+          CI_RES="${{ env.ci_result }}"
+          [ -z "$CI_RES" ] && CI_RES="unknown"
+          if [ "$CI_RES" = "success" ]; then STATUS="promoted"; else STATUS="ci-failed"; fi
           FSHA=$(gh api "repos/$AUTOPILOT_REPO/contents/${FILE}?ref=$STATE_BRANCH" --jq '.sha' 2>/dev/null || echo "")
           PROMO='[]'
           if [ "${{ env.promoted }}" = "true" ]; then
@@ -429,8 +436,8 @@ jobs:
           STATE=$(jq -n --arg ws "${{ needs.setup.outputs.ws_id }}" --arg sha "${{ env.sha }}" --arg tag "$TAG" \
             --arg ver "${{ env.version }}" --arg ts "$NOW" --arg run "${{ github.run_id }}" \
             --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --argjson promo "$PROMO" --arg ci "${{ env.ci_result }}" \
-            'if $ci == "success" then "promoted" else "ci-failed" end as $status | {schemaVersion:2,workspaceId:$ws,component:"agent",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,promotions:$promo,ciResult:$ci,status:$status}')
+            --argjson promo "$PROMO" --arg ci "$CI_RES" --arg st "$STATUS" \
+            '{schemaVersion:2,workspaceId:$ws,component:"agent",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,promotions:$promo,ciResult:$ci,status:$st}')
           ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: agent -> $TAG [skip ci]" -f "content=$(echo "$STATE"|base64 -w0)")
           [ -n "$FSHA" ] && [ "$FSHA" != "null" ] && ARGS+=(-f "sha=$FSHA")
           gh api "repos/$AUTOPILOT_REPO/contents/${FILE}" --method PUT "${ARGS[@]}"
