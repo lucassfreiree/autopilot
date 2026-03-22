@@ -2,14 +2,13 @@
   "schemaVersion": 2,
   "workspaceId": "ws-default",
   "component": "agent",
-  "lastReleasedSha": "63f5d896addd7ccdc3d2a2114d58854caaba8627",
-  "lastTag": "source-change",
-  "updatedAt": "2026-03-22T13:52:29Z",
-  "runId": "23404431052",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23404431052",
+  "lastReleasedSha": "128ac2cf9cbf71a3eecbd22d621acc4a2355f4fe",
+  "lastTag": "2.2.2",
+  "lastVersion": "2.2.2",
+  "updatedAt": "2026-03-22T14:57:43Z",
+  "runId": "23405630499",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23405630499",
+  "promotions": [],
   "ciResult": "failure",
-  "status": "ci-failed",
-  "changeType": "source-code",
-  "commitMessage": "feat: add autopilot info utility (source change validation)",
-  "promoted": false
+  "status": "ci-failed"
 }
