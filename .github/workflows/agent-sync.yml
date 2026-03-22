@@ -142,17 +142,20 @@ jobs:
 
       - name: "Check API key"
         if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0'
+        id: apicheck
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
-            echo "::error ::OPENAI_API_KEY secret is not set. Add it in Settings > Secrets."
-            exit 1
+            echo "::warning ::OPENAI_API_KEY not set. Will use local fix mode."
+            echo "mode=local" >> "$GITHUB_OUTPUT"
+          else
+            echo "API key present (${#OPENAI_API_KEY} chars)"
+            echo "mode=api" >> "$GITHUB_OUTPUT"
           fi
-          echo "API key present (${#OPENAI_API_KEY} chars, starts with ${OPENAI_API_KEY:0:3}...)"
 
       - name: "Build API payload"
-        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0'
+        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0' && steps.apicheck.outputs.mode == 'api'
         run: |
           # Truncate to keep payload manageable
           head -300 /tmp/prompt.txt > /tmp/prompt-truncated.txt
@@ -173,7 +176,7 @@ jobs:
           echo "Payload valid JSON: $(jq empty /tmp/api-payload.json 2>&1 && echo 'yes' || echo 'no')"
 
       - name: "Call ChatGPT API"
-        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0'
+        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0' && steps.apicheck.outputs.mode == 'api'
         id: chatgpt
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -210,8 +213,30 @@ jobs:
           echo "=== Response (first 50 lines) ==="
           head -50 /tmp/chatgpt-response.txt
 
-      - name: "Apply fixes"
-        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0'
+      - name: "Local fix (no API)"
+        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0' && steps.apicheck.outputs.mode == 'local'
+        working-directory: /tmp/source
+        run: |
+          echo "=== Running eslint --fix locally ==="
+          npx eslint src/ --fix 2>/dev/null || true
+          echo "=== Checking remaining errors ==="
+          REMAINING=$(npx eslint src/ --format json 2>/dev/null | jq '[.[] | .errorCount] | add // 0' 2>/dev/null || echo "?")
+          echo "Remaining errors after --fix: $REMAINING"
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes from eslint --fix"
+            echo "local_applied=no-changes" >> "$GITHUB_ENV"
+          else
+            git commit -m "fix: auto-fix lint errors (eslint --fix)"
+            git push origin main
+            echo "local_applied=pushed" >> "$GITHUB_ENV"
+            echo "Fixes pushed"
+          fi
+          echo "local_remaining=$REMAINING" >> "$GITHUB_ENV"
+
+      - name: "Apply ChatGPT fixes"
+        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0' && steps.apicheck.outputs.mode == 'api'
         working-directory: /tmp/source
         run: |
           ANSWER=$(cat /tmp/chatgpt-response.txt)
@@ -259,7 +284,7 @@ jobs:
           PYEOF
 
       - name: "Verify and push"
-        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0'
+        if: steps.inputs.outputs.task == 'ci-fix' && steps.lint.outputs.error_count != '0' && steps.apicheck.outputs.mode == 'api'
         id: push
         working-directory: /tmp/source
         env:

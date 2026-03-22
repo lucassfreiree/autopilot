@@ -186,7 +186,31 @@ jobs:
           done
           echo "Controller CI: ${{ env.ci_result }}"
 
+      - name: "Save controller state"
+        if: env.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          WS_PATH="${{ needs.setup.outputs.ws_path }}"
+          FILE="${WS_PATH}/controller-release-state.json"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SHA="${{ env.sha }}"
+          SHORT="${SHA:0:7}"
+          VER="${{ env.version }}"
+          TAG="${VER}-${SHORT}"
+          FSHA=$(gh api "repos/$AUTOPILOT_REPO/contents/${FILE}?ref=$STATE_BRANCH" --jq '.sha' 2>/dev/null || echo "")
+          STATE=$(jq -n --arg ws "${{ needs.setup.outputs.ws_id }}" --arg sha "$SHA" --arg tag "$TAG" \
+            --arg ver "$VER" --arg ts "$NOW" --arg run "${{ github.run_id }}" \
+            --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg ci "${{ env.ci_result || 'n/a' }}" \
+            '{schemaVersion:2,workspaceId:$ws,component:"controller",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,ciResult:$ci,status:"tested"}')
+          ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: controller -> $TAG [skip ci]" -f "content=$(echo "$STATE"|base64 -w0)")
+          [ -n "$FSHA" ] && [ "$FSHA" != "null" ] && ARGS+=(-f "sha=$FSHA")
+          gh api "repos/$AUTOPILOT_REPO/contents/${FILE}" --method PUT "${ARGS[@]}"
+          echo "Controller state saved: $TAG"
+
       - name: "Summary"
+        if: always()
         run: |
           echo "## Controller" >> "$GITHUB_STEP_SUMMARY"
           echo "| Step | Result |" >> "$GITHUB_STEP_SUMMARY"
