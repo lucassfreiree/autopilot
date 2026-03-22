@@ -185,9 +185,13 @@ jobs:
             fi
           done
           echo "Controller CI: ${{ env.ci_result }}"
+          if [ "${{ env.ci_result }}" = "failure" ]; then
+            echo "::error ::Controller CI failed. Blocking pipeline."
+            exit 1
+          fi
 
       - name: "Save controller state"
-        if: env.pushed == 'true'
+        if: always() && env.pushed == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
@@ -203,7 +207,7 @@ jobs:
             --arg ver "$VER" --arg ts "$NOW" --arg run "${{ github.run_id }}" \
             --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --arg ci "${{ env.ci_result || 'n/a' }}" \
-            '{schemaVersion:2,workspaceId:$ws,component:"controller",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,ciResult:$ci,status:"tested"}')
+            'if $ci == "success" then "promoted" else "ci-failed" end as $status | {schemaVersion:2,workspaceId:$ws,component:"controller",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,ciResult:$ci,status:$status}')
           ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: controller -> $TAG [skip ci]" -f "content=$(echo "$STATE"|base64 -w0)")
           [ -n "$FSHA" ] && [ "$FSHA" != "null" ] && ARGS+=(-f "sha=$FSHA")
           gh api "repos/$AUTOPILOT_REPO/contents/${FILE}" --method PUT "${ARGS[@]}"
@@ -299,9 +303,13 @@ jobs:
           [ "$CI_RESULT" = "pending" ] && CI_RESULT="timeout"
           echo "ci_result=$CI_RESULT" >> "$GITHUB_ENV"
           echo "Agent CI: $CI_RESULT"
+          if [ "$CI_RESULT" = "failure" ]; then
+            echo "::error ::Agent CI failed. Blocking pipeline."
+            exit 1
+          fi
 
       - name: "Promote to CAP"
-        if: env.ci_result != 'timeout'
+        if: env.ci_result == 'success' || env.ci_result == 'no-ci'
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
@@ -345,6 +353,7 @@ jobs:
           fi
 
       - name: "Save state"
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
@@ -363,7 +372,7 @@ jobs:
             --arg ver "${{ env.version }}" --arg ts "$NOW" --arg run "${{ github.run_id }}" \
             --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --argjson promo "$PROMO" --arg ci "${{ env.ci_result }}" \
-            '{schemaVersion:2,workspaceId:$ws,component:"agent",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,promotions:$promo,ciResult:$ci,status:"promoted"}')
+            'if $ci == "success" then "promoted" else "ci-failed" end as $status | {schemaVersion:2,workspaceId:$ws,component:"agent",lastReleasedSha:$sha,lastTag:$tag,lastVersion:$ver,updatedAt:$ts,runId:$run,runUrl:$url,promotions:$promo,ciResult:$ci,status:$status}')
           ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: agent -> $TAG [skip ci]" -f "content=$(echo "$STATE"|base64 -w0)")
           [ -n "$FSHA" ] && [ "$FSHA" != "null" ] && ARGS+=(-f "sha=$FSHA")
           gh api "repos/$AUTOPILOT_REPO/contents/${FILE}" --method PUT "${ARGS[@]}"

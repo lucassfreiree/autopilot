@@ -152,9 +152,11 @@ jobs:
           PROMOTED="false"
           PROCEED="false"
           if [ "$PUSHED" = "true" ]; then
-            PROCEED="true"
             if [ "$CI_RESULT" = "failure" ]; then
-              echo "::warning ::CI failed but proceeding with promotion (corporate CI may have pre-existing issues)"
+              echo "::error ::CI failed. Pipeline blocked — no promotion."
+              PROCEED="false"
+            else
+              PROCEED="true"
             fi
           fi
           echo "=== Gate: proceed=$PROCEED (ci=$CI_RESULT, dry=$DRY_RUN) ==="
@@ -247,4 +249,10 @@ jobs:
           echo "| Gate | proceed=$PROCEED |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Promote | $PROMOTED |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Tag | $TAG |" >> "$GITHUB_STEP_SUMMARY"
+
+          # ── 10. Exit with error if CI failed ──────────────
+          if [ "$CI_RESULT" = "failure" ]; then
+            echo "::error ::Pipeline failed: corporate CI did not pass."
+            exit 1
+          fi
           echo "=== DONE ==="
