@@ -1,0 +1,5 @@
+{
+  "workspace_id": "ws-default",
+  "run": 1,
+  "note": "Fix lint error no-nested-ternary in automation-http.service.ts"
+}
