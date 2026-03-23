@@ -1,27 +1,29 @@
 {
   "workspace_id": "ws-default",
   "component": "controller",
-  "change_type": "version-bump",
+  "change_type": "multi-file",
   "version": "3.5.4",
-  "files": [
+  "changes": [
     {
       "target_path": "package.json",
+      "action": "search-replace",
       "search": "\"version\": \"3.5.3\"",
       "replace": "\"version\": \"3.5.4\""
     },
     {
       "target_path": "package-lock.json",
+      "action": "search-replace",
       "search": "\"version\": \"3.5.2\"",
       "replace": "\"version\": \"3.5.4\""
     },
     {
       "target_path": "src/swagger/swagger.json",
-      "search": "\"version\": \"3.4.2\"",
-      "replace": "\"version\": \"3.5.4\""
+      "action": "replace-file",
+      "content_ref": "patches/swagger.json"
     }
   ],
-  "commit_message": "chore: bump version to 3.5.4",
+  "commit_message": "chore: bump to 3.5.4, fix swagger encoding (remove accents)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 21
+  "run": 22
 }
