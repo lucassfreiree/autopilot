@@ -201,12 +201,14 @@ export async function executeAgent(
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     const isAbort = e instanceof Error && e.name === "AbortError";
+    const execId = ((res.locals as Record<string, unknown>).execId as string) || undefined;
     if (isAbort) {
       const timeoutMs = readAgentCallTimeoutMs();
       res.status(504).json({
         ok: false,
         error: "Timed out while waiting for Agent response",
         detail: `No response from Agent after ${timeoutMs}ms`,
+        execId,
       });
       return;
     }
@@ -215,6 +217,7 @@ export async function executeAgent(
       ok: false,
       error: "Internal error while dispatching execution",
       detail: msg,
+      execId,
     });
   }
 }
