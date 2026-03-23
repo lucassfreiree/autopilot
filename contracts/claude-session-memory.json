@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-23T22:00:00-03:00",
-  "lastSessionId": "session_01WNCzT7nhQbajAjtvmqDgvK",
+  "lastUpdated": "2026-03-23T23:30:00-03:00",
+  "lastSessionId": "session_current_save_flow",
 
   "executionHistory": {
     "description": "Historico completo de tudo que foi executado. Futuras sessoes DEVEM consultar antes de repetir qualquer operacao.",
@@ -58,6 +58,53 @@
             "error": "Step falhou — actions/checkout nao suporta paths fora de $GITHUB_WORKSPACE",
             "fix": "Substituiu por git clone --depth 1 com RELEASE_TOKEN",
             "prevention": "Para checkout em path customizado fora do workspace: SEMPRE usar git clone, nunca actions/checkout"
+          }
+        ]
+      },
+      {
+        "id": "session_post_run33_success",
+        "date": "2026-03-23",
+        "summary": "Workflow apply-source-change run #33 completou com SUCESSO. Fixes intermediarios: skip per-file lint para multi-file, cancel-in-progress para desbloquear runs stuck.",
+        "stepsExecuted": [
+          {
+            "step": 1,
+            "action": "Run 30 falhou — lint per-file nao compativel com multi-file",
+            "how": "Workflow tentava rodar eslint por arquivo individual em multi-file, mas nao tinha logica para iterar",
+            "lesson": "multi-file deve pular lint per-file e rodar lint global no final"
+          },
+          {
+            "step": 2,
+            "action": "Fix: skip per-file lint para multi-file + timeout",
+            "how": "PR mergeado (commit 1521e9c). Adicionou condicao para skip lint per-file quando multi-file. Adicionou timeout.",
+            "filesChanged": [".github/workflows/apply-source-change.yml"],
+            "result": "Run 31 disparado"
+          },
+          {
+            "step": 3,
+            "action": "Runs ficaram stuck (queued/in_progress sem terminar)",
+            "how": "concurrency group sem cancel-in-progress. Runs antigos bloqueavam novos.",
+            "lesson": "Workflow com concurrency group DEVE ter cancel-in-progress: true para evitar queue infinita"
+          },
+          {
+            "step": 4,
+            "action": "Fix: cancel-in-progress para desbloquear runs stuck",
+            "how": "PR mergeado (commit 9877c45). Adicionou cancel-in-progress: true no concurrency group.",
+            "filesChanged": [".github/workflows/apply-source-change.yml"],
+            "result": "Run 33 disparado e completou com SUCESSO"
+          },
+          {
+            "step": 5,
+            "action": "Run #33 completou com sucesso",
+            "result": "Workflow apply-source-change executou todos os stages: Setup → Session Guard → Apply & Push → CI Gate → Save State → Audit. Codigo pushado para repo corporativo controller. Esteira de Build NPM #198 iniciada para gerar imagem 3.5.4.",
+            "lesson": "Pipeline completo de deploy funciona ponta-a-ponta. Proximo deploy: so criar patches + atualizar trigger + PR + merge."
+          }
+        ],
+        "mistakesMade": [
+          {
+            "mistake": "Nao tinha cancel-in-progress no concurrency group",
+            "error": "Runs ficavam queued indefinidamente, bloqueando uns aos outros",
+            "fix": "Adicionou cancel-in-progress: true",
+            "prevention": "SEMPRE ter cancel-in-progress: true em workflows com concurrency group"
           }
         ]
       },
@@ -212,8 +259,10 @@
       "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "lastTriggerRun": 30,
+    "lastTriggerRun": 33,
+    "lastSuccessfulRun": 33,
     "lastDeployPR": 92,
+    "pipelineStatus": "SUCCESS — run #33 completou todos os stages. Imagem 3.5.4 em build na Esteira NPM #198.",
     "multiFilePayload": {
       "change_type": "multi-file",
       "changesFormat": [
@@ -229,7 +278,10 @@
       "Push direto para main: BLOQUEADO (403). Sempre PR.",
       "Deploy roda ponta-a-ponta sem intervencao. Usuario NAO aprova nada.",
       "actions/checkout@v4 NAO suporta paths absolutos fora de $GITHUB_WORKSPACE. Usar git clone.",
-      "SEMPRE monitorar workflow run apos trigger: WebFetch da API /actions/workflows/<name>/runs e /actions/runs/<id>/jobs"
+      "SEMPRE monitorar workflow run apos trigger: WebFetch da API /actions/workflows/<name>/runs e /actions/runs/<id>/jobs",
+      "multi-file DEVE pular lint per-file — lint global no final e suficiente",
+      "Workflow com concurrency group DEVE ter cancel-in-progress: true",
+      "Pipeline FUNCIONA ponta-a-ponta: trigger → apply-source-change → push corporativo → CI gate → state save → audit"
     ]
   },
 
@@ -259,6 +311,29 @@
         "fix": "Trocado por git clone --depth 1 com RELEASE_TOKEN",
         "fixedInPR": 92,
         "fixedInRun": 30
+      },
+      {
+        "step": "Lint per-file em multi-file change",
+        "cause": "Workflow tentava lint por arquivo em multi-file, mas nao iterava corretamente",
+        "fix": "Skip per-file lint para multi-file + timeout",
+        "fixedInCommit": "1521e9c",
+        "fixedInRun": 31
+      },
+      {
+        "step": "Runs stuck em queue (concurrency)",
+        "cause": "concurrency group sem cancel-in-progress bloqueava runs novos",
+        "fix": "Adicionou cancel-in-progress: true",
+        "fixedInCommit": "9877c45",
+        "fixedInRun": 33
+      }
+    ],
+    "successfulRuns": [
+      {
+        "run": 33,
+        "date": "2026-03-23",
+        "version": "3.5.4",
+        "stages": ["Setup", "Session Guard", "Apply & Push", "CI Gate", "Save State", "Audit"],
+        "result": "SUCCESS — codigo pushado para controller corporativo. Esteira NPM #198 iniciada."
       }
     ],
     "lesson": "NUNCA assumir que workflow rodou com sucesso. SEMPRE monitorar e verificar."
@@ -326,6 +401,9 @@
     "deployVersion": "3.5.4",
     "deployPR": 85,
     "deployTriggerRun": 27,
+    "finalSuccessfulRun": 33,
+    "deployedToCorporateRepo": true,
+    "esteiraBuilding": "NPM #198 — imagem 3.5.4",
     "sourceFiles": {
       "controller": "src/controllers/oas-sre-controller.controller.ts",
       "authMiddleware": "src/middlewares/oas-origin-auth.ts",
