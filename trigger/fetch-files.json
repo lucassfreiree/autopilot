@@ -1,6 +1,6 @@
 {
   "workspace_id": "ws-default",
   "component": "controller",
-  "files": "src/swagger/swagger.json,src/swagger/makeSwagger.ts,src/swagger/swagger.ts,package-lock.json",
-  "run": 8
+  "files": "package.json,package-lock.json,src/swagger/swagger.json,src/middleware/oas-origin-auth.ts",
+  "run": 9
 }
