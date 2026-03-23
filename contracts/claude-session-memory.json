@@ -406,6 +406,56 @@
     "lesson": "NUNCA assumir que workflow rodou com sucesso. SEMPRE monitorar e verificar."
   },
 
+  "corporateCIMonitoring": {
+    "description": "OBRIGATORIO: Apos apply-source-change completar com sucesso, a esteira de Build NPM do repo corporativo AINDA precisa rodar e pode FALHAR. O workflow apply-source-change so verifica se o push foi aceito e se o CI gate passou, mas a esteira corporativa completa (build Docker image, testes completos, publicacao no registry) roda DEPOIS e de forma INDEPENDENTE.",
+    "rule": "SEMPRE monitorar a esteira corporativa apos deploy. NAO considerar deploy finalizado ate a imagem Docker ser gerada.",
+    "monitoringFlow": [
+      "1. Apos apply-source-change SUCCESS: verificar se esteira de Build NPM foi acionada no repo corporativo",
+      "2. Monitorar status da esteira a cada 3-5 minutos",
+      "3. Se esteira FALHAR: diagnosticar IMEDIATAMENTE sem perguntar ao usuario",
+      "4. Baixar logs da esteira, analisar erro, criar fix, deployar correcao automaticamente",
+      "5. AVISAR usuario do resultado final (imagem Docker gerada ou falha diagnosticada)"
+    ],
+    "howToMonitor": {
+      "controller": {
+        "repo": "bbvinet/psc-sre-automacao-controller",
+        "ciName": "Esteira de Build NPM",
+        "checkUrl": "gh api repos/bbvinet/psc-sre-automacao-controller/commits/{sha}/check-runs (via BBVINET_TOKEN no workflow)",
+        "imageRegistry": "docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller",
+        "note": "A esteira e acionada automaticamente pelo push feito pelo apply-source-change. Verificar o SHA do commit pushado."
+      },
+      "agent": {
+        "repo": "bbvinet/psc-sre-automacao-agent",
+        "ciName": "Esteira de Build NPM",
+        "checkUrl": "gh api repos/bbvinet/psc-sre-automacao-agent/commits/{sha}/check-runs (via BBVINET_TOKEN no workflow)",
+        "imageRegistry": "docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-agent"
+      }
+    },
+    "failureProtocol": [
+      "1. Identificar qual step da esteira falhou (build, test, lint, publish)",
+      "2. Se build/TypeScript: erro de compilacao — verificar imports, types, tsconfig",
+      "3. Se test/Jest: teste unitario falhou — verificar se o teste espera comportamento antigo",
+      "4. Se lint/ESLint: erro de lint — verificar regras do projeto",
+      "5. Se publish: tag duplicada no registry — incrementar version",
+      "6. Criar patch de correcao AUTOMATICAMENTE — nao perguntar ao usuario",
+      "7. Incrementar run no trigger, novo PR, merge, monitorar novamente"
+    ],
+    "commonCIFailures": [
+      {"error": "Tag duplicada no registry", "fix": "Incrementar patch version", "pattern": "duplicate tag|already exists"},
+      {"error": "TypeScript compilation error", "fix": "Verificar imports, types, interfaces", "pattern": "TS\\d{4}|error TS|Cannot find"},
+      {"error": "Test failure", "fix": "Verificar se teste espera comportamento antigo, atualizar teste ou fix o codigo", "pattern": "FAIL|expect.*received|test.*failed"},
+      {"error": "ESLint error", "fix": "Verificar regras do projeto, corrigir ou disable inline", "pattern": "eslint|no-unused|prefer-const"},
+      {"error": "JWT scope claim errado", "fix": "Agent middleware le payload.scope (singular), nunca scopes (plural)", "pattern": "Insufficient scope|403"}
+    ],
+    "goldenRules": [
+      "Deploy NAO esta completo quando apply-source-change termina — FALTA a esteira corporativa",
+      "SEMPRE monitorar a esteira apos deploy ate a imagem Docker ser publicada",
+      "Se esteira falhar: diagnosticar e corrigir AUTOMATICAMENTE sem perguntar",
+      "Registrar CADA falha com causa + fix em knownFailures para resolucao rapida",
+      "AVISAR usuario assim que imagem for publicada ou falha diagnosticada"
+    ]
+  },
+
   "authArchitecture": {
     "secrets": {
       "sre-controller-auth": {
@@ -646,13 +696,13 @@
         "output": "PR mergeado. Workflow apply-source-change disparado automaticamente."
       },
       "phase5_monitor": {
-        "name": "Monitorar Workflow (OBRIGATORIO)",
+        "name": "Monitorar Workflow apply-source-change (OBRIGATORIO)",
         "steps": [
           "1. Imediatamente apos merge: WebFetch em https://api.github.com/repos/lucassfreiree/autopilot/actions/workflows/apply-source-change.yml/runs?per_page=3",
           "2. Verificar se novo run apareceu (status: queued ou in_progress)",
           "3. Aguardar 2-3 minutos e verificar novamente",
-          "4. Se status=completed e conclusion=success: DEPLOY CONCLUIDO",
-          "5. Se status=completed e conclusion=failure: verificar jobs para diagnosticar",
+          "4. Se status=completed e conclusion=success: PROSSEGUIR para phase5b",
+          "5. Se status=completed e conclusion=failure: verificar jobs, diagnosticar, corrigir AUTOMATICAMENTE, re-deploy",
           "6. AVISAR O USUARIO assim que o workflow finalizar (sucesso ou falha)"
         ],
         "monitoringUrls": {
@@ -665,7 +715,32 @@
           "maxWait": "15 minutos (CI gate pode demorar dependendo da esteira corporativa)",
           "onCompletion": "AVISAR IMEDIATAMENTE o usuario com resultado"
         },
-        "output": "Workflow concluido. Usuario avisado."
+        "output": "Workflow concluido. Prosseguir para phase5b."
+      },
+      "phase5b_corporate_ci": {
+        "name": "Monitorar Esteira Corporativa (OBRIGATORIO — NAO PULAR)",
+        "description": "CRITICO: apply-source-change SUCCESS NAO significa deploy completo! A Esteira de Build NPM roda INDEPENDENTEMENTE apos o push para o repo corporativo e PODE FALHAR.",
+        "steps": [
+          "1. Apos apply-source-change SUCCESS: CI Gate ja verificou build+test+lint basicos",
+          "2. Monitorar se imagem Docker esta sendo gerada (Esteira de Build NPM)",
+          "3. Se CI Gate passou: a esteira provavelmente esta OK, mas CONFIRMAR",
+          "4. Se esteira FALHAR em qualquer ponto:",
+          "   a. Baixar logs e diagnosticar o erro AUTOMATICAMENTE (NAO perguntar ao usuario)",
+          "   b. Falhas comuns: TypeScript errors, test failures, lint errors, duplicate tags",
+          "   c. Criar patch de correcao, bumpar trigger run, novo PR, merge, re-monitorar",
+          "   d. Repetir ate sucesso",
+          "5. AVISAR usuario com resultado final (imagem gerada ou falha diagnosticada)",
+          "6. Registrar CADA falha em knownFailures + errorRecovery na session memory"
+        ],
+        "failureActions": {
+          "typescript_error": "Verificar imports, types, interfaces. Corrigir no patch e re-deploy",
+          "test_failure": "Verificar se teste espera comportamento antigo. Atualizar teste ou corrigir codigo",
+          "lint_error": "Verificar regras do projeto. Corrigir ou disable inline se necessario",
+          "duplicate_tag": "Incrementar patch version em TODOS os 4 arquivos",
+          "scope_claim": "Agent le payload.scope (singular). NUNCA usar scopes (plural)"
+        },
+        "goldenRule": "Deploy so esta COMPLETO quando a imagem Docker e publicada no registry. NAO parar de monitorar antes disso.",
+        "output": "Imagem Docker gerada. Deploy REALMENTE completo. Avisar usuario."
       },
       "phase6_post_deploy": {
         "name": "Pos-Deploy",

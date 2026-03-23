@@ -249,14 +249,31 @@ Edit `trigger/source-change.json`:
 7. The merge to main with trigger/source-change.json change AUTO-TRIGGERS apply-source-change.yml
 ```
 
-### Phase 5: Monitor Workflow (MANDATORY)
+### Phase 5: Monitor Autopilot Workflow (MANDATORY)
 ```
 1. After merge: WebFetch https://api.github.com/repos/lucassfreiree/autopilot/actions/workflows/apply-source-change.yml/runs?per_page=3
 2. Verify new run appeared (status: queued/in_progress)
 3. Poll every 2-3 minutes
-4. If completed+success: DEPLOY DONE — notify user immediately
-5. If completed+failure: check job details, diagnose, fix, re-trigger
+4. If completed+success: proceed to Phase 5b
+5. If completed+failure: check job details, diagnose, fix, re-trigger AUTOMATICALLY
 6. ALWAYS notify user on completion (success or failure)
+```
+
+### Phase 5b: Monitor Corporate CI Pipeline (MANDATORY — DO NOT SKIP)
+```
+CRITICAL: apply-source-change SUCCESS does NOT mean deploy is done!
+The corporate "Esteira de Build NPM" runs INDEPENDENTLY after code is pushed.
+
+1. After apply-source-change SUCCESS: the corporate CI was already checked in CI Gate step
+2. If CI Gate passed: corporate CI already validated build+test+lint
+3. Monitor if Docker image is being generated (Esteira de Build NPM)
+4. If corporate CI FAILS at any point:
+   a. Download logs and diagnose the error AUTOMATICALLY (DO NOT ask user)
+   b. Common failures: TypeScript errors, test failures, lint errors, duplicate tags
+   c. Create fix patch, bump trigger run, new PR, merge, re-monitor
+   d. Repeat until success
+5. ALWAYS notify user with final result (image generated or failure diagnosed)
+6. Record EVERY failure in session memory knownFailures + errorRecovery
 ```
 
 ### Phase 6: Post-Deploy
@@ -278,6 +295,9 @@ Edit `trigger/source-change.json`:
 | ALWAYS fetch origin/main first | Prevents merge conflicts |
 | ALWAYS do everything in 1 commit | Patches + trigger + references + memory together |
 | NEVER ask user about code issues | Download, analyze, fix, and deploy AUTOMATICALLY |
+| NEVER consider deploy done after apply-source-change | Corporate CI (Esteira de Build NPM) runs AFTER and can FAIL independently |
+| ALWAYS monitor corporate CI after deploy | Poll until Docker image is generated or failure is diagnosed |
+| ALWAYS diagnose and fix CI failures automatically | Download logs, analyze, create fix, re-deploy — NO user intervention |
 | ALWAYS map errors and solutions | Record in session memory knownFailures + errorRecovery for fast resolution |
 | ALWAYS verify JWT claim names | Agent reads `payload.scope` (singular), never `scopes` (plural) |
 
