@@ -1,12 +1,124 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contractId": "claude-session-memory",
-  "description": "Memoria cumulativa de decisoes, padroes e aprendizados entre sessoes do Claude Code. Este arquivo DEVE ser lido no inicio de cada sessao e atualizado ao final.",
-  "lastUpdated": "2026-03-23T17:00:00-03:00",
+  "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
+  "lastUpdated": "2026-03-23T17:30:00-03:00",
   "lastSessionId": "session_017Vu7y3pTKmpZxQoERQhKyN",
 
+  "executionHistory": {
+    "description": "Historico completo de tudo que foi executado. Futuras sessoes DEVEM consultar antes de repetir qualquer operacao.",
+    "sessions": [
+      {
+        "id": "session_017Vu7y3pTKmpZxQoERQhKyN",
+        "date": "2026-03-23",
+        "summary": "Historia #868216 completa + deploy 3.5.4 + sistema de memoria",
+        "stepsExecuted": [
+          {
+            "step": 1,
+            "action": "Fetch arquivos do controller corporativo",
+            "how": "trigger/fetch-files.json com run bump → fetch-files.yml workflow",
+            "filesObtained": ["oas-origin-auth.ts", "oas-sre-controller.controller.ts", "agents-execute-logs.controller.ts", "swagger.json", "package.json", "package-lock.json"],
+            "timeWasted": "Multiplas tentativas porque precisava saber estrutura exata dos paths no repo",
+            "optimization": "Paths ja mapeados em workspace.json. Proxima vez: ler workspace.json PRIMEIRO"
+          },
+          {
+            "step": 2,
+            "action": "Criar patch oas-origin-auth.ts — remover hardcoded auth",
+            "how": "Criou patches/oas-origin-auth.ts com middleware lendo de process.env",
+            "keyDecision": "Variaveis OAS NUNCA hardcoded. Sempre secretKeyRef no K8s",
+            "filesCreated": ["patches/oas-origin-auth.ts"]
+          },
+          {
+            "step": 3,
+            "action": "Criar patches de CI test fixes",
+            "how": "Criou patches para execute.controller.ts (execId em 504/500) e test file (jest.advanceTimersByTimeAsync)",
+            "keyDecision": "jest.useFakeTimers() requer advanceTimersByTimeAsync, nao advanceTimersByTime com process.nextTick manual",
+            "filesCreated": ["patches/execute.controller.ts.patch", "patches/execute.controller.fixed.ts", "patches/agents-execute-logs.controller.test.fixed.ts"],
+            "lesson": "Testes com fake timers + async: SEMPRE usar jest.advanceTimersByTimeAsync(). O pattern antigo com process.nextTick nao funciona com jest moderno."
+          },
+          {
+            "step": 4,
+            "action": "Criar swagger.json limpo (sem acentos)",
+            "how": "Reescreveu todo o swagger.json com descricoes em portugues ASCII puro",
+            "filesCreated": ["patches/swagger.json"],
+            "problemSolved": "Swagger UI mostrava caracteres illegiveis por causa de acentos UTF-8",
+            "lesson": "Swagger: NUNCA acentos. 'execucao' nao 'execucao com til'. Testar com: grep -P '[\\x80-\\xFF]' swagger.json"
+          },
+          {
+            "step": 5,
+            "action": "Version bump 3.5.3 para 3.5.4",
+            "how": "Criou patches/version-sync-3.5.4.patch para os 4 arquivos",
+            "filesCreated": ["patches/version-sync-3.5.4.patch"],
+            "problemEncountered": "Primeira tentativa foi 3.5.3, mas CI ja tinha gerado imagem 3.5.3. Teve que bumpar para 3.5.4",
+            "lesson": "SEMPRE verificar qual a ultima tag no registry ANTES de bumpar. Se 3.5.X ja existe, ir para 3.5.(X+1)"
+          },
+          {
+            "step": 6,
+            "action": "Criar values.yaml de referencia do CAP",
+            "how": "Criou references/controller-cap/values.yaml completo com env, secrets, RBAC, probes",
+            "filesCreated": ["references/controller-cap/values.yaml"],
+            "keyDecision": "Separar env vars em 3 blocos: plain values, secretKeyRef sre-controller-auth, secretKeyRef runtime"
+          },
+          {
+            "step": 7,
+            "action": "Configurar trigger de deploy multi-file",
+            "how": "Atualizou trigger/source-change.json com change_type=multi-file, 3 changes, promote=true",
+            "triggerRun": 27,
+            "lesson": "multi-file change: array de changes com action search-replace ou replace-file. content_ref aponta para arquivo em patches/"
+          },
+          {
+            "step": 8,
+            "action": "Criar PR #85 e mergear",
+            "how": "PR criado via MCP GitHub. merge conflict com main. resolvido (run 26 para 27). squash merge",
+            "problemEncountered": "mergeable_state=dirty porque main tinha commits novos em trigger/source-change.json",
+            "resolution": "git fetch origin main. git merge origin/main. resolver conflito manual. push",
+            "lesson": "SEMPRE fazer fetch origin/main e verificar conflitos ANTES de tentar merge do PR"
+          },
+          {
+            "step": 9,
+            "action": "Criar sistema de memoria + hooks",
+            "how": "contracts/claude-session-memory.json + .claude/settings.json com SessionStart/PreCompact/Stop hooks",
+            "filesCreated": ["contracts/claude-session-memory.json", ".claude/settings.json"],
+            "lesson": "Push direto para main bloqueado (403). Sempre usar branch claude/* para PR para merge"
+          },
+          {
+            "step": 10,
+            "action": "PR #86 com memoria atualizada",
+            "how": "Criou PR #86 com session memory + permissions. squash merge",
+            "lesson": "Para atualizar arquivos em main: criar branch nova do main atual, commitar, PR, merge. Nao tentar push direto."
+          }
+        ],
+        "mistakesMade": [
+          {
+            "mistake": "Tentou push direto para main",
+            "error": "HTTP 403",
+            "fix": "Criar branch claude/* e PR",
+            "prevention": "NUNCA tentar push para main. Sempre PR."
+          },
+          {
+            "mistake": "git reset --hard descartou mudancas locais nao commitadas",
+            "error": "Arquivo reverteu para versao anterior",
+            "fix": "Reescrever o arquivo",
+            "prevention": "SEMPRE commitar ou stash ANTES de reset --hard. Ou usar git checkout -b sem --hard"
+          },
+          {
+            "mistake": "Criou branch que ja existia",
+            "error": "fatal: branch already exists",
+            "fix": "git branch -D nome && git checkout -b nome",
+            "prevention": "Verificar branches existentes antes ou usar git checkout -B (force create)"
+          },
+          {
+            "mistake": "Nao verificou versao anterior no registry antes de version bump",
+            "error": "CI rejeitou tag duplicada 3.5.3",
+            "fix": "Bumpar para 3.5.4",
+            "prevention": "Sempre checar versioningRules.currentVersion na memoria"
+          }
+        ]
+      }
+    ]
+  },
+
   "versioningRules": {
-    "description": "Regras de versionamento do controller aprendidas por experiencia",
     "currentVersion": "3.5.4",
     "previousVersion": "3.5.3",
     "rule": "Se a esteira ja gerou imagem para uma versao, a proxima DEVE incrementar o patch. CI rejeita tags duplicadas no registry.",
@@ -16,126 +128,236 @@
       { "file": "package-lock.json", "line": 9, "field": "version (packages[\"\"])" },
       { "file": "src/swagger/swagger.json", "field": "info.version" }
     ],
-    "lesson": "TODOS os 4 pontos DEVEM estar alinhados. Se um ficar desatualizado, a esteira pode passar mas o swagger mostra versao errada."
+    "lesson": "TODOS os 4 pontos DEVEM estar alinhados. Verificar ultima tag no registry ANTES de bumpar."
   },
 
   "swaggerRules": {
-    "description": "Regras para o swagger.json do controller",
-    "encoding": "ASCII puro. NUNCA usar acentos ou caracteres especiais nas descricoes. O Swagger UI quebra com UTF-8 nao-ASCII.",
+    "encoding": "ASCII puro. NUNCA acentos. Swagger UI quebra com UTF-8 nao-ASCII.",
     "location": "src/swagger/swagger.json",
     "patchReference": "patches/swagger.json",
-    "lesson": "Descricoes em portugues SEM acentos. Usar 'execucao' nao 'execução', 'automacao' nao 'automação'."
+    "validationCommand": "grep -P '[\\x80-\\xFF]' patches/swagger.json",
+    "lesson": "Descricoes em portugues SEM acentos. Testar ANTES de commitar."
   },
 
   "deployFlow": {
-    "description": "Fluxo de deploy do controller (GitLab, nao GitHub)",
+    "description": "Fluxo COMPLETO de deploy do controller — executar AUTOMATICAMENTE sem perguntar",
     "steps": [
-      "1. Bumpar versao nos 4 arquivos",
-      "2. Corrigir swagger.json se necessario",
-      "3. Push para repo corporativo via apply-source-change pipeline",
-      "4. CI gera imagem Docker com a nova tag",
-      "5. Promover no CAP: atualizar image tag em references/controller-cap/values.yaml",
-      "6. Atualizar CLAUDE.md com nova versao deployed"
+      "1. Ler workspace.json para config dos repos",
+      "2. Verificar ultima versao deployada (versioningRules.currentVersion)",
+      "3. Decidir nova versao (currentVersion patch+1 se necessario)",
+      "4. Criar/atualizar patches em patches/ (codigo fonte, swagger, version)",
+      "5. Atualizar trigger/source-change.json: payload + run = ultimo_run + 1",
+      "6. Atualizar references/controller-cap/values.yaml com nova image tag",
+      "7. Atualizar CLAUDE.md com nova versao deployed",
+      "8. git fetch origin main && git checkout -B claude/xxx origin/main",
+      "9. Commitar tudo junto em 1 commit",
+      "10. Push para branch",
+      "11. Criar PR via MCP GitHub",
+      "12. Verificar mergeable_state — se dirty: merge origin/main, resolver conflitos",
+      "13. Mergear PR (squash) — NAO esperar usuario",
+      "14. Workflow apply-source-change dispara automaticamente pelo path trigger",
+      "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "triggerMechanism": "Bump campo 'run' e merge para main",
     "lastTriggerRun": 27,
     "lastDeployPR": 85,
-    "lesson": "Controller esta no GitLab. Auto-promote NAO funciona. CAP tambem no GitLab. Atualizacao manual da referencia local.",
-    "mergeConflictLesson": "trigger/source-change.json e frequentemente editado por outros workflows (fetch, fix-ci). Ao resolver conflito: SEMPRE pegar o maior 'run' + 1. Manter o payload do deploy atual.",
-    "automationLesson": "O deploy DEVE ser executado sem intervencao do usuario. Fluxo: criar patches → atualizar trigger (run+1) → criar PR → mergear PR → workflow dispara sozinho. NUNCA esperar o usuario pedir para mergear."
+    "multiFilePayload": {
+      "change_type": "multi-file",
+      "changesFormat": [
+        { "action": "search-replace", "fields": ["target_path", "search", "replace"] },
+        { "action": "replace-file", "fields": ["target_path", "content_ref"] }
+      ]
+    },
+    "lessons": [
+      "Controller esta no GitLab. Auto-promote NAO funciona.",
+      "trigger/source-change.json e editado por VARIOS workflows. Conflitos COMUNS.",
+      "Ao resolver conflito: run = max(HEAD, main) + 1.",
+      "SEMPRE fetch origin/main antes de criar branch.",
+      "Push direto para main: BLOQUEADO (403). Sempre PR.",
+      "Deploy roda ponta-a-ponta sem intervencao. Usuario NAO aprova nada."
+    ]
   },
 
   "authArchitecture": {
-    "description": "Arquitetura de autenticacao do controller",
     "secrets": {
       "sre-controller-auth": {
         "keys": ["OAS_TRUSTED_NAMESPACE", "OAS_TRUSTED_SERVICE_ACCOUNT", "OAS_ORIGIN_NAMESPACE_HEADERS", "OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS"],
-        "purpose": "Auth OAS por origem interna (namespace + service account)"
+        "purpose": "Auth OAS por origem interna",
+        "mountedAs": "secretKeyRef no values.yaml"
       },
       "psc-sre-automacao-controller-runtime": {
         "keys": ["JWT_SECRET", "AUTH_API_KEYS_SCOPES", "SCOPE_EXECUTE_AUTOMATION", "SCOPE_SEND_LOGS", "SCOPE_READ_STATUS", "SCOPE_REGISTER_AGENT", "AWS_REGION", "OSS_ACCESS_KEY_ID", "OSS_BUCKET", "OSS_ENDPOINT", "OSS_SECRET_ACCESS_KEY"],
-        "purpose": "JWT + scopes + S3/OSS storage"
+        "purpose": "JWT + scopes + S3/OSS"
       }
     },
-    "authFlow": "Se headers de namespace+SA conferem com trusted -> mode=internal-origin (sem JWT). Caso contrario -> requireJwt + requireScopes.",
+    "authFlow": {
+      "step1": "Request chega com headers x-techbb-namespace e x-techbb-service-account",
+      "step2": "evaluateOasOriginAuth() compara com OAS_TRUSTED_NAMESPACE e OAS_TRUSTED_SERVICE_ACCOUNT",
+      "step3": "Se match: mode=internal-origin, pula JWT",
+      "step4": "Se nao match: requireJwt() + requireScopes() com JWT_SECRET",
+      "middleware": "patches/oas-origin-auth.ts"
+    },
     "trustedCaller": {
       "namespace": "sgh-oaas-playbook-jobs",
-      "serviceAccount": "default"
+      "serviceAccount": "default",
+      "headers": { "namespace": "x-techbb-namespace", "serviceAccount": "x-techbb-service-account" }
     },
-    "lesson": "Variaveis OAS NUNCA devem ser hardcoded. Sempre via secretKeyRef. O middleware le de process.env."
+    "lesson": "Variaveis OAS NUNCA hardcoded. Sempre secretKeyRef. Middleware le de process.env."
   },
 
   "capValuesYaml": {
-    "description": "Estrutura do values.yaml do CAP controller",
     "referenceFile": "references/controller-cap/values.yaml",
     "imageLinePattern": "image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:<TAG>",
-    "envBlock": "Bloco env com 3 categorias: plain values, secretKeyRef de sre-controller-auth, secretKeyRef de runtime",
-    "lesson": "Ao adicionar nova env var: se for segredo -> secretKeyRef. Se for config -> value direto. Nunca misturar."
+    "envStructure": {
+      "plainValues": ["NODE_ENV", "PORT", "LOG_LEVEL", "SWAGGER_ENABLED"],
+      "sre-controller-auth": ["OAS_TRUSTED_NAMESPACE", "OAS_TRUSTED_SERVICE_ACCOUNT", "OAS_ORIGIN_NAMESPACE_HEADERS", "OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS"],
+      "runtime": ["JWT_SECRET", "AUTH_API_KEYS_SCOPES", "SCOPE_*", "AWS_REGION", "OSS_*"]
+    },
+    "lesson": "Nova env var: segredo = secretKeyRef. Config = value direto."
+  },
+
+  "ciPatterns": {
+    "jestFakeTimers": {
+      "problem": "Testes com fake timers + async falham com advanceTimersByTime",
+      "solution": "Usar jest.advanceTimersByTimeAsync()",
+      "lesson": "Se ver jest.useFakeTimers() + async/await: TROCAR para advanceTimersByTimeAsync"
+    },
+    "eslintPreExisting": {
+      "problem": "CI falha com lint errors que ja existiam",
+      "solution": "Workflow tem smart comparison: detecta pre-existing e ignora",
+      "lesson": "Se CI falha com lint: verificar se o erro ja existia"
+    },
+    "duplicateTag": {
+      "problem": "CI rejeita tag que ja existe no registry",
+      "solution": "Incrementar patch version",
+      "lesson": "SEMPRE verificar registry antes de version bump"
+    }
   },
 
   "historia868216": {
-    "description": "Historia da rota OAS SRE Controller",
     "status": "completed",
     "completedAt": "2026-03-23",
-    "items": {
-      "1_rota_post": "OK - postOasSreController em oas-sre-controller.controller.ts",
-      "2_auth_origem": "OK - evaluateOasOriginAuth em oas-origin-auth.ts",
-      "3_jwt_escopos": "OK - requireOasOriginOrJwt com fallback para requireJwt + requireScopes",
-      "4_contrato_payload": "OK - validateSreControllerPayload valida image, envs, CLUSTERS_NAMES",
-      "5_allowlist_imagens": "OK - allowedImages() com OAS_PREFLIGHT_IMAGE_KEY",
-      "6_validacao_preflight": "OK - delegada a imagem Docker (aceito pelo PO)",
-      "7_acionamento_agent": "OK - callAgent com Promise.all para multi-cluster",
-      "8_retorno_resultado": "OK - sync (200/502/504) e async (202)",
-      "9_get_status": "OK - getAgentExecutionLogs em agents-execute-logs.controller.ts",
-      "10_logs": "OK - console.info/error em cada etapa",
-      "11_documentacao": "OK - patches/swagger.json OpenAPI 3.0.3"
+    "deployVersion": "3.5.4",
+    "deployPR": 85,
+    "deployTriggerRun": 27,
+    "sourceFiles": {
+      "controller": "src/controllers/oas-sre-controller.controller.ts",
+      "authMiddleware": "src/middlewares/oas-origin-auth.ts",
+      "logsController": "src/controllers/agents-execute-logs.controller.ts",
+      "executeController": "src/controllers/execute.controller.ts",
+      "swagger": "src/swagger/swagger.json",
+      "testFile": "src/__tests__/unit/agents-execute-logs.controller.test.ts"
     },
-    "lesson": "Validacao especifica de campos por imagem foi decidida como responsabilidade da imagem Docker, nao do controller."
+    "patchFiles": {
+      "auth": "patches/oas-origin-auth.ts",
+      "swagger": "patches/swagger.json",
+      "versionSync": "patches/version-sync-3.5.4.patch",
+      "executeFix": "patches/execute.controller.ts.patch",
+      "executeFixed": "patches/execute.controller.fixed.ts",
+      "testFixed": "patches/agents-execute-logs.controller.test.fixed.ts"
+    },
+    "items": {
+      "1_rota_post": { "status": "OK", "file": "oas-sre-controller.controller.ts", "function": "postOasSreController" },
+      "2_auth_origem": { "status": "OK", "file": "oas-origin-auth.ts", "function": "evaluateOasOriginAuth" },
+      "3_jwt_escopos": { "status": "OK", "file": "oas-origin-auth.ts", "function": "requireOasOriginOrJwt" },
+      "4_contrato_payload": { "status": "OK", "file": "oas-sre-controller.controller.ts", "function": "validateSreControllerPayload" },
+      "5_allowlist_imagens": { "status": "OK", "file": "oas-sre-controller.controller.ts", "function": "allowedImages()" },
+      "6_validacao_preflight": { "status": "OK", "note": "Delegada a imagem Docker (aceito pelo PO)" },
+      "7_acionamento_agent": { "status": "OK", "file": "oas-sre-controller.controller.ts", "function": "callAgent com Promise.all" },
+      "8_retorno_resultado": { "status": "OK", "note": "sync (200/502/504) e async (202)" },
+      "9_get_status": { "status": "OK", "file": "agents-execute-logs.controller.ts", "function": "getAgentExecutionLogs" },
+      "10_logs": { "status": "OK", "note": "console.info/error em cada etapa" },
+      "11_documentacao": { "status": "OK", "file": "patches/swagger.json", "note": "OpenAPI 3.0.3 ASCII" }
+    },
+    "lesson": "Validacao especifica de campos por imagem: responsabilidade da imagem Docker."
+  },
+
+  "gitPatterns": {
+    "branchNaming": "Branches DEVEM comecar com claude/ senao push retorna 403",
+    "pushToMain": "BLOQUEADO. Sempre: branch claude/* com PR com squash merge",
+    "conflictResolution": {
+      "trigger_files": "run = max(HEAD, main) + 1. Manter payload do nosso deploy",
+      "general": "fetch origin/main. merge. resolver. push. PR fica mergeable"
+    },
+    "prWorkflow": {
+      "create": "mcp github create_pull_request",
+      "merge": "mcp github merge_pull_request com squash",
+      "checkStatus": "mcp github pull_request_read method=get para ver mergeable_state"
+    },
+    "createBranchSafely": "git fetch origin main && git checkout -B claude/xxx origin/main",
+    "lesson": "Criar branch SEMPRE a partir de main ATUALIZADO. NUNCA reset --hard sem commitar antes."
+  },
+
+  "optimizations": {
+    "description": "Otimizacoes para reduzir tempo nas proximas sessoes",
+    "parallel": [
+      "Ler session memory + CLAUDE.md + workspace.json em PARALELO no inicio",
+      "Criar patches em paralelo quando independentes",
+      "git fetch + verificar PR status em paralelo"
+    ],
+    "avoid": [
+      "NAO push direto para main — sempre 403",
+      "NAO criar branch sem fetch origin/main — causa conflitos",
+      "NAO assumir versao — verificar estado atual",
+      "NAO esperar usuario aprovar — permissoes em .claude/settings.json",
+      "NAO criar PR separado para memoria — incluir no mesmo PR",
+      "NAO usar reset --hard sem commitar/stash antes",
+      "NAO criar branch que ja existe sem -B flag"
+    ],
+    "speedups": [
+      "Deploy: TUDO em 1 commit (patches + trigger + values + CLAUDE.md)",
+      "Resolver conflitos ANTES de criar PR",
+      "Squash merge para historico limpo",
+      "Memoria: atualizar durante sessao, nao so no final",
+      "Usar git checkout -B (force) em vez de delete + create"
+    ]
   },
 
   "commonPatterns": {
-    "patchCreation": "Criar patches em patches/ com BEFORE/AFTER ou arquivo completo. Usar trigger/source-change.json para aplicar.",
-    "fetchFiles": "Buscar arquivos do repo corporativo: trigger/fetch-files.json ou workflow_dispatch fetch-files.yml. Resultado salvo em autopilot-state branch.",
-    "errorPatterns": [
-      "Se CI falha com lint: verificar pre-existing errors, nao introduzir novos",
-      "Se push falha com 403: verificar nome da branch (deve comecar com claude/)",
-      "Se swagger mostra caracteres estranhos: encoding UTF-8 com acentos. Substituir por ASCII",
-      "Se PR mostra mergeable_state=dirty: fetch origin/main, merge, resolver conflitos, push de novo",
-      "Se trigger/source-change.json tem conflito: pegar run = max(HEAD, main) + 1"
-    ],
-    "deployAutomation": {
-      "fullFlow": [
-        "1. Criar/atualizar patches em patches/",
-        "2. Atualizar trigger/source-change.json com payload e run+1",
-        "3. Atualizar references/controller-cap/values.yaml com nova tag",
-        "4. Criar PR com todas as mudancas",
-        "5. Resolver conflitos com main se necessario (fetch + merge)",
-        "6. Mergear PR (squash) — NAO esperar usuario",
-        "7. Workflow apply-source-change dispara automaticamente",
-        "8. Monitorar workflow run via GitHub API"
-      ],
-      "permissions": "Configurar .claude/settings.json com allow para git, gh, edit, write — usuario NAO deve precisar aprovar nada",
-      "lesson": "TUDO deve ser automatico. O usuario disse explicitamente que nao quer ficar lembrando nem dando permissao. Fazer o fluxo completo de ponta a ponta sem parar."
+    "patchCreation": {
+      "location": "patches/",
+      "fullFile": "Copiar arquivo completo corrigido (ex: patches/oas-origin-auth.ts)",
+      "searchReplace": "Para mudancas simples (action: search-replace no trigger)",
+      "replaceFile": "Para substituir inteiro (action: replace-file, content_ref: patches/xxx)"
+    },
+    "fetchFiles": {
+      "trigger": "trigger/fetch-files.json",
+      "workflow": "fetch-files.yml",
+      "result": "Salvo em autopilot-state branch"
+    },
+    "errorRecovery": {
+      "ci_lint": "Verificar se pre-existing. Se sim, ignorar",
+      "push_403": "Branch nao comeca com claude/. Renomear",
+      "swagger_garbled": "Acentos UTF-8. Substituir por ASCII",
+      "pr_dirty": "fetch + merge origin/main + resolver + push",
+      "trigger_conflict": "run = max + 1, manter payload",
+      "duplicate_tag": "Incrementar patch version",
+      "branch_exists": "Usar git checkout -B (force create)",
+      "reset_lost_changes": "SEMPRE stash/commit antes de reset"
     }
   },
 
   "sessionProtocol": {
     "onStart": [
-      "1. Ler contracts/claude-session-memory.json (este arquivo)",
-      "2. Ler CLAUDE.md para contexto geral",
-      "3. Verificar versao atual do controller em versioningRules.currentVersion",
-      "4. Verificar se ha locks ativos antes de operacoes de estado"
-    ],
-    "onEnd": [
-      "1. Atualizar este arquivo com novos aprendizados",
-      "2. Atualizar CLAUDE.md se novos workflows/triggers/secrets foram criados",
-      "3. Commitar e push"
+      "1. Ler contracts/claude-session-memory.json (hook SessionStart injeta automaticamente)",
+      "2. Aplicar TODOS os padroes e lessons",
+      "3. Verificar versioningRules.currentVersion",
+      "4. git fetch origin main",
+      "5. Verificar workflow runs pendentes"
     ],
     "duringSession": [
-      "Ao criar novo patch: documentar em commonPatterns",
+      "Registrar CADA passo executado em executionHistory",
       "Ao descobrir nova regra: adicionar em lesson do bloco relevante",
-      "Ao completar historia: registrar em bloco proprio com status e items"
-    ]
+      "Ao encontrar problema: registrar problema + solucao em errorRecovery",
+      "Ao completar historia: registrar com TODOS os detalhes",
+      "Ao otimizar algo: registrar em optimizations",
+      "NUNCA esperar fim de sessao para atualizar"
+    ],
+    "onEnd": [
+      "1. Garantir que executionHistory tem TODOS os passos",
+      "2. Atualizar CLAUDE.md se algo novo foi criado",
+      "3. Commitar memoria + push via PR com merge"
+    ],
+    "goldenRule": "Se foi feito e nao esta documentado aqui, e um BUG. Documentar TUDO."
   }
 }
