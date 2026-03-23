@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-24T00:15:00-03:00",
-  "lastSessionId": "session_01WNCzT7nhQbajAjtvmqDgvK_deploy355",
+  "lastUpdated": "2026-03-23T20:00:00-03:00",
+  "lastSessionId": "session_01WNCzT7nhQbajAjtvmqDgvK_fix356",
 
   "executionHistory": {
     "description": "Historico completo de tudo que foi executado. Futuras sessoes DEVEM consultar antes de repetir qualquer operacao.",
@@ -253,8 +253,8 @@
   },
 
   "versioningRules": {
-    "currentVersion": "3.5.5",
-    "previousVersion": "3.5.4",
+    "currentVersion": "3.5.6",
+    "previousVersion": "3.5.5",
     "rule": "Se a esteira ja gerou imagem para uma versao, a proxima DEVE incrementar o patch. CI rejeita tags duplicadas no registry.",
     "versionFiles": [
       { "file": "package.json", "line": 3, "field": "version" },
@@ -293,10 +293,10 @@
       "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "lastTriggerRun": 34,
+    "lastTriggerRun": 35,
     "lastSuccessfulRun": 34,
     "lastDeployPR": 93,
-    "pipelineStatus": "SUCCESS — run #34 completou todos os stages. Versao 3.5.5 com swagger completo (18 rotas).",
+    "pipelineStatus": "PENDING — run #35 (3.5.6) fix: mint JWT for internal-origin agent calls.",
     "multiFilePayload": {
       "change_type": "multi-file",
       "changesFormat": [
@@ -509,7 +509,9 @@
       "NAO esperar usuario aprovar — permissoes em .claude/settings.json",
       "NAO criar PR separado para memoria — incluir no mesmo PR",
       "NAO usar reset --hard sem commitar/stash antes",
-      "NAO criar branch que ja existe sem -B flag"
+      "NAO criar branch que ja existe sem -B flag",
+      "NAO perguntar ao usuario sobre codigos — baixar, analisar, corrigir e deployar AUTOMATICAMENTE",
+      "NAO pedir confirmacao para deploy — seguir fluxo completo autonomamente"
     ],
     "speedups": [
       "Deploy: TUDO em 1 commit (patches + trigger + values + CLAUDE.md)",
