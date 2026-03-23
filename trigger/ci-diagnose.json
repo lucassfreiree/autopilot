@@ -1,7 +1,7 @@
 {
   "workspace_id": "ws-default",
-  "component": "agent",
-  "commit_sha": "",
-  "note": "Diagnose agent CI after autopilotInfo.ts commit",
-  "run": 6
+  "component": "controller",
+  "commit_sha": "c7520a439604bff59dab1d76f475b14bb6bac917",
+  "note": "Diagnose after lint fix - check if tests run now",
+  "run": 10
 }

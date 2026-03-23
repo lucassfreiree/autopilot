@@ -25,5 +25,5 @@
   "commit_message": "chore: bump to 3.5.4, fix swagger encoding (remove accents)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 22
+  "run": 27
 }
