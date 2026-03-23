@@ -1,6 +1,6 @@
 {
   "workspace_id": "ws-default",
   "component": "agent",
-  "files": "package.json",
-  "run": 3
+  "files": "src/routes/index.js,src/routes/index.ts,src/app.js,src/app.ts,src/server.js,src/server.ts,src/index.js,src/index.ts,package.json,src/routes/cronjob.js,src/routes/cronjob.ts,src/controllers/cronjob.js,src/controllers/cronjob.ts",
+  "run": 4
 }
