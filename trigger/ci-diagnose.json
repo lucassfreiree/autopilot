@@ -2,6 +2,6 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "commit_sha": "",
-  "note": "Diagnose corporate CI failure after deploy 3.5.6 (run 36)",
-  "run": 11
+  "note": "Verify corporate CI passing after TS2769 fix (run 37)",
+  "run": 12
 }
