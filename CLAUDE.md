@@ -26,6 +26,9 @@ Zero local dependencies. 100% GitHub-native.
 - `pending/` — Pending workflows not yet installed (e.g., `release-autopilot.yml`)
 - `pending-workflows/` — Workflow drafts with installation guide (`INSTALL.md`, `agent-release.yml`, `init-state-branch.yml`)
 - `snapshots/` — Local state snapshots for rollback (e.g., `snapshots/20260321-214500/`)
+- `patches/` — Source code patches applied to corporate repos via apply-source-change pipeline
+- `references/` — Reference files from corporate repos not yet migrated to GitHub
+  - `references/controller-cap/values.yaml` — Controller CAP values.yaml (source: GitLab, image tag updated here)
 
 ### Schemas (full list)
 | Schema | Validates |
@@ -83,6 +86,15 @@ Visual automation and external integrations (100% self-hosted, open-source).
 8. Never expose secrets in commit messages or logs
 9. Always validate jq output with fallbacks: `jq -r '.field // ""' 2>/dev/null || echo ""`
 10. Use base64 encoding when passing content between workflow jobs (avoids shell quoting issues)
+
+## Controller CAP (GitLab — not yet migrated to GitHub)
+- **Reference file**: `references/controller-cap/values.yaml`
+- **Image**: `docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller`
+- **Current deployed tag**: `3.4.1` (pending update to `3.5.3`)
+- **K8s Secret**: `psc-sre-automacao-controller-runtime` (11 keys: JWT_SECRET, AUTH_API_KEYS_SCOPES, SCOPE_*, AWS_REGION, OSS_*)
+- **OAS Auth env vars** (plain, not secret): `OAS_TRUSTED_NAMESPACE`, `OAS_TRUSTED_SERVICE_ACCOUNT`, `OAS_ORIGIN_NAMESPACE_HEADERS`, `OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS`
+- **Trusted caller**: namespace=`sgh-oaas-playbook-jobs`, serviceAccount=`default`, header=`x-techbb-namespace`/`x-techbb-service-account`
+- **Note**: This CAP repo is on GitLab, not GitHub. The autopilot pipeline cannot auto-promote controller releases until migration.
 
 ## Workspaces
 
