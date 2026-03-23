@@ -1,7 +1,7 @@
 {
   "workspace_id": "ws-default",
-  "component": "agent",
-  "commit_sha": "",
-  "note": "Diagnose agent CI after autopilotInfo.ts commit",
-  "run": 6
+  "component": "controller",
+  "commit_sha": "6403a21",
+  "note": "Diagnose Esteira de Build NPM run #193 - all 3 fixes failed",
+  "run": 7
 }
