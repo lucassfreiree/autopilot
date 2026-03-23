@@ -277,6 +277,9 @@ Edit `trigger/source-change.json`:
 | ALWAYS check version before bump | CI rejects duplicate tags |
 | ALWAYS fetch origin/main first | Prevents merge conflicts |
 | ALWAYS do everything in 1 commit | Patches + trigger + references + memory together |
+| NEVER ask user about code issues | Download, analyze, fix, and deploy AUTOMATICALLY |
+| ALWAYS map errors and solutions | Record in session memory knownFailures + errorRecovery for fast resolution |
+| ALWAYS verify JWT claim names | Agent reads `payload.scope` (singular), never `scopes` (plural) |
 
 ## apply-source-change Pipeline (7 Stages)
 ```

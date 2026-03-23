@@ -294,9 +294,9 @@
     ],
     "triggerFile": "trigger/source-change.json",
     "lastTriggerRun": 36,
-    "lastSuccessfulRun": 34,
-    "lastDeployPR": 93,
-    "pipelineStatus": "PENDING — run #36 (3.5.6) fix: mint JWT for internal-origin agent calls. Run #35 falhou no CI Gate.",
+    "lastSuccessfulRun": 36,
+    "lastDeployPR": 104,
+    "pipelineStatus": "SUCCESS — run #36 completou todos os stages. Versao 3.5.6 com mintInternalOriginJwt para chamadas internal-origin.",
     "multiFilePayload": {
       "change_type": "multi-file",
       "changesFormat": [
@@ -361,6 +361,23 @@
         "fix": "Adicionou cancel-in-progress: true",
         "fixedInCommit": "9877c45",
         "fixedInRun": 33
+      },
+      {
+        "step": "CI Gate decision — failure (run 35)",
+        "cause": "JWT scope claim usava 'scopes' (plural) em vez de 'scope' (singular). Agent middleware readScopeClaim() le payload.scope. Esteira de Build NPM falhou no CI do repo corporativo.",
+        "fix": "Corrigido scope claim para 'scope' (singular) + swagger version bump",
+        "fixedInPR": 104,
+        "fixedInRun": 36,
+        "lesson": "SEMPRE verificar nome exato dos claims JWT. Agent usa payload.scope (singular). Nunca scopes (plural)."
+      },
+      {
+        "step": "401 Missing Bearer token — agent rejeita chamadas internal-origin",
+        "cause": "Quando controller autentica via internal-origin (x-techbb-* headers), nao existia Authorization header para repassar ao agent. getAgentAuthorization() retornava undefined.",
+        "fix": "Adicionado mintInternalOriginJwt() no oas-sre-controller.controller.ts. Quando trustedInternalOrigin=true, controller gera JWT usando JWT_SECRET/JWT_ISSUER/JWT_AUDIENCE e envia como Bearer ao agent.",
+        "fixedInPR": 103,
+        "fixedInRun": 36,
+        "lesson": "Chamadas internal-origin NAO tem Authorization header. Controller DEVE gerar JWT para repassar ao agent. Env vars JWT_* ja estao disponiveis no pod.",
+        "diagnosticPattern": "Log [oas-auth] mode=jwt trusted=false namespace=': xxx' → dois pontos extras no header name no Insomnia. Log [oas-auth] mode=internal-origin trusted=true + agent 401 → controller nao repassa JWT."
       }
     ],
     "successfulRuns": [
@@ -377,6 +394,13 @@
         "version": "3.5.5",
         "stages": ["Setup", "Session Guard", "Apply & Push", "CI Gate", "Save State", "Audit"],
         "result": "SUCCESS — swagger completo com 18 rotas + version bump 3.5.5 deployado."
+      },
+      {
+        "run": 36,
+        "date": "2026-03-23",
+        "version": "3.5.6",
+        "stages": ["Setup", "Session Guard", "Apply & Push", "CI Gate", "Promote to CAP", "Save State", "Audit"],
+        "result": "SUCCESS — mintInternalOriginJwt para chamadas internal-origin. Fix 401 agent. 3 deploys consecutivos com sucesso (33, 34, 36)."
       }
     ],
     "lesson": "NUNCA assumir que workflow rodou com sucesso. SEMPRE monitorar e verificar."
@@ -542,7 +566,12 @@
       "trigger_conflict": "run = max + 1, manter payload",
       "duplicate_tag": "Incrementar patch version",
       "branch_exists": "Usar git checkout -B (force create)",
-      "reset_lost_changes": "SEMPRE stash/commit antes de reset"
+      "reset_lost_changes": "SEMPRE stash/commit antes de reset",
+      "agent_401_internal_origin": "Controller nao gera JWT para agent em chamadas internal-origin. Fix: mintInternalOriginJwt() em oas-sre-controller.controller.ts",
+      "jwt_scope_claim_wrong": "Agent middleware le payload.scope (singular). NUNCA usar 'scopes' (plural) no jwt.sign()",
+      "insomnia_header_colon": "Insomnia adiciona : automaticamente. NAO colocar : no nome do header. Ex: x-techbb-namespace (sem :)",
+      "ci_gate_block": "Smart CI diz que falha NAO e pre-existente. Analisar build/test/lint logs do repo corporativo. Corrigir patch, bump run, novo PR+merge",
+      "fetch_files_not_triggering": "fetch-files.json so dispara quando mergeado em main. Push para branch NAO dispara. Alternativa: ler do autopilot-state branch (fetched-* files)"
     }
   },
 
