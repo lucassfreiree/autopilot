@@ -1,6 +1,6 @@
 {
   "workspace_id": "ws-default",
   "component": "controller",
-  "files": "src/server.ts,src/app.ts,src/routes.ts,src/auth/route-scope-matrix.ts,src/auth/api-key.ts,src/auth/apiKeyScopes.ts,src/util/trusted-agent.ts,src/util/sync-timeout.ts,src/middleware/agent-callback-jwt.ts,src/controllers/agents.controller.ts,src/controllers/health.controller.ts",
-  "run": 11
+  "files": "src/routes/oasRouter.ts,src/routes/agentsRouter.ts,src/routes/auth.ts,src/routes/logs.ts,src/util/agent-url.ts,src/repository/agentsRepo.ts,src/util/sync-timeout.ts,src/middleware/agent-callback-jwt.ts,src/middleware/logging.ts,src/util/logger.ts,src/util/time.ts,src/util/metrics.ts,src/swagger/makeSwagger.ts",
+  "run": 12
 }
