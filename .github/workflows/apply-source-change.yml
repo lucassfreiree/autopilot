@@ -280,9 +280,10 @@ jobs:
 
       - name: "Checkout autopilot (for patch files)"
         if: needs.setup.outputs.change_type == 'multi-file'
-        uses: actions/checkout@v4
-        with:
-          path: /tmp/autopilot
+        run: |
+          git clone --depth 1 "https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/${{ env.AUTOPILOT_REPO }}.git" /tmp/autopilot
+          echo "Autopilot repo cloned for patch files"
+          ls /tmp/autopilot/patches/ 2>/dev/null || echo "No patches/ directory"
 
       - name: "Apply change"
         working-directory: /tmp/source
