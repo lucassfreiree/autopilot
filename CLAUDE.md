@@ -295,6 +295,40 @@ Claude Code MUST automatically and proactively keep this file (CLAUDE.md) up to 
 
 **Rule**: If it exists in the repo but not in CLAUDE.md, it is a bug. Fix it automatically without asking.
 
+## Session Memory (CRITICAL — Intelligent Learning System)
+
+Claude Code maintains a **cumulative memory file** at `contracts/claude-session-memory.json` that persists decisions, patterns, and lessons learned across all sessions.
+
+### How it works
+```
+Session Start → Read memory → Apply learned patterns → Avoid past mistakes
+During Session → Record new decisions, rules, lessons in real-time
+Session End → Update memory → Commit → Available for next session
+```
+
+### What gets recorded automatically
+| Category | Examples |
+|----------|---------|
+| **Versioning rules** | Current version, 4 version file locations, CI duplicate tag rejection |
+| **Deploy flow** | Step-by-step pipeline, trigger mechanism, GitLab limitations |
+| **Auth architecture** | Secrets, auth flow, trusted callers, middleware behavior |
+| **Swagger rules** | Encoding (ASCII only), no accents, patch reference |
+| **Historia completions** | Status of each item, PO decisions, scope exclusions |
+| **Error patterns** | Common failures and how to fix them |
+| **Common patterns** | How to create patches, fetch files, handle CI |
+
+### Memory file location
+- **File**: `contracts/claude-session-memory.json`
+- **Referenced by**: `contracts/claude-agent-contract.json` (contextFiles + sessionMemory)
+- **Protocol**: Read on start, update during session, commit on end
+
+### Rules
+1. **ALWAYS** read `claude-session-memory.json` at session start
+2. **NEVER** repeat a mistake that is documented in `lesson` fields
+3. **ALWAYS** update memory when a new decision or pattern is discovered
+4. **ALWAYS** record completed historias with item-by-item status
+5. Memory is append-only for lessons — never delete learned patterns
+
 ## Agent Compatibility
 This architecture is operable by Claude, ChatGPT, Codex, and GitHub Copilot.
 See `contracts/` for per-agent instructions. All agents share `contracts/shared-agent-contract.json` (common rules, schemas, state paths).
