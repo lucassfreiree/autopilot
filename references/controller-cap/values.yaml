@@ -181,15 +181,27 @@ sre-aut-controller:
                 # ── Agent routing ──
                 - name: AGENT_BASE_URL_TEMPLATE
                   value: https://sre-aut-agent.psc.{cluster}.bb.com.br
-                # ── OAS Origin Auth (added in 3.5.x) ──
+                # ── OAS Origin Auth (added in 3.5.x — from K8s Secret: sre-controller-auth) ──
                 - name: OAS_TRUSTED_NAMESPACE
-                  value: sgh-oaas-playbook-jobs
+                  valueFrom:
+                    secretKeyRef:
+                      name: sre-controller-auth
+                      key: OAS_TRUSTED_NAMESPACE
                 - name: OAS_TRUSTED_SERVICE_ACCOUNT
-                  value: default
+                  valueFrom:
+                    secretKeyRef:
+                      name: sre-controller-auth
+                      key: OAS_TRUSTED_SERVICE_ACCOUNT
                 - name: OAS_ORIGIN_NAMESPACE_HEADERS
-                  value: x-techbb-namespace,x-k8s-namespace,x-origin-namespace,x-namespace
+                  valueFrom:
+                    secretKeyRef:
+                      name: sre-controller-auth
+                      key: OAS_ORIGIN_NAMESPACE_HEADERS
                 - name: OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS
-                  value: x-techbb-service-account,x-k8s-service-account,x-origin-service-account,x-service-account,x-service-account-name
+                  valueFrom:
+                    secretKeyRef:
+                      name: sre-controller-auth
+                      key: OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS
                 # ── OAS Preflight ──
                 - name: OAS_PREFLIGHT_IMAGE_KEY
                   value: psc-sre-ns-migration-preflight

@@ -92,7 +92,7 @@ Visual automation and external integrations (100% self-hosted, open-source).
 - **Image**: `docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller`
 - **Current deployed tag**: `3.4.1` (pending update to `3.5.3`)
 - **K8s Secret**: `psc-sre-automacao-controller-runtime` (11 keys: JWT_SECRET, AUTH_API_KEYS_SCOPES, SCOPE_*, AWS_REGION, OSS_*)
-- **OAS Auth env vars** (plain, not secret): `OAS_TRUSTED_NAMESPACE`, `OAS_TRUSTED_SERVICE_ACCOUNT`, `OAS_ORIGIN_NAMESPACE_HEADERS`, `OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS`
+- **K8s Secret**: `sre-controller-auth` (4 keys: OAS_TRUSTED_NAMESPACE, OAS_TRUSTED_SERVICE_ACCOUNT, OAS_ORIGIN_NAMESPACE_HEADERS, OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS)
 - **Trusted caller**: namespace=`sgh-oaas-playbook-jobs`, serviceAccount=`default`, header=`x-techbb-namespace`/`x-techbb-service-account`
 - **Note**: This CAP repo is on GitLab, not GitHub. The autopilot pipeline cannot auto-promote controller releases until migration.
 
