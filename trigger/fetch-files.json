@@ -1,6 +1,6 @@
 {
   "workspace_id": "ws-default",
   "component": "controller",
-  "files": "src/__tests__/unit/oas-sre-controller.route.test.ts,src/__tests__/.envTest.js",
+  "files": "src/controllers/execute.controller.ts,src/__tests__/unit/agents-execute-logs.controller.test.ts,src/__tests__/unit/execute.controller.test.ts",
   "run": 5
 }
