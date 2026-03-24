@@ -1,4 +1,4 @@
-name: "Release Freeze"
+name: "[Release] Freeze / Unfreeze"
 
 on:
   workflow_dispatch:
@@ -30,6 +30,7 @@ env:
 
 jobs:
   freeze:
+    name: "Freeze or Unfreeze Releases"
     runs-on: ubuntu-latest
     steps:
       - name: "${{ github.event.inputs.action }} releases"

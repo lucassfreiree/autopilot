@@ -1,4 +1,4 @@
-name: "Fetch: Corporate Source Files"
+name: "[Corp] Fetch: Source Files"
 on:
   push:
     branches: [main]

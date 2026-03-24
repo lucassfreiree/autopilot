@@ -1,11 +1,11 @@
-name: "Alert & Notify"
+name: "[Infra] Alert & Notify"
 
 on:
   workflow_run:
     workflows:
-      - "Health Check"
-      - "Test: Full Flow (Controller + Agent)"
-      - "Test: Corporate Flow"
+      - "[Core] Health Check"
+      - "[Corp] Test: Full Flow (Controller + Agent)"
+      - "[Corp] Test: Corporate E2E Flow"
     types: [completed]
   workflow_dispatch:
     inputs:

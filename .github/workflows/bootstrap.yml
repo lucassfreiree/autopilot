@@ -1,4 +1,4 @@
-name: "Bootstrap: Full Setup"
+name: "[Core] Bootstrap: Full Setup"
 
 on:
   workflow_dispatch:

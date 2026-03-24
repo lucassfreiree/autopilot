@@ -1,4 +1,4 @@
-name: "Fix CI + Validate Full Flow"
+name: "[Corp] Fix: CI + Validate Full Flow"
 
 on:
   push:

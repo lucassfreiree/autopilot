@@ -1,4 +1,4 @@
-name: "Session Guard: Prevent Concurrent Agent Conflicts"
+name: "[Core] Session Guard"
 
 # This workflow protects against concurrent modifications from
 # different agents (Claude Code vs Codex) sharing the same account.

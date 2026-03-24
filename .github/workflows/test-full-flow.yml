@@ -1,4 +1,4 @@
-name: "Test: Full Flow (Controller + Agent)"
+name: "[Corp] Test: Full Flow (Controller + Agent)"
 
 on:
   push:

@@ -4,7 +4,7 @@
 # Required secrets: RELEASE_TOKEN (PAT with repo scope on lucassfreiree/autopilot + deploy repo)
 # Required vars: AUTOPILOT_WORKSPACE_ID
 # =============================================================================
-name: "Autopilot: Controller Release"
+name: "[Release] Controller"
 
 on:
   workflow_run:

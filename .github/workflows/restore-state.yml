@@ -1,4 +1,4 @@
-name: "Restore State (Rollback)"
+name: "[Core] Restore: State Rollback"
 
 on:
   workflow_dispatch:
@@ -24,6 +24,7 @@ env:
 
 jobs:
   restore:
+    name: "Restore from Backup"
     runs-on: ubuntu-latest
     steps:
       - name: "Find snapshot"

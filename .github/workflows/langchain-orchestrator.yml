@@ -1,4 +1,4 @@
-name: "LangChain Orchestrator"
+name: "[Agent] LangChain Orchestrator"
 
 # Intelligent agent orchestration powered by LangChain + Claude.
 # Replaces rigid shell scripts with context-aware AI decision-making.

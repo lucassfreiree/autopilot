@@ -1,4 +1,4 @@
-name: "CI Diagnose: Fetch Error Logs"
+name: "[Corp] CI: Diagnose Error Logs"
 
 on:
   push:

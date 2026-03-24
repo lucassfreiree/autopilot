@@ -1,4 +1,4 @@
-name: "Release Approval Gate"
+name: "[Release] Approval Gate"
 
 on:
   workflow_dispatch:
@@ -32,6 +32,7 @@ env:
 
 jobs:
   gate:
+    name: "Approval Gate"
     runs-on: ubuntu-latest
     steps:
       - name: "Check freeze"

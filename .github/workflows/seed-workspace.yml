@@ -1,4 +1,4 @@
-name: "Seed Workspace"
+name: "[Core] Seed Workspace"
 
 on:
   workflow_dispatch:
@@ -29,6 +29,7 @@ env:
 
 jobs:
   seed:
+    name: "Create Workspace State"
     runs-on: ubuntu-latest
     steps:
       - name: Validate

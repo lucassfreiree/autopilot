@@ -1,4 +1,4 @@
-name: "CI Failure Analysis"
+name: "[Agent] CI Failure Analysis"
 
 on:
   workflow_dispatch:

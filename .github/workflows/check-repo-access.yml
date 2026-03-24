@@ -1,4 +1,4 @@
-name: Check Repo Access
+name: "[Corp] Check: Repo Access"
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ on:
 
 jobs:
   check-access:
+    name: "Validate Token Access"
     runs-on: ubuntu-latest
     steps:
       - name: Check access to corporate repos

@@ -1,4 +1,4 @@
-name: "Health Check"
+name: "[Core] Health Check"
 
 on:
   schedule:
@@ -19,6 +19,7 @@ env:
 
 jobs:
   health:
+    name: "Run Health Checks"
     runs-on: ubuntu-latest
     steps:
       - name: Discover workspaces

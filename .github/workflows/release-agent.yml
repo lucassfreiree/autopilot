@@ -4,7 +4,7 @@
 # Required secrets: RELEASE_TOKEN
 # Required vars: AUTOPILOT_WORKSPACE_ID
 # =============================================================================
-name: "Autopilot: Agent Release"
+name: "[Release] Agent"
 
 on:
   workflow_run:

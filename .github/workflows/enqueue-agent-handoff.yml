@@ -1,4 +1,4 @@
-name: "Enqueue Agent Handoff"
+name: "[Agent] Enqueue Handoff"
 
 on:
   workflow_dispatch:
