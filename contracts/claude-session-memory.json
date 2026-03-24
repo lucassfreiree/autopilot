@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-24T12:00:00-03:00",
-  "lastSessionId": "session_setup_cit_multicompany",
+  "lastUpdated": "2026-03-24T17:30:00-03:00",
+  "lastSessionId": "session_oaas_integration_test",
 
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -15,8 +15,8 @@
         "tokenSecret": "BBVINET_TOKEN",
         "repos": ["bbvinet/psc-sre-automacao-controller", "bbvinet/psc-sre-automacao-agent", "bbvinet/psc_releases_cap_sre-aut-agent"],
         "status": "active",
-        "lastDeploy": "3.5.6 (run #38)",
-        "notes": "Pipeline completo e funcional. Controller no GitLab (sem auto-promote). Esteira de Build NPM."
+        "lastDeploy": "3.5.12 (current deployed)",
+        "notes": "Pipeline completo e funcional. Controller no GitLab (sem auto-promote). Esteira de Build NPM. Controller v3.5.12 operacional no cluster k8shmlbb111b (HML)."
       },
       "cit": {
         "workspaceId": "ws-cit",
@@ -79,6 +79,55 @@
   "executionHistory": {
     "description": "Historico completo de tudo que foi executado. Futuras sessoes DEVEM consultar antes de repetir qualquer operacao.",
     "sessions": [
+      {
+        "id": "session_oaas_integration_test",
+        "date": "2026-03-24",
+        "summary": "Diagnostico de integracao OaaS: oferta migra-microsservicos-openshift chamando controller. Identificados 2 problemas: DNS transiente + 401 por falta de headers x-techbb-* no playbook da oferta.",
+        "stepsExecuted": [
+          {
+            "step": 1,
+            "action": "Analisou log de falha da oferta migra-microsservicos-openshift (operation c2345ccf)",
+            "how": "Usuario compartilhou logs do broker OaaS. Primeira execucao falhou com DNS Name or service not known para sre-aut-controller.psc.k8shmlbb111b.bb.com.br",
+            "lesson": "Cluster HML correto e k8shmlbb111b (com BB duplo). k8shmlb111b (b simples) NAO resolve DNS."
+          },
+          {
+            "step": 2,
+            "action": "Validou que controller esta operacional",
+            "how": "curl -vkI https://sre-aut-controller.psc.k8shmlbb111b.bb.com.br retornou HTTP 200, Express, TLS 1.3, certificado BB valido",
+            "result": "Controller v3.5.12 UP e acessivel no cluster k8shmlbb111b"
+          },
+          {
+            "step": 3,
+            "action": "Analisou segunda execucao (operation b5e4de21) — erro 401 Unauthorized",
+            "how": "Log mostrou {\"error\":\"Unauthorized\"} na chamada POST /oas/sre-controller?mode=sync. Playbook nao envia headers x-techbb-*",
+            "lesson": "Playbook execute-psc-ns-migration-preflight.yml da oferta migra-microsservicos-openshift NAO envia headers de autenticacao internal-origin"
+          },
+          {
+            "step": 4,
+            "action": "Verificou env vars do controller pod",
+            "how": "k9s shell no pod psc-sre-aut-controller-bd8c66bd9-j88qn. Todos os OAS_* corretos: OAS_TRUSTED_NAMESPACE=sgh-oaas-playbook-jobs, OAS_TRUSTED_SERVICE_ACCOUNT=default, headers corretos",
+            "result": "Config do controller 100% correta"
+          },
+          {
+            "step": 5,
+            "action": "Testou curl manual com headers do pod APB",
+            "how": "curl com -H x-techbb-namespace: sgh-oaas-playbook-jobs -H x-techbb-service-account: default",
+            "result": "Controller respondeu mode=internal-origin trusted=true. Auth passou. Retornou 400 (payload incompleto no teste, esperado)",
+            "lesson": "Auth internal-origin funciona perfeitamente quando headers sao enviados. O problema e exclusivamente no playbook da oferta que nao envia os headers."
+          },
+          {
+            "step": 6,
+            "action": "Gerou status report para gestao",
+            "how": "Documento com situacao atual, validacoes realizadas, causa raiz e proximos passos"
+          }
+        ],
+        "mistakesMade": [],
+        "keyDecisions": [
+          "Causa raiz identificada: playbook da oferta migra-microsservicos-openshift nao envia headers x-techbb-*",
+          "Controller esta correto — nenhuma alteracao necessaria no controller",
+          "Fix necessario no playbook da oferta (repo da plataforma OaaS, nao no autopilot)"
+        ]
+      },
       {
         "id": "session_setup_cit_multicompany",
         "date": "2026-03-24",
@@ -640,7 +689,22 @@
       "serviceAccount": "default",
       "headers": { "namespace": "x-techbb-namespace", "serviceAccount": "x-techbb-service-account" }
     },
-    "lesson": "Variaveis OAS NUNCA hardcoded. Sempre secretKeyRef. Middleware le de process.env."
+    "lesson": "Variaveis OAS NUNCA hardcoded. Sempre secretKeyRef. Middleware le de process.env.",
+    "oaasIntegration": {
+      "description": "Plataforma OaaS (Ofertas as a Service) executa playbooks no namespace sgh-oaas-playbook-jobs que chamam o controller",
+      "ofertaMigracao": "migra-microsservicos-openshift-v1",
+      "playbookPreflight": "actions/execute-psc-ns-migration-preflight.yml",
+      "endpoint": "POST /oas/sre-controller?mode=sync",
+      "authRequired": "Headers x-techbb-namespace + x-techbb-service-account OU Bearer JWT",
+      "clusterHML": "k8shmlbb111b (com BB duplo)",
+      "controllerDNS": "sre-aut-controller.psc.k8shmlbb111b.bb.com.br",
+      "controllerIP": "172.17.229.129",
+      "controllerPod": "psc-sre-aut-controller-bd8c66bd9-j88qn (namespace psc-sre-aut-controller)",
+      "apbPodNamespace": "sgh-oaas-playbook-jobs",
+      "validatedAt": "2026-03-24",
+      "status": "Controller OK. Playbook da oferta precisa enviar headers x-techbb-*.",
+      "lesson": "Quando OaaS retorna 401: verificar se o playbook da oferta envia os headers de auth. Controller aceita internal-origin quando headers estao presentes."
+    }
   },
 
   "capValuesYaml": {
@@ -787,6 +851,8 @@
       "ci_logs_vs_ci_diagnosis": "ci-diagnosis-controller.json roda tsc/jest LOCAL sem npm install — erros TS2688/jest-not-found sao esperados e NAO refletem a esteira real. Para erros REAIS da esteira corporativa: ler ci-logs-controller-*.txt (ultimo arquivo = ultimo run)",
       "esteira_corporativa_falhou": "Usar ci-diagnose workflow para baixar logs. Ler ci-logs-controller-*.txt no autopilot-state (ultimo arquivo = ultimo run). Corrigir patch, bump run, re-deploy automaticamente",
       "error_message_change_breaks_tests": "CRITICO: Ao mudar qualquer mensagem de erro (ex: 401 response body), buscar TODOS os arquivos que retornam essa mensagem (jwt.ts, jwt-callback.ts, e qualquer outro middleware) E TODOS os testes que verificam. Usar: grep -rn 'mensagem_antiga' src/ para encontrar TODOS. Arquivos de CODIGO afetados: jwt.ts (3 mensagens), jwt-callback.ts (13 mensagens). Arquivos de TESTE afetados: agentsRouter.test.ts (4), jwt.middleware.test.ts (2), oas-sre-controller.route.test.ts (1). LESSON: jwt-callback.ts e um middleware SEPARADO do jwt.ts que tem suas PROPRIAS mensagens de erro. Ambos devem ser atualizados.",
+      "oaas_oferta_401_no_headers": "Oferta migra-microsservicos-openshift retorna 401 ao chamar controller. CAUSA: playbook execute-psc-ns-migration-preflight.yml NAO envia headers x-techbb-namespace e x-techbb-service-account. FIX: adicionar headers no task uri do Ansible. Controller esta correto — problema e no playbook da oferta (repo da plataforma OaaS).",
+      "oaas_dns_transiente": "Pod APB pode ter falha DNS transiente para hostnames *.psc.k8shmlbb111b.bb.com.br. Reexecutar resolve. Cluster HML correto: k8shmlbb111b (com BB duplo, NAO b simples).",
       "ci_gate_preexisting_bug": "CRITICO: CI Gate 'smart pre-existing detection' esta QUEBRADO. Reporta ciResult=failure MESMO quando a esteira corporativa PASSA. Aconteceu no run #43: esteira #208 PASSOU com sucesso mas CI Gate reportou ci-failed-preexisting. O CI Gate NAO e confiavel para determinar se a esteira passou ou falhou. Para saber o resultado REAL: 1) Checar ci-logs-controller-*.txt (se novo log apareceu com PASS em todos os testes = sucesso), 2) Perguntar ao usuario se necessario, 3) Tempo de execucao: esteira que FALHA em teste leva ~3.5 min, esteira que PASSA leva ~14 min. Se CI Gate levou 14+ min = provavelmente passou."
     }
   },
