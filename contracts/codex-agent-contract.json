@@ -28,6 +28,7 @@
     "sourceCodeChanges": "Use apply-source-change.yml workflow or trigger file. Never push directly to corporate repos without session lock."
   },
   "contextFiles": [
+    "AGENTS.md",
     "contracts/shared-agent-contract.json",
     "schemas/*.schema.json"
   ]

@@ -47,7 +47,6 @@
     "Should create handoffs for complex implementations instead of doing them directly"
   ],
   "contextFiles": [
-    ".github/copilot-instructions.md",
     "contracts/shared-agent-contract.json",
     "CLAUDE.md"
   ]
