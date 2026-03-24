@@ -182,6 +182,70 @@ Centro operacional para atividades de DevOps, SRE, Cloud e Automation. Compartil
 - Usage: `source ops/scripts/utils/ops-logger.sh && ops_log "action" "description" "result" "details"`
 - Search: `ops_log_search "keyword"` | View recent: `ops_log_tail 20`
 
+### Per-Tool Configuration (`ops/config/`)
+| Config | Path | Status |
+|--------|------|--------|
+| AWS | `ops/config/cloud/aws/aws-config.json` | Placeholder (awaiting credentials) |
+| Azure | `ops/config/cloud/azure/azure-config.json` | Placeholder (awaiting credentials) |
+| GCP | `ops/config/cloud/gcp/gcp-config.json` | Placeholder (awaiting credentials) |
+| GitHub | `ops/config/ci/github/github-config.json` | Active |
+| GitLab CI | `ops/config/ci/gitlab/gitlab-config.json` | Placeholder |
+| Jenkins | `ops/config/ci/jenkins/jenkins-config.json` | Placeholder |
+| Kubernetes | `ops/config/k8s/k8s-config.json` | Placeholder (awaiting cluster access) |
+| Terraform | `ops/config/terraform/terraform-config.json` | Placeholder (awaiting backend) |
+| Datadog | `ops/config/monitoring/datadog/datadog-config.json` | Placeholder |
+| Grafana | `ops/config/monitoring/grafana/grafana-config.json` | Placeholder |
+| Prometheus | `ops/config/monitoring/prometheus/prometheus-config.json` | Placeholder |
+
+### Operational Workflows (GitHub Actions)
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ops-cloud-diagnose.yml` | manual | Multi-cloud auth check and resource listing |
+| `ops-tf-plan.yml` | manual | Terraform plan/validate/drift for any module |
+| `ops-k8s-health.yml` | manual | K8s cluster health check via cloud provider |
+| `ops-monitor-alerts.yml` | manual + schedule (6h) | Check active alerts across monitoring platforms |
+| `ops-pipeline-diagnose.yml` | manual | Cross-platform pipeline failure analysis |
+
+### Integration Registry
+- Registry file: `ops/integrations/registry.json`
+- Webhook contracts: `ops/integrations/contracts/`
+- Supported integrations: Slack, Datadog, Grafana, Prometheus, Terraform Cloud, GitHub API
+
+### Automation Runtimes
+| Runtime | Location | Setup |
+|---------|----------|-------|
+| Shell (primary) | `ops/scripts/<domain>/` | Ready — all scripts executable |
+| Python | `ops/scripts/python/` | `pip install -r requirements.txt` |
+| Node.js | `ops/scripts/node/` | `npm install` |
+| Shared utilities | `ops_utils.py` / `ops-utils.js` | OpsLogger, apiRequest, loadConfig |
+
+### Terraform Structure
+```
+ops/terraform/
+  modules/                    # Reusable modules
+  environments/dev/           # Dev environment (placeholder)
+  environments/staging/       # Staging environment (placeholder)
+  environments/production/    # Production environment (placeholder)
+  global/                     # Global resources
+```
+
+### Operational Documentation
+| Doc | Path |
+|-----|------|
+| Overview | `ops/docs/README.md` |
+| GitHub & Actions | `ops/docs/github-ops.md` |
+| Cloud (AWS/Azure/GCP) | `ops/docs/cloud-ops.md` |
+| Terraform | `ops/docs/terraform-ops.md` |
+| Kubernetes | `ops/docs/k8s-ops.md` |
+| CI/CD (GitLab/Jenkins) | `ops/docs/ci-ops.md` |
+| Monitoring | `ops/docs/monitoring-ops.md` |
+| Automation Scripts | `ops/docs/automation-ops.md` |
+
+### Operational Readiness Tracker
+- File: `ops/inventory/readiness.json`
+- Tracks per-tool: structure, config, scripts, workflows, docs, credentials
+- Current readiness: **17%** (2/12 tools fully ready, structure 100% complete)
+
 ## Rules
 1. Never store corporate code, secrets, or internal URLs in this repo
 2. Always use workspace_id — never hardcode tenant/org names
