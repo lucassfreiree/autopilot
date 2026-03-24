@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-24T17:30:00-03:00",
-  "lastSessionId": "session_oaas_integration_test",
+  "lastUpdated": "2026-03-24T18:30:00-03:00",
+  "lastSessionId": "session_setup_ops_environment",
 
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -26,7 +26,14 @@
         "repos": [],
         "status": "setup",
         "lastDeploy": null,
-        "notes": "Nova empresa. Stack DevOps. Repos e pipelines a serem configurados conforme demanda."
+        "notes": "Nova empresa. Stack DevOps. Ambiente operacional completo em ops/ (scripts, runbooks, templates, checklists). Multi-cloud ready (AWS/Azure/GCP). Multi-CI ready (GitLab/GitHub/Jenkins). IaC com Terraform/Terragrunt.",
+        "opsEnvironment": {
+          "setupDate": "2026-03-24",
+          "scripts": ["diagnose.sh", "analyze-pipeline.sh", "cluster-health.sh", "tf-ops.sh", "cloud-check.sh", "alert-check.sh", "ops-logger.sh"],
+          "runbooks": ["incident-response", "pipeline-troubleshooting", "k8s-common-issues", "terraform-operations", "cloud-operations", "monitoring-setup"],
+          "templates": ["gitlab-ci", "github-actions", "jenkinsfile", "terraform-module", "k8s-deployment", "prometheus-alerts", "grafana-dashboard"],
+          "checklists": ["new-environment", "deploy", "troubleshooting"]
+        }
       }
     },
     "goldenRules": [

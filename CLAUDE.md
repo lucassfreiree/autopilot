@@ -29,6 +29,13 @@ Zero local dependencies. 100% GitHub-native.
 - `patches/` — Source code patches applied to corporate repos via apply-source-change pipeline
 - `references/` — Reference files from corporate repos not yet migrated to GitHub
   - `references/controller-cap/values.yaml` — Controller CAP values.yaml (source: GitLab, image tag updated here)
+- `ops/` — Operational environment (scripts, runbooks, templates, checklists)
+  - `ops/ops-config.json` — Operational environment master config
+  - `ops/scripts/` — Executable operational scripts by domain
+  - `ops/runbooks/` — Operational runbooks by domain (incidents, pipelines, k8s, terraform, cloud, monitoring)
+  - `ops/templates/` — Reusable templates (CI/CD, K8s, Terraform, monitoring)
+  - `ops/checklists/` — Operational checklists (deploy, new-environment, troubleshooting)
+  - `ops/logs/` — Auto-generated operational logs (gitignored)
 
 ### Schemas (full list)
 | Schema | Validates |
@@ -119,6 +126,61 @@ This control plane manages **multiple companies** from a single point. Each comp
 1. Stack DevOps — foco em infraestrutura, automacao, containers, IaC
 2. Repos e pipelines serao configurados conforme demanda
 3. Operacoes iniciais nao requerem deploy pipeline — foco em organizacao e tooling
+4. Ambiente operacional completo em `ops/` — scripts, runbooks, templates, checklists
+5. Multi-cloud ready: AWS, Azure, GCP (conforme acessos disponiveis)
+6. Multi-CI ready: GitLab CI, GitHub Actions, Jenkins
+7. IaC: Terraform + Terragrunt com templates e wrappers operacionais
+8. Monitoring: Datadog, Grafana, Prometheus, Alertmanager com templates de alertas e dashboards
+
+## Operational Environment (`ops/`)
+
+Centro operacional para atividades de DevOps, SRE, Cloud e Automation. Compartilhado entre workspaces, com foco inicial na CIT.
+
+### Scripts Operacionais
+| Script | Path | Uso |
+|--------|------|-----|
+| Universal Diagnostics | `ops/scripts/troubleshooting/diagnose.sh` | `./diagnose.sh endpoint\|pod\|service\|dns\|node\|system` |
+| Pipeline Analyzer | `ops/scripts/ci/analyze-pipeline.sh` | `./analyze-pipeline.sh github\|gitlab\|jenkins <args>` |
+| Cluster Health | `ops/scripts/k8s/cluster-health.sh` | `./cluster-health.sh [namespace\|--all-namespaces]` |
+| Terraform Ops | `ops/scripts/terraform/tf-ops.sh` | `./tf-ops.sh plan\|apply\|validate\|drift\|fmt <path>` |
+| Cloud Auth Check | `ops/scripts/cloud/cloud-check.sh` | `./cloud-check.sh aws\|azure\|gcp\|all [resources]` |
+| Alert Check | `ops/scripts/monitoring/alert-check.sh` | `./alert-check.sh datadog\|grafana\|prometheus\|alertmanager` |
+| Ops Logger | `ops/scripts/utils/ops-logger.sh` | `source ops-logger.sh; ops_log "action" "desc" "result"` |
+
+### Runbooks
+| Runbook | Path | Conteudo |
+|---------|------|----------|
+| Incident Response | `ops/runbooks/incidents/incident-response.json` | SOP completo P1-P4 com 5 fases |
+| Pipeline Troubleshooting | `ops/runbooks/pipelines/pipeline-troubleshooting.json` | Falhas comuns GitHub/GitLab/Jenkins |
+| K8s Common Issues | `ops/runbooks/k8s/k8s-common-issues.json` | CrashLoop, ImagePull, Pending, HPA, Ingress |
+| Terraform Operations | `ops/runbooks/terraform/terraform-operations.json` | State lock, drift, import, best practices |
+| Cloud Operations | `ops/runbooks/cloud/cloud-operations.json` | AWS/Azure/GCP common tasks e troubleshooting |
+| Monitoring Setup | `ops/runbooks/monitoring/monitoring-setup.json` | Datadog, Prometheus/Grafana, SLO framework |
+
+### Templates
+| Template | Path | Para que |
+|----------|------|---------|
+| GitLab CI | `ops/templates/ci/gitlab-ci-template.yml` | Pipeline multi-stage com security scan |
+| GitHub Actions | `ops/templates/ci/github-actions-template.yml` | CI/CD com build, test, deploy |
+| Jenkinsfile | `ops/templates/ci/jenkinsfile-template.groovy` | Declarative pipeline com parallel stages |
+| Terraform Module | `ops/templates/terraform/module-template/` | Modulo base com variables e outputs |
+| S3 Backend | `ops/templates/terraform/backend-s3.tf` | Remote state com DynamoDB locking |
+| K8s Deployment | `ops/templates/k8s/deployment-template.yaml` | Deployment + Service + HPA production-ready |
+| Prometheus Alerts | `ops/templates/monitoring/prometheus-alerts-template.yml` | Alertas infra + K8s + application |
+| Grafana Dashboard | `ops/templates/monitoring/grafana-dashboard-template.json` | Dashboard de servico com RED metrics |
+
+### Checklists
+| Checklist | Path | Quando usar |
+|-----------|------|-------------|
+| New Environment | `ops/checklists/new-environment.json` | Setup de novo ambiente (infra, CI, monitoring, security) |
+| Deploy | `ops/checklists/deploy-checklist.json` | Pre-deploy, during, post-deploy, rollback triggers |
+| Troubleshooting | `ops/checklists/troubleshooting-checklist.json` | Metodologia estruturada de troubleshooting |
+
+### Operational Logging
+- Log file: `ops/logs/ops-log.jsonl` (gitignored, local only)
+- Format: JSON Lines (one entry per line)
+- Usage: `source ops/scripts/utils/ops-logger.sh && ops_log "action" "description" "result" "details"`
+- Search: `ops_log_search "keyword"` | View recent: `ops_log_tail 20`
 
 ## Rules
 1. Never store corporate code, secrets, or internal URLs in this repo
