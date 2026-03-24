@@ -1,7 +1,18 @@
 # Workspace Context Separation — Visual Guide
 
 ## Golden Rule
-**Cada empresa e um contexto COMPLETAMENTE ISOLADO.** Nunca misturar dados, credenciais, commits ou estado entre empresas.
+**Nenhum workspace e "default". Cada empresa e um contexto COMPLETAMENTE ISOLADO.**
+O agente DEVE identificar qual empresa pelo contexto da conversa antes de qualquer acao.
+
+## Workspace Identification Protocol (MANDATORY)
+
+1. **ANTES de qualquer operacao**: identificar qual empresa/workspace o usuario esta falando
+2. **Pistas de contexto**:
+   - Getronics: controller, agent, NestJS, bbvinet, psc-sre, swagger, Jest, ESLint, esteira, build NPM
+   - CIT: DevOps, Terraform, Kubernetes, K8s, Docker, cloud, AWS, Azure, GCP, monitoring, Datadog, Grafana, infra, IaC
+3. **Se ambiguo**: PERGUNTAR ao usuario antes de prosseguir
+4. **Uma vez identificado**: ler `state/workspaces/<ws_id>/workspace.json` para config
+5. **Quick index**: `ops/config/workspaces/<ws_id>.json`
 
 ## Quick Identification
 

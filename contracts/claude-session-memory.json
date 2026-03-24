@@ -266,13 +266,16 @@
       }
     },
     "goldenRules": [
+      "NENHUM workspace e default — SEMPRE identificar pelo contexto da conversa antes de qualquer acao",
+      "Se contexto ambiguo: PERGUNTAR ao usuario qual empresa/workspace antes de prosseguir",
       "NUNCA misturar dados, credenciais, commits ou estado entre empresas",
-      "Identificar contexto ativo ANTES de qualquer operacao",
-      "Cada empresa usa exclusivamente seu proprio token",
-      "Em caso de duvida, o padrao e isolamento",
+      "Cada empresa usa exclusivamente seu proprio token (ler de workspace.json credentials.tokenSecretName)",
+      "Em caso de duvida, o padrao e isolamento — nunca assumir que contextos podem ser compartilhados",
       "Monitorar CI de cada empresa SEPARADAMENTE",
-      "Workspace config e a fonte de verdade para cada empresa",
+      "Workspace config (state/workspaces/<ws_id>/workspace.json) e a fonte de verdade para cada empresa",
+      "Quick index por workspace: ops/config/workspaces/<ws_id>.json",
       "Trigger files tem campo _context para identificacao visual — SEMPRE verificar antes de editar",
+      "Pistas de contexto: Getronics = controller/agent/NestJS/bbvinet/esteira; CIT = DevOps/Terraform/K8s/cloud/monitoring",
       "Workflows [Corp] so funcionam com ws-default (BBVINET_TOKEN hardcoded) — NAO usar para CIT ate adaptacao",
       "Workflows [Core] e [Release] sao workspace-aware — seguros para qualquer workspace",
       "Workflows Ops: sao shared — funcionam para qualquer workspace"

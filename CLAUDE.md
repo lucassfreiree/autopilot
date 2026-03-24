@@ -129,13 +129,22 @@ Full separation guide: `ops/docs/workspace-separation.md`
 | **CI** | GitHub Actions do autopilot | CI pipeline da empresa (configurado por workspace) |
 | **SHAs** | SHA do merge no autopilot | SHA do commit no repo corporativo (DIFERENTE!) |
 
+### Workspace Identification (MANDATORY — Before ANY Operation)
+**Nenhum workspace e "default".** O agente DEVE identificar qual empresa/workspace pelo contexto da conversa antes de qualquer acao.
+1. Identificar pistas no contexto: nome da empresa, repos, stack, ferramentas mencionadas
+2. Se Getronics/controller/agent/NestJS/bbvinet/esteira → `ws-default`
+3. Se CIT/DevOps/Terraform/K8s/cloud/monitoring/infra → `ws-cit`
+4. Se ambiguo → **PERGUNTAR ao usuario** antes de prosseguir
+5. Uma vez identificado, ler `state/workspaces/<ws_id>/workspace.json` para config
+6. Quick index: `ops/config/workspaces/<ws_id>.json`
+
 ### Isolation Rules
-1. **NUNCA** misturar dados, commits, credenciais ou estado entre empresas
-2. **Cada workspace** usa exclusivamente seu proprio token (secret name em `credentials.tokenSecretName`)
-3. **Monitorar SEPARADAMENTE**: workflow do autopilot vs CI de cada empresa
-4. Quando usuario menciona CI/esteira → identificar QUAL empresa antes de agir
-5. **Sucesso do apply-source-change NAO garante sucesso do CI corporativo** (vale para todas as empresas)
-6. **Contexto ativo** deve ser identificado ANTES de qualquer operacao
+1. **NUNCA** assumir um workspace como padrao — sempre identificar pelo contexto
+2. **NUNCA** misturar dados, commits, credenciais ou estado entre empresas
+3. **Cada workspace** usa exclusivamente seu proprio token (secret name em `credentials.tokenSecretName`)
+4. **Monitorar SEPARADAMENTE**: workflow do autopilot vs CI de cada empresa
+5. Quando usuario menciona CI/esteira → identificar QUAL empresa antes de agir
+6. **Sucesso do apply-source-change NAO garante sucesso do CI corporativo** (vale para todas as empresas)
 7. **Em caso de duvida, o padrao e isolamento** — nunca assumir que contextos podem ser compartilhados
 8. Os SHAs sao DIFERENTES entre autopilot e cada repo corporativo
 
@@ -561,9 +570,11 @@ To prevent conflicts:
 
 ## Session Startup (IMPORTANT — Run at every new session)
 Every new Claude Code session MUST:
-1. **Check corporate repo access**: Trigger `check-repo-access.yml` workflow (via workflow_dispatch or push) to validate `BBVINET_TOKEN` has access to all corporate repos (`agent`, `controller`, `CAP`).
-2. **Read workspace config**: Load `state/workspaces/ws-default/workspace.json` to understand current workspace setup.
-3. **Check active locks**: Verify no other agent holds a session lock before performing state-changing operations.
+1. **Read session memory**: Load `contracts/claude-session-memory.json` (injected by hook).
+2. **Identify workspace context**: Determine which company/workspace the user needs from conversation context. **No workspace is default** — always identify before acting. If ambiguous, ASK.
+3. **Read workspace config**: Load `state/workspaces/<identified_ws_id>/workspace.json` for the relevant workspace.
+4. **Check active locks**: Verify no other agent holds a session lock before performing state-changing operations.
+5. **Check corporate repo access** (if workspace has repos): Verify token has access to workspace repos.
 
 ### Workflow: check-repo-access.yml
 | Trigger | Secret Used | Repos Checked |
