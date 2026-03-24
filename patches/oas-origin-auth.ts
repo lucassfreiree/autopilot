@@ -59,13 +59,15 @@ function readBodyHeaders(req: Request): Record<string, string> {
   if (!body || typeof body !== "object") return {};
   const raw = body.headers;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  const result: Record<string, string> = {};
-  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+  const entries = Object.entries(raw as Record<string, unknown>);
+  return entries.reduce<Record<string, string>>((acc, pair) => {
+    const key = pair[0];
+    const val = pair[1];
     if (typeof val === "string" && val.trim()) {
-      result[key.toLowerCase()] = val.trim();
+      acc[key.toLowerCase()] = val.trim();
     }
-  }
-  return result;
+    return acc;
+  }, {});
 }
 
 function firstHeaderValue(

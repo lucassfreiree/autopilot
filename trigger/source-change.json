@@ -2,7 +2,7 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.5.10",
+  "version": "3.5.11",
   "changes": [
     {
       "target_path": "src/middleware/oas-origin-auth.ts",
@@ -12,24 +12,24 @@
     {
       "target_path": "package.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.10\"",
-      "replace": "\"version\": \"3.5.11\""
+      "search": "\"version\": \"3.5.11\"",
+      "replace": "\"version\": \"3.5.12\""
     },
     {
       "target_path": "package-lock.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.10\"",
-      "replace": "\"version\": \"3.5.11\""
+      "search": "\"version\": \"3.5.11\"",
+      "replace": "\"version\": \"3.5.12\""
     },
     {
       "target_path": "src/swagger/swagger.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.10\"",
-      "replace": "\"version\": \"3.5.11\""
+      "search": "\"version\": \"3.5.11\"",
+      "replace": "\"version\": \"3.5.12\""
     }
   ],
-  "commit_message": "feat: read auth headers from body.headers fallback for APB calls (3.5.11)",
+  "commit_message": "fix: replace for-of with reduce to satisfy ESLint no-restricted-syntax (3.5.12)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 44
+  "run": 45
 }
