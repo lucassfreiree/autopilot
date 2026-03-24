@@ -2,16 +2,34 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.5.6",
+  "version": "3.5.7",
   "changes": [
     {
-      "target_path": "src/controllers/oas-sre-controller.controller.ts",
+      "target_path": "src/middleware/jwt.ts",
       "action": "replace-file",
-      "content_ref": "patches/oas-sre-controller.controller.ts"
+      "content_ref": "patches/jwt.ts"
+    },
+    {
+      "target_path": "package.json",
+      "action": "search-replace",
+      "search": "\"version\": \"3.5.6\"",
+      "replace": "\"version\": \"3.5.7\""
+    },
+    {
+      "target_path": "package-lock.json",
+      "action": "search-replace",
+      "search": "\"version\": \"3.5.6\"",
+      "replace": "\"version\": \"3.5.7\""
+    },
+    {
+      "target_path": "src/swagger/swagger.json",
+      "action": "search-replace",
+      "search": "\"version\": \"3.5.6\"",
+      "replace": "\"version\": \"3.5.7\""
     }
   ],
-  "commit_message": "fix: move readAuthDecision before usage (ESLint no-use-before-define)",
+  "commit_message": "fix: generic 401 error messages to prevent auth implementation leakage (3.5.7)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 38
+  "run": 39
 }
