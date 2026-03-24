@@ -30,10 +30,10 @@ lucassfreiree/autopilot (this repo)
   agent-release-state.json
   controller-release-state.json
   release-freeze.json
-  locks/ (1 files)
-  audit/ (139 files)
+  locks/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
+  audit/ (140 files)
   improvements/ (1 files)
-  metrics/ (1 files)
+  metrics/ (2 files)
   handoffs/ (1 files)
   approvals/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
 
@@ -237,4 +237,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/{FILE
 | Handoff to Codex | Dispatch `enqueue-agent-handoff.yml`, `to_agent=codex` |
 
 ---
-*Last synced: 2026-03-24T00:26:24Z | Run: 23466987532*
+*Last synced: 2026-03-24T12:05:12Z | Run: 23488501813*
