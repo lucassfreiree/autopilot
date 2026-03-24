@@ -1,4 +1,4 @@
-name: "Backup State"
+name: "[Core] Backup: State Snapshot"
 
 on:
   schedule:
@@ -15,6 +15,7 @@ env:
 
 jobs:
   backup:
+    name: "Snapshot to autopilot-backups"
     runs-on: ubuntu-latest
     steps:
       - name: Snapshot state to backups

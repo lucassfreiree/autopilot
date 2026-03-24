@@ -1,4 +1,4 @@
-name: "Record Improvement"
+name: "[Agent] Record Improvement"
 
 on:
   workflow_dispatch:

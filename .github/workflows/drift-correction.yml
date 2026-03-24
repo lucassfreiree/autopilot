@@ -1,4 +1,4 @@
-name: "Drift Correction"
+name: "[Corp] Drift Correction"
 
 on:
   schedule:
@@ -23,6 +23,7 @@ env:
 
 jobs:
   drift:
+    name: "Detect & Correct Drift"
     runs-on: ubuntu-latest
     steps:
       - name: "Detect and correct drift"

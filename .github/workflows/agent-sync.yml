@@ -1,4 +1,4 @@
-name: "Agent Sync: Claude <-> ChatGPT"
+name: "[Corp] Agent Sync: Claude + ChatGPT"
 
 on:
   push:
@@ -36,7 +36,7 @@ env:
 
 jobs:
   sync:
-    name: "Agent collaboration"
+    name: "Clone + Fix + Push"
     runs-on: ubuntu-latest
     steps:
 

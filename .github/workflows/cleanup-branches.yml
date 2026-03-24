@@ -1,4 +1,4 @@
-name: "Cleanup: Stale Branches"
+name: "[Infra] Cleanup: Stale Branches"
 
 on:
   schedule:

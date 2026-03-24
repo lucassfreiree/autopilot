@@ -1,4 +1,4 @@
-name: "Fix: Corporate CI Errors"
+name: "[Corp] Fix: CI Lint Errors"
 
 on:
   push:

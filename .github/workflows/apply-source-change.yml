@@ -1,4 +1,4 @@
-name: "Apply Source Code Change"
+name: "[Corp] Deploy: Apply Source Change"
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: "Continuous Improvement"
+name: "[Infra] Continuous Improvement"
 
 # Self-improving pipeline that analyzes the project for issues,
 # applies auto-fixes, records learnings, and tracks improvement trends.

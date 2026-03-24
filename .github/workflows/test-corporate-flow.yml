@@ -1,4 +1,4 @@
-name: "Test: Corporate E2E Flow"
+name: "[Corp] Test: Corporate E2E Flow"
 
 on:
   push:

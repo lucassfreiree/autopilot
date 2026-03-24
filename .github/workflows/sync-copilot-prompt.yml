@@ -1,4 +1,4 @@
-name: "Sync Copilot Prompt"
+name: "[Infra] Sync Copilot Prompt"
 
 # Auto-regenerates .github/copilot-instructions.md whenever
 # workflows, schemas, contracts, or triggers change.
