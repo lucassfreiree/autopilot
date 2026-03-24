@@ -271,8 +271,31 @@
       "Cada empresa usa exclusivamente seu proprio token",
       "Em caso de duvida, o padrao e isolamento",
       "Monitorar CI de cada empresa SEPARADAMENTE",
-      "Workspace config e a fonte de verdade para cada empresa"
-    ]
+      "Workspace config e a fonte de verdade para cada empresa",
+      "Trigger files tem campo _context para identificacao visual — SEMPRE verificar antes de editar",
+      "Workflows [Corp] so funcionam com ws-default (BBVINET_TOKEN hardcoded) — NAO usar para CIT ate adaptacao",
+      "Workflows [Core] e [Release] sao workspace-aware — seguros para qualquer workspace",
+      "Workflows Ops: sao shared — funcionam para qualquer workspace"
+    ],
+    "workspaceSeparationAudit": {
+      "date": "2026-03-24",
+      "status": "structure_complete_enforcement_partial",
+      "findings": {
+        "safe_for_all_workspaces": ["health-check.yml", "backup-state.yml", "restore-state.yml", "seed-workspace.yml", "session-guard.yml", "workspace-lock-gc.yml", "release-controller.yml", "release-agent.yml", "release-freeze.yml", "release-approval.yml", "release-metrics.yml", "ops-cloud-diagnose.yml", "ops-tf-plan.yml", "ops-k8s-health.yml", "ops-monitor-alerts.yml", "ops-pipeline-diagnose.yml"],
+        "hardcoded_to_ws_default": ["apply-source-change.yml", "ci-diagnose.yml", "fix-corporate-ci.yml", "fetch-files.yml", "drift-correction.yml", "fix-and-validate.yml", "agent-sync.yml", "check-repo-access.yml", "test-full-flow.yml", "test-corporate-flow.yml"],
+        "global_no_workspace": ["alert-notify.yml", "deploy-panel.yml", "sync-copilot-prompt.yml", "cleanup-branches.yml"]
+      },
+      "visualSeparation": {
+        "triggerFiles": "Campo _context adicionado com formato 'EMPRESA | workspace_id | TOKEN_NAME'",
+        "workspaceIndex": "ops/config/workspaces/ws-default.json e ws-cit.json — quick reference para agents",
+        "separationGuide": "ops/docs/workspace-separation.md — mapa completo de scopes"
+      },
+      "whatNeedsFutureWork": [
+        "Adaptar workflows [Corp] para selecao dinamica de token baseada em workspace_id",
+        "Isso sera feito quando CIT_TOKEN e repos CIT estiverem disponiveis",
+        "NAO mexer nos workflows agora — risco de quebrar pipeline Getronics funcional"
+      ]
+    }
   },
 
   "contextSeparation": {

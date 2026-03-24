@@ -85,6 +85,7 @@ Visual automation and external integrations (100% self-hosted, open-source).
 ## Context Separation (CRITICAL — Multi-Company Isolation)
 
 This control plane manages **multiple companies** from a single point. Each company is a **completely isolated context**.
+Full separation guide: `ops/docs/workspace-separation.md`
 
 ### Company Contexts
 
@@ -96,6 +97,28 @@ This control plane manages **multiple companies** from a single point. Each comp
 | **Repos** | `bbvinet/psc-sre-automacao-*` | To be configured |
 | **Token** | `BBVINET_TOKEN` | `CIT_TOKEN` (when available) |
 | **Data Classification** | Confidential | Internal |
+| **Quick Index** | `ops/config/workspaces/ws-default.json` | `ops/config/workspaces/ws-cit.json` |
+| **Trigger Label** | `_context: "GETRONICS \| ws-default \| BBVINET_TOKEN"` | `_context: "CIT \| ws-cit \| CIT_TOKEN"` |
+
+### Workspace Navigation (for agents)
+| What you need | Where to find |
+|---------------|---------------|
+| Which company am I working with? | Check `workspace_id` in trigger file or user context |
+| Company config and repos | `state/workspaces/<ws_id>/workspace.json` |
+| Quick visual index | `ops/config/workspaces/<ws_id>.json` |
+| Which token to use | `workspace.json → credentials.tokenSecretName` |
+| Which workflows work for this workspace | `ops/config/workspaces/<ws_id>.json → workflows_that_use_this_workspace` |
+| Full separation rules | `ops/docs/workspace-separation.md` |
+
+### Workflow Scope Classification
+| Prefix | Scope | Safe for all workspaces? |
+|--------|-------|--------------------------|
+| `[Corp]` | Corporate pipeline operations | **NO** — currently hardcoded to BBVINET_TOKEN (ws-default only) |
+| `[Core]` | Control plane operations | **YES** — workspace-aware, reads from state |
+| `[Release]` | Release management | **YES** — reads workspace.json dynamically |
+| `[Infra]` | Infrastructure/maintenance | **PARTIAL** — some hardcoded to ws-default |
+| `[Agent]` | Agent coordination | **PARTIAL** — check per workflow |
+| `Ops:` | Operational tasks (CIT focus) | **YES** — shared, accepts workspace_id input |
 
 ### Autopilot vs Corporate Context (per company)
 
