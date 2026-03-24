@@ -2,16 +2,12 @@
   "schemaVersion": 2,
   "workspaceId": "ws-default",
   "component": "controller",
-  "lastReleasedSha": "d803f8ef939952c71e4527dd59c2b5101144cef8",
-  "lastTag": "source-change",
-  "updatedAt": "2026-03-24T14:46:50Z",
-  "runId": "23494865305",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23494865305",
+  "lastReleasedSha": "081c472231996b7231f0e10852ccfd4016e7a183",
+  "lastTag": "3.6.0",
+  "lastVersion": "3.6.0",
+  "updatedAt": "2026-03-24T21:19:43Z",
+  "runId": "23512177537",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23512177537",
   "ciResult": "success",
-  "status": "ci-passed",
-  "changeType": "source-code",
-  "commitMessage": "fix: replace for-of with reduce to satisfy ESLint no-restricted-syntax (3.5.12)",
-  "promoted": false,
-  "preExistingFailure": false,
-  "gateDecision": "pass"
+  "status": "promoted"
 }
