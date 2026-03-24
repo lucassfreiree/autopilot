@@ -2,12 +2,17 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.5.7",
+  "version": "3.5.8",
   "changes": [
     {
       "target_path": "src/middleware/jwt.ts",
       "action": "replace-file",
       "content_ref": "patches/jwt.ts"
+    },
+    {
+      "target_path": "src/middleware/jwt-callback.ts",
+      "action": "replace-file",
+      "content_ref": "patches/jwt-callback.ts"
     },
     {
       "target_path": "src/__tests__/unit/oas-sre-controller.route.test.ts",
@@ -27,24 +32,24 @@
     {
       "target_path": "package.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.7\"",
-      "replace": "\"version\": \"3.5.8\""
+      "search": "\"version\": \"3.5.8\"",
+      "replace": "\"version\": \"3.5.9\""
     },
     {
       "target_path": "package-lock.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.7\"",
-      "replace": "\"version\": \"3.5.8\""
+      "search": "\"version\": \"3.5.8\"",
+      "replace": "\"version\": \"3.5.9\""
     },
     {
       "target_path": "src/swagger/swagger.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.7\"",
-      "replace": "\"version\": \"3.5.8\""
+      "search": "\"version\": \"3.5.8\"",
+      "replace": "\"version\": \"3.5.9\""
     }
   ],
-  "commit_message": "fix: update all test assertions for generic 401 messages (3.5.8)",
+  "commit_message": "fix: generic 401 in jwt.ts AND jwt-callback.ts + all test assertions (3.5.9)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 41
+  "run": 42
 }
