@@ -3,34 +3,39 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.5.13",
+  "version": "3.5.14",
   "changes": [
     {
-      "target_path": "src/controllers/oas-sre-controller.controller.ts",
+      "target_path": "src/controllers/oas-execute.controller.ts",
       "action": "replace-file",
-      "content_ref": "patches/oas-sre-controller.controller.ts"
+      "content_ref": "patches/oas-execute.controller.ts"
+    },
+    {
+      "target_path": "src/controllers/agents-execute-logs.controller.ts",
+      "action": "replace-file",
+      "content_ref": "patches/agents-execute-logs.controller.ts"
     },
     {
       "target_path": "package.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.12\"",
-      "replace": "\"version\": \"3.5.13\""
+      "search": "\"version\": \"3.5.13\"",
+      "replace": "\"version\": \"3.5.14\""
     },
     {
       "target_path": "package-lock.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.12\"",
-      "replace": "\"version\": \"3.5.13\""
+      "search": "\"version\": \"3.5.13\"",
+      "replace": "\"version\": \"3.5.14\""
     },
     {
       "target_path": "src/swagger/swagger.json",
       "action": "search-replace",
-      "search": "\"version\": \"3.5.12\"",
-      "replace": "\"version\": \"3.5.13\""
+      "search": "\"version\": \"3.5.13\"",
+      "replace": "\"version\": \"3.5.14\""
     }
   ],
-  "commit_message": "fix(security): XSS sanitization + SSRF URL validation + error output hardening (3.5.13)",
+  "commit_message": "fix(security): SSRF validation in oas-execute + DoS loop bound in agents-execute-logs (3.5.14)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 47
+  "run": 48
 }
