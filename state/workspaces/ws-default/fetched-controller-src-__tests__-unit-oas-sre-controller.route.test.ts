@@ -114,7 +114,7 @@ describe("POST /oas/sre-controller", () => {
     });
 
     expect(res.status).toBe(401);
-    expect(res.body).toEqual({ error: "Missing Bearer token" });
+    expect(res.body).toEqual({ error: "Unauthorized" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
