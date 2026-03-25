@@ -709,8 +709,8 @@
   },
 
   "versioningRules": {
-    "currentVersion": "3.5.11",
-    "previousVersion": "3.5.10",
+    "currentVersion": "3.5.13",
+    "previousVersion": "3.5.12",
     "rule": "Se a esteira ja gerou imagem para uma versao, a proxima DEVE incrementar o patch. CI rejeita tags duplicadas no registry.",
     "versionFiles": [
       { "file": "package.json", "line": 3, "field": "version" },
@@ -749,7 +749,7 @@
       "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "lastTriggerRun": 44,
+    "lastTriggerRun": 46,
     "lastSuccessfulRun": 43,
     "lastDeployPR": 104,
     "pipelineStatus": "SUCCESS — run #43 (3.5.10) COMPLETO. Esteira corporativa #208 PASSOU. Imagem Docker 3.5.10 publicada. NOTA: CI Gate reportou ci-failed-preexisting INCORRETAMENTE — esteira real passou.",
@@ -1163,6 +1163,10 @@
       "ci_logs_vs_ci_diagnosis": "ci-diagnosis-controller.json roda tsc/jest LOCAL sem npm install — erros TS2688/jest-not-found sao esperados e NAO refletem a esteira real. Para erros REAIS da esteira corporativa: ler ci-logs-controller-*.txt (ultimo arquivo = ultimo run)",
       "esteira_corporativa_falhou": "Usar ci-diagnose workflow para baixar logs. Ler ci-logs-controller-*.txt no autopilot-state (ultimo arquivo = ultimo run). Corrigir patch, bump run, re-deploy automaticamente",
       "error_message_change_breaks_tests": "CRITICO: Ao mudar qualquer mensagem de erro (ex: 401 response body), buscar TODOS os arquivos que retornam essa mensagem (jwt.ts, jwt-callback.ts, e qualquer outro middleware) E TODOS os testes que verificam. Usar: grep -rn 'mensagem_antiga' src/ para encontrar TODOS. Arquivos de CODIGO afetados: jwt.ts (3 mensagens), jwt-callback.ts (13 mensagens). Arquivos de TESTE afetados: agentsRouter.test.ts (4), jwt.middleware.test.ts (2), oas-sre-controller.route.test.ts (1). LESSON: jwt-callback.ts e um middleware SEPARADO do jwt.ts que tem suas PROPRIAS mensagens de erro. Ambos devem ser atualizados.",
+      "security_xss_reflected": "NUNCA refletir input do usuario em responses sem sanitizacao. Usar sanitizeForOutput() que remove <>'\"& e limita a 256 chars. Checkmarx detecta Reflected_XSS quando req.body flui para res.json().",
+      "security_ssrf_url_validation": "TODA URL usada em fetch()/http request DEVE ser validada contra TRUSTED_AGENT_URL_PATTERN (regex de dominio confiavel). Usar validateTrustedUrl() antes de qualquer fetch. Checkmarx detecta SSRF quando body influencia URL de request.",
+      "security_dos_loop_bound": "NUNCA usar req.query/req.body para controlar numero de iteracoes de um loop sem limite maximo (MAX_RESULTS). Checkmarx detecta Server_DoS_by_Loop.",
+      "security_error_detail_leak": "NUNCA retornar error.message direto no response. Usar sanitizeForOutput(msg) para limpar e limitar. Evita information disclosure.",
       "oaas_oferta_401_no_headers": "Oferta migra-microsservicos-openshift retorna 401 ao chamar controller. CAUSA: playbook execute-psc-ns-migration-preflight.yml NAO envia headers x-techbb-namespace e x-techbb-service-account. FIX: adicionar headers no task uri do Ansible. Controller esta correto — problema e no playbook da oferta (repo da plataforma OaaS).",
       "oaas_dns_transiente": "Pod APB pode ter falha DNS transiente para hostnames *.psc.k8shmlbb111b.bb.com.br. Reexecutar resolve. Cluster HML correto: k8shmlbb111b (com BB duplo, NAO b simples).",
       "ci_gate_preexisting_bug": "CRITICO: CI Gate 'smart pre-existing detection' esta QUEBRADO. Reporta ciResult=failure MESMO quando a esteira corporativa PASSA. Aconteceu no run #43: esteira #208 PASSOU com sucesso mas CI Gate reportou ci-failed-preexisting. O CI Gate NAO e confiavel para determinar se a esteira passou ou falhou. Para saber o resultado REAL: 1) Checar ci-logs-controller-*.txt (se novo log apareceu com PASS em todos os testes = sucesso), 2) Perguntar ao usuario se necessario, 3) Tempo de execucao: esteira que FALHA em teste leva ~3.5 min, esteira que PASSA leva ~14 min. Se CI Gate levou 14+ min = provavelmente passou."
