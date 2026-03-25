@@ -754,11 +754,12 @@ export async function getAgentExecutionLogs(
     if (Number.isFinite(ms)) toMs = ms;
   }
 
+  const MAX_RESULTS = 1000;
   const limitParsed = Number(limitRaw);
   const limit =
     Number.isFinite(limitParsed) && limitParsed > 0
-      ? Math.floor(limitParsed)
-      : undefined;
+      ? Math.min(Math.floor(limitParsed), MAX_RESULTS)
+      : MAX_RESULTS;
 
   const filtered = payload.entries.filter((e) => {
     if (!hasTimeFilter && !limit) return true;
