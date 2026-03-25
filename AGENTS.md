@@ -84,8 +84,8 @@ lucassfreiree/autopilot (this repo)
   agent-release-state.json
   controller-release-state.json
   release-freeze.json
-  locks/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
-  audit/ (209 files)
+  locks/ (1 files)
+  audit/ (211 files)
   improvements/ (1 files)
   metrics/ (3 files)
   handoffs/ (1 files)
@@ -208,7 +208,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 
 | File | Name | Triggers |
 |---|---|---|
-| agent-bridge.yml | agent-bridge.yml | unknown |
+| agent-bridge.yml | [Agent] Bridge: Claude ↔ Codex | trigger file, manual |
 | agent-sync.yml | [Corp] Agent Sync: Claude + ChatGPT | trigger file, manual |
 | alert-notify.yml | [Infra] Alert & Notify | manual |
 | apply-source-change.yml | [Corp] Deploy: Apply Source Change | trigger file, manual |
@@ -219,8 +219,8 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | ci-diagnose.yml | [Corp] CI: Diagnose Error Logs | trigger file, manual |
 | ci-failure-analysis.yml | [Agent] CI Failure Analysis | manual |
 | cleanup-branches.yml | [Infra] Cleanup: Stale Branches | scheduled, manual, PR |
-| codex-apply.yml | codex-apply.yml | unknown |
-| codex-deploy.yml | codex-deploy.yml | unknown |
+| codex-apply.yml | [Agent] Codex Apply: Task → Code → PR | trigger file, manual |
+| codex-deploy.yml | [Agent] Codex Deploy: Full Pipeline | trigger file, manual |
 | continuous-improvement.yml | [Infra] Continuous Improvement | scheduled, trigger file, manual |
 | deploy-panel.yml | [Infra] Deploy Panel (GitHub Pages) | push, manual |
 | drift-correction.yml | [Corp] Drift Correction | scheduled, manual |
@@ -254,12 +254,15 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 
 | Workflow | Inputs |
 |---|---|
+| agent-bridge.yml | task, model, include_session_memory, include_patches |
 | agent-sync.yml | workspace_id, task, context |
 | alert-notify.yml | severity, title, body |
 | apply-source-change.yml | workspace_id, component, change_type, target_path, file_content, commit_message, skip_ci_wait, promote |
 | bootstrap.yml | workspace_id |
 | ci-diagnose.yml | workspace_id, component, commit_sha |
 | ci-failure-analysis.yml | workspace_id, component, run_id |
+| codex-apply.yml | task, target_files, model, auto_merge, workspace_id, run |
+| codex-deploy.yml | task, component, workspace_id, model, auto_merge, run |
 | continuous-improvement.yml | workspace_id, auto_fix, scope |
 | drift-correction.yml | workspace_id, dry_run |
 | enqueue-agent-handoff.yml | workspace_id, from_agent, to_agent, component, summary, next_steps, priority |
@@ -330,13 +333,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | Handoff to Claude | Dispatch `enqueue-agent-handoff.yml`, `to_agent=claude` |
 
 ---
-*Last synced: 2026-03-25T20:10:45Z | Run: 23561735221*
-
-## OPERATIONAL GUARDRAILS (Codex web autonomy)
-
-- Preserve existing behavior and current pipelines unless task explicitly requires a change.
-- Never modify or expose secrets in files, commits, PR text, or logs.
-- Never push directly to protected branches; always prefer branch + PR flow.
-- Keep changes minimal, auditable, and scoped to the requested task.
-- Run lint/tests/checks when available and update docs/tests when change requires it.
-- Always include in PR summary: what changed, validation status, risks, and rollback path.
+*Last synced: 2026-03-25T21:10:01Z | Run: 23564278202*
