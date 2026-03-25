@@ -25,6 +25,14 @@ type AutomationMetadata = {
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 const DEFAULT_AGENT_CALL_TIMEOUT_MS = 30_000;
 
+function sanitizeForOutput(value: unknown): string {
+  return String(value ?? "")
+    .replace(/[<>"'&]/g, "")
+    .replace(/[\r\n\t]+/g, " ")
+    .trim()
+    .slice(0, 256);
+}
+
 function parseSafeIdentifier(value: unknown): string {
   if (typeof value !== "string") return "";
 
@@ -341,7 +349,7 @@ export async function postOasAutomation(
     res.status(500).json({
       ok: false,
       error: "Internal error while dispatching execution",
-      detail: msg,
+      detail: sanitizeForOutput(msg),
       execId,
     });
   }
