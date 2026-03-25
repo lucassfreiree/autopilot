@@ -343,8 +343,8 @@
     "sessions": [
       {
         "id": "session_oaas_integration_test",
-        "date": "2026-03-24",
-        "summary": "Diagnostico de integracao OaaS: oferta migra-microsservicos-openshift chamando controller. Identificados 2 problemas: DNS transiente + 401 por falta de headers x-techbb-* no playbook da oferta.",
+        "date": "2026-03-25",
+        "summary": "Integracao OaaS → Controller → Agent COMPLETA e FUNCIONAL. Diagnosticados e resolvidos: DNS transiente, 401 auth, payload 400, campos obrigatorios do broker, mapeamento de inputs do manifesto. Fluxo ponta-a-ponta validado com compliance_status=success.",
         "stepsExecuted": [
           {
             "step": 1,
@@ -381,13 +381,39 @@
             "step": 6,
             "action": "Gerou status report para gestao",
             "how": "Documento com situacao atual, validacoes realizadas, causa raiz e proximos passos"
+          },
+          {
+            "step": 7,
+            "action": "Resolveu payload 400 — CLUSTERS_NAMES required",
+            "how": "Controller valida CLUSTERS_NAMES no raiz do body. Playbook enviava dentro de envs. Identificou que playbook usa inputs do manifesto (cluster_hml_origin) pra montar CLUSTERS_NAMES internamente.",
+            "lesson": "Controller espera CLUSTERS_NAMES no raiz. Playbook monta isso a partir de cluster_hml_origin. NAO passar CLUSTERS_NAMES manualmente."
+          },
+          {
+            "step": 8,
+            "action": "Descobriu campos obrigatorios do broker OaaS por tentativa",
+            "how": "Broker valida inputs do manifesto um por um: namespaces_list (string comma-sep, NAO array), solution_service_origin, solution_service_destination, cluster_hml_origin",
+            "lesson": "Broker OaaS valida contra o manifesto da oferta. Consultar manifesto ANTES de testar para evitar descobrir campos um por um."
+          },
+          {
+            "step": 9,
+            "action": "Identificou mapeamento correto de inputs do manifesto",
+            "how": "Leu manifesto da oferta migra-microsservicos-openshift-v1. Inputs declarados: namespaces_list, solution_service_origin, cluster_hml_origin (select: k8shmlbb111/k8shmlbb111b). CLUSTERS_NAMES e image NAO sao inputs — playbook monta internamente.",
+            "lesson": "CRITICO: Cenario de teste deve passar SOMENTE os inputs do manifesto. Playbook monta o JSON body pro controller a partir desses inputs."
+          },
+          {
+            "step": 10,
+            "action": "Integracao OaaS → Controller → Agent SUCESSO TOTAL",
+            "how": "Payload correto com inputs do manifesto. Controller autenticou (internal-origin), mintou JWT, despachou para agent. Agent executou psc-sre-ns-migration-preflight, retornou compliance_status=success em 9.2s (sync mode).",
+            "result": "POST /oas/sre-controller?mode=sync → 200 OK em 9284ms. namespace=aai-consulta-iban-api, cluster_type=origem, compliance_status=success.",
+            "lesson": "Fluxo ponta-a-ponta OaaS → Controller → Agent validado e funcional. Nenhuma alteracao necessaria no controller."
           }
         ],
         "mistakesMade": [],
         "keyDecisions": [
           "Causa raiz identificada: playbook da oferta migra-microsservicos-openshift nao envia headers x-techbb-*",
           "Controller esta correto — nenhuma alteracao necessaria no controller",
-          "Fix necessario no playbook da oferta (repo da plataforma OaaS, nao no autopilot)"
+          "Fix necessario no playbook da oferta (repo da plataforma OaaS, nao no autopilot)",
+          "Cenario de teste OaaS deve usar inputs do manifesto (cluster_hml_origin, namespaces_list, solution_service_*), NAO campos internos (CLUSTERS_NAMES, image, envs)"
         ]
       },
       {
@@ -964,8 +990,32 @@
       "controllerPod": "psc-sre-aut-controller-bd8c66bd9-j88qn (namespace psc-sre-aut-controller)",
       "apbPodNamespace": "sgh-oaas-playbook-jobs",
       "validatedAt": "2026-03-24",
-      "status": "Controller OK. Playbook da oferta precisa enviar headers x-techbb-*.",
-      "lesson": "Quando OaaS retorna 401: verificar se o playbook da oferta envia os headers de auth. Controller aceita internal-origin quando headers estao presentes."
+      "status": "FUNCIONAL — integracao ponta-a-ponta validada em 2026-03-25. compliance_status=success.",
+      "manifestInputs": {
+        "namespaces_list": "string comma-sep (regex: ^[a-zA-Z][a-zA-Z0-9_-]*(,[a-zA-Z][a-zA-Z0-9_-]*)*$)",
+        "solution_service_origin": "select from API",
+        "solution_service_destination": "select from API",
+        "cluster_hml_origin": "select: k8shmlbb111 | k8shmlbb111b"
+      },
+      "correctTestPayload": {
+        "namespaces_list": "aai-consulta-iban-api",
+        "solution_service_origin": "aai-consulta-iban-api",
+        "solution_service_destination": "aai-consulta-iban-api",
+        "cluster_hml_origin": "k8shmlbb111b"
+      },
+      "doNotPass": ["CLUSTERS_NAMES", "image", "envs — playbook monta tudo internamente a partir dos inputs do manifesto"],
+      "successfulExecution": {
+        "date": "2026-03-25",
+        "requestId": "7e1f3308-f38b-44e8-a700-c743b35e948d",
+        "execId": "7ac2b099-8323-4210-a74c-3254fbb75bc5",
+        "image": "psc-sre-ns-migration-preflight",
+        "cluster": "k8shmlbb111b",
+        "namespace": "aai-consulta-iban-api",
+        "result": "compliance_status=success",
+        "duration": "9284ms (sync mode)",
+        "httpStatus": 200
+      },
+      "lesson": "Cenario de teste usa SOMENTE inputs do manifesto. Playbook monta CLUSTERS_NAMES e envs internamente. Broker valida campos do manifesto antes de despachar. Quando OaaS retorna 401: verificar headers x-techbb-*."
     }
   },
 
