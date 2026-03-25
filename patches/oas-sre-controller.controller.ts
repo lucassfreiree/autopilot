@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
-import jwt from "jsonwebtoken";
 import {
   initExecution,
   type ExecutionSnapshot,
@@ -61,7 +60,6 @@ type AllowedImage = {
 
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 const DEFAULT_AGENT_CALL_TIMEOUT_MS = 30_000;
-const TRUSTED_AGENT_URL_PATTERN = /^https:\/\/[A-Za-z0-9._-]+\.bb\.com\.br\//;
 
 function asRecord(value: unknown): JsonRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -85,16 +83,6 @@ function safeLogValue(value: unknown): string {
     .replace(/[\r\n\t]+/g, " ")
     .trim()
     .slice(0, 256);
-}
-
-function validateTrustedUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return false;
-    return TRUSTED_AGENT_URL_PATTERN.test(url);
-  } catch {
-    return false;
-  }
 }
 
 function readAgentCallTimeoutMs(): number {
@@ -292,74 +280,9 @@ function getIncomingAuthorization(req: Request): string | undefined {
   return auth || undefined;
 }
 
-function parseExpiresIn(raw: string): jwt.SignOptions["expiresIn"] {
-  const value = raw.trim();
-  if (!value) return undefined;
-  if (/^\d+$/.test(value)) return Number(value);
-  return value as jwt.SignOptions["expiresIn"];
-}
-
-function mintInternalOriginJwt(execId: string): string | undefined {
-  const secret = safeString(process.env.JWT_SECRET);
-  if (!secret) return undefined;
-
-  const issuer =
-    safeString(process.env.JWT_ISSUER) || "psc-sre-automacao-controller";
-  const audience =
-    safeString(process.env.JWT_AUDIENCE) || "psc-sre-automacao-agent";
-  const expiresIn = parseExpiresIn(
-    safeString(process.env.JWT_EXPIRES_IN) || "5m",
-  );
-  const algorithm = (safeString(process.env.JWT_SIGN_ALG) ||
-    "HS256") as jwt.Algorithm;
-  const subject =
-    safeString(process.env.JWT_DEFAULT_SUBJECT) || "oas-internal-origin";
-  const executeScope =
-    safeString(process.env.SCOPE_EXECUTE_AUTOMATION) || "execute:automation";
-
-  const token = jwt.sign(
-    {
-      execId,
-      scope: [executeScope],
-      origin: "internal-origin",
-    },
-    secret,
-    {
-      issuer,
-      audience,
-      subject,
-      expiresIn,
-      algorithm,
-    },
-  );
-
-  return `Bearer ${token}`;
-}
-
-function readAuthDecision(res: Response): OasOriginAuthDecision | undefined {
-  const locals = res.locals as Locals;
-  return locals.oasAuthDecision;
-}
-
-function getAgentAuthorization(
-  req: Request,
-  res: Response,
-  execId: string,
-): string | undefined {
+function getAgentAuthorization(req: Request): string | undefined {
   const incoming = getIncomingAuthorization(req);
   if (incoming) return incoming;
-
-  const authDecision = readAuthDecision(res);
-  if (authDecision?.trustedInternalOrigin) {
-    const minted = mintInternalOriginJwt(execId);
-    if (minted) {
-      console.info(
-        "[oas-sre-controller] minted JWT for internal-origin request execId=%s",
-        safeLogValue(execId),
-      );
-      return minted;
-    }
-  }
 
   const fromEnv = safeString(process.env.AGENT_EXECUTE_AUTHORIZATION);
   return fromEnv || undefined;
@@ -388,6 +311,11 @@ async function callAgent(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function readAuthDecision(res: Response): OasOriginAuthDecision | undefined {
+  const locals = res.locals as Locals;
+  return locals.oasAuthDecision;
 }
 
 function summarizeDispatches(dispatches: AgentCallResult[]) {
@@ -436,7 +364,7 @@ export async function postOasSreController(
 
   const requestId = safeString(req.header("x-request-id")) || execId;
   const authDecision = readAuthDecision(res);
-  const outboundAuthorization = getAgentAuthorization(req, res, execId);
+  const outboundAuthorization = getAgentAuthorization(req);
 
   console.info(
     "[oas-sre-controller] start execId=%s image=%s clusters=%d authMode=%s",
@@ -453,8 +381,7 @@ export async function postOasSreController(
       validation.clustersNames.map((cluster) => {
         const agentUrl =
           resolveTrustedRegisteredAgentExecuteUrlByCluster(cluster);
-        if (!agentUrl) return null;
-        return { cluster, agentUrl };
+        return agentUrl ? { cluster, agentUrl } : null;
       });
 
     const missingTargets = validation.clustersNames.filter(

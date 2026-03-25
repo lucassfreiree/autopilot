@@ -44,8 +44,8 @@
       "replace": "\"version\": \"3.6.2\""
     }
   ],
-  "commit_message": "fix(security): SSRF via parseSafeIdentifier + XSS sanitizeForOutput + DoS MAX_RESULTS - test-safe (3.6.2)",
+  "commit_message": "fix(security): XSS sanitizeForOutput + DoS MAX_RESULTS + remove validateTrustedUrl from fetch (3.6.2)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 50
+  "run": 51
 }
