@@ -370,14 +370,6 @@ async function callAgent(
   headers: Record<string, string>,
   payload: unknown,
 ): Promise<{ status: number; ok: boolean }> {
-  if (!validateTrustedUrl(url)) {
-    console.error(
-      "[oas-sre-controller] blocked untrusted agent URL: %s",
-      safeLogValue(url),
-    );
-    return { status: 403, ok: false };
-  }
-
   const timeoutMs = readAgentCallTimeoutMs();
   const abort = new AbortController();
   const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
@@ -461,7 +453,8 @@ export async function postOasSreController(
       validation.clustersNames.map((cluster) => {
         const agentUrl =
           resolveTrustedRegisteredAgentExecuteUrlByCluster(cluster);
-        return agentUrl ? { cluster, agentUrl } : null;
+        if (!agentUrl) return null;
+        return { cluster, agentUrl };
       });
 
     const missingTargets = validation.clustersNames.filter(
