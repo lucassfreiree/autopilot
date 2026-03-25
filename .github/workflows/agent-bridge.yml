@@ -109,6 +109,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MODEL: ${{ steps.model.outputs.selected_model }}
           TASK: ${{ steps.cfg.outputs.task }}
+          SHARED_AGENT_CONTEXT: ${{ steps.shared_context.outputs.content }}
         run: |
           set +e
           SHARED_CONTEXT=$(cat /tmp/shared-context.txt 2>/dev/null || echo "")
@@ -120,6 +121,7 @@ ${SHARED_CONTEXT}"
             --arg model "$MODEL" \
             --arg system "$SYSTEM_MSG" \
             --arg task "$TASK" \
+            --arg system_prompt "$SYSTEM_PROMPT" \
             '{
               model: $model,
               input: [
