@@ -2,7 +2,7 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "controller",
-  "commit_sha": "",
-  "note": "Diagnose esteira corporativa apos deploy 3.5.14 (run 48)",
-  "run": 19
+  "commit_sha": "0cb5e7a40fae15aadb015ded6c372ae6cce3a3ff",
+  "note": "Diagnose esteira corporativa deploy 3.6.1 (run 49) - buscar logs reais",
+  "run": 20
 }
