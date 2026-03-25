@@ -1,5 +1,4 @@
 # Runtime state — never commit
-state/
 cache/
 reports/
 spooler/
