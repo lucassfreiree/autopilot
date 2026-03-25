@@ -1,6 +1,6 @@
 # Workflow Topology & Observability Report
 
-- Total workflows: **38**
+- Total workflows: **37**
 - Workspace-aware (`workflow_dispatch.inputs.workspace_id`): **29**
 
 ## Workflows by Category
@@ -8,7 +8,7 @@
 | Category | Count |
 |---|---:|
 | Ops | 6 |
-| [Agent] | 5 |
+| [Agent] | 4 |
 | [Core] | 7 |
 | [Corp] | 10 |
 | [Infra] | 5 |
@@ -18,7 +18,6 @@
 
 | Workflow | File | Triggers | Jobs | Workspace | Tools/Integrations |
 |---|---|---|---:|---|---|
-| [Agent] Auto PR + Auto-Merge (Codex) | `.github/workflows/auto-pr-codex.yml` | push | 1 | no | github |
 | [Agent] CI Failure Analysis | `.github/workflows/ci-failure-analysis.yml` | workflow_dispatch | 1 | yes | github, node |
 | [Agent] Enqueue Handoff | `.github/workflows/enqueue-agent-handoff.yml` | workflow_dispatch | 1 | yes | github |
 | [Agent] LangChain Orchestrator | `.github/workflows/langchain-orchestrator.yml` | workflow_call, workflow_dispatch | 1 | yes | github, python |

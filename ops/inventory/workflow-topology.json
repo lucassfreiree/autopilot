@@ -61,22 +61,6 @@
     ]
   },
   {
-    "file": ".github/workflows/auto-pr-codex.yml",
-    "name": "[Agent] Auto PR + Auto-Merge (Codex)",
-    "category": "[Agent]",
-    "triggers": [
-      "push"
-    ],
-    "workspace_aware": false,
-    "jobs_total": 1,
-    "job_names": [
-      "Create/Update PR and enable auto-merge"
-    ],
-    "tools": [
-      "github"
-    ]
-  },
-  {
     "file": ".github/workflows/backup-state.yml",
     "name": "[Core] Backup: State Snapshot",
     "category": "[Core]",
