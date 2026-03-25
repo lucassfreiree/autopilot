@@ -110,3 +110,32 @@ Ele executa, em sequência:
 7. Se `gh` não estiver disponível: cria PR via API com `CODEX_TOKEN/GITHUB_TOKEN` (sem auto-merge)
 
 > Observação: auto-merge total depende de `gh` (ou GraphQL equivalente) e das regras de branch protection.
+
+
+## Agent Bridge (Claude ↔ Codex)
+
+Fluxo declarado pelo operador para comunicação entre agentes:
+
+1. Claude edita `trigger/agent-bridge.json` e faz merge em `main`
+2. Workflow `agent-bridge.yml` executa com `OPENAI_API_KEY`
+3. Chama OpenAI API com contexto (session memory + patches + contract)
+4. Salva resposta no branch `autopilot-state` em `agent-bridge-latest.json`
+5. Claude lê a resposta via fetch no `autopilot-state`
+
+Exemplo de trigger:
+
+```json
+{
+  "task": "Review security patches and suggest improvements",
+  "model": "o3",
+  "include_session_memory": true,
+  "include_patches": true,
+  "run": 2
+}
+```
+
+Checklist de validação sugerido:
+- `trigger/agent-bridge.json` com `run` incrementado
+- workflow disparado no Actions
+- `agent-bridge-latest.json` atualizado no `autopilot-state`
+- correlação entre `task` enviada e resposta persistida

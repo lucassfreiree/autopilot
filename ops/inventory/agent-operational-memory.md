@@ -54,3 +54,17 @@ bash -n ops/scripts/git/auto-pr-merge.sh
 2. Gerar relatório de gaps de `workspace_id` por workflow e sugerir correções não disruptivas.
 3. Implementar checklist automático de pré-execução (locks, inputs obrigatórios, contexto).
 4. Publicar matriz de integrações (GitHub/GitLab/Jenkins/Cloud/K8s/Terraform) com cobertura por workflow.
+
+
+## Integração declarada: Agent Bridge (Claude ↔ Codex)
+
+Contexto informado pelo operador:
+
+- Workflow: `agent-bridge.yml`
+- Trigger: `trigger/agent-bridge.json`
+- Entrada esperada: `task`, `model`, `include_session_memory`, `include_patches`, `run`
+- Fluxo declarado: trigger em `main` → chamada OpenAI API com contexto → resposta salva em `autopilot-state` (`agent-bridge-latest.json`)
+
+Observação operacional:
+- Neste ambiente local atual, os artefatos do Agent Bridge ainda não estão presentes no working tree local (provável divergência por falta de sincronização remota).
+- Assim que houver sincronização com remoto, validar o fluxo com uma execução de trigger controlada.
