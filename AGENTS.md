@@ -71,7 +71,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ (1 files)
-  audit/ (193 files)
+  audit/ (195 files)
   improvements/ (1 files)
   metrics/ (3 files)
   handoffs/ (1 files)
@@ -103,6 +103,7 @@ Edit a trigger file on `main` branch, bump the `run` field.
 
 | Trigger File | Workflow | Context | Config Fields |
 |---|---|---|---|
+| `trigger/agent-bridge.json` | agent-bridge.yml | SHARED | all workspaces | context, include_patches, include_session_memory, model, task, workspace_id |
 | `trigger/agent-sync.json` | agent-sync.yml | GETRONICS | ws-default | BBVINET_TOKEN | context, task, workspace_id |
 | `trigger/ci-diagnose.json` | ci-diagnose.yml | GETRONICS | ws-default | BBVINET_TOKEN | commit_sha, component, note, workspace_id |
 | `trigger/e2e-test.json` | test-corporate-flow.yml | GETRONICS | ws-default | BBVINET_TOKEN | dry_run, workspace_id |
@@ -191,6 +192,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 
 | File | Name | Triggers |
 |---|---|---|
+| agent-bridge.yml | [Agent] Bridge: Claude ↔ Codex | trigger file, manual |
 | agent-sync.yml | [Corp] Agent Sync: Claude + ChatGPT | trigger file, manual |
 | alert-notify.yml | [Infra] Alert & Notify | manual |
 | apply-source-change.yml | [Corp] Deploy: Apply Source Change | trigger file, manual |
@@ -232,6 +234,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 
 | Workflow | Inputs |
 |---|---|
+| agent-bridge.yml | task, context, workspace_id, model, include_session_memory, include_patches |
 | agent-sync.yml | workspace_id, task, context |
 | alert-notify.yml | severity, title, body |
 | apply-source-change.yml | workspace_id, component, change_type, target_path, file_content, commit_message, skip_ci_wait, promote |
@@ -307,4 +310,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | Handoff to Claude | Dispatch `enqueue-agent-handoff.yml`, `to_agent=claude` |
 
 ---
-*Last synced: 2026-03-25T17:27:27Z | Run: 23554758578*
+*Last synced: 2026-03-25T18:26:26Z | Run: 23557329736*
