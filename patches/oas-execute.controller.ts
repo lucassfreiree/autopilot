@@ -284,15 +284,6 @@ export async function postOasAutomation(
       safeLogValue(execId),
     );
 
-    if (!validateTrustedUrl(trustedAgentUrl)) {
-      console.error(
-        "[oas] blocked untrusted agent URL: %s",
-        safeLogValue(trustedAgentUrl),
-      );
-      res.status(403).json({ ok: false, error: "Blocked: untrusted agent URL" });
-      return;
-    }
-
     const timeoutMs = readAgentCallTimeoutMs();
     const abort = new AbortController();
     const timeoutId = setTimeout(() => abort.abort(), timeoutMs);

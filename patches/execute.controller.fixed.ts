@@ -95,10 +95,6 @@ async function postJson(
   headers: Record<string, string>,
   body: unknown,
 ): Promise<FetchJsonResult> {
-  if (!validateTrustedUrl(url)) {
-    return { ok: false, status: 403, text: "Blocked: untrusted agent URL" };
-  }
-
   const timeoutMs = readAgentCallTimeoutMs();
   const abort = new AbortController();
   const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
