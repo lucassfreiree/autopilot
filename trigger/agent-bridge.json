@@ -1,0 +1,10 @@
+{
+  "_context": "SHARED | all workspaces",
+  "workspace_id": "ws-default",
+  "task": "Review current patches in patches/ directory and suggest improvements for security and code quality",
+  "context": "",
+  "model": "o3",
+  "include_session_memory": true,
+  "include_patches": false,
+  "run": 1
+}
