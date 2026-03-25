@@ -12,7 +12,8 @@
     "ci-monitoring",
     "handoff-consumption",
     "pre-deploy-validation",
-    "security-patching"
+    "security-patching",
+    "direct-commits-via-codex-apply"
   ],
   "tools": {
     "primary": "codex-web",
@@ -60,9 +61,38 @@
         "gh pr merge {pr_number} --squash"
       ],
       "rules": [
-        "Branch DEVE comecar com claude/ (protecao de branch)",
+        "Branch DEVE comecar com claude/ ou codex/ (protecao de branch)",
         "SEMPRE squash merge",
         "NUNCA push direto para main (403)"
+      ]
+    },
+    "codexApplyWorkflow": {
+      "description": "Workflow que permite Codex fazer commits automaticamente via OpenAI API. Codex recebe a task, gera codigo, cria branch codex/*, commita, abre PR e opcionalmente faz auto-merge.",
+      "workflow": "codex-apply.yml",
+      "triggerFile": "trigger/codex-commit.json",
+      "triggerFormat": {
+        "task": "Descricao da tarefa para o Codex implementar",
+        "target_files": "Arquivos alvo separados por virgula (opcional — Codex ve o conteudo atual)",
+        "model": "Modelo OpenAI (default: o3)",
+        "branch_suffix": "Sufixo do branch codex/ (opcional)",
+        "auto_merge": "true para merge automatico, false para apenas criar PR",
+        "run": "Incrementar para disparar"
+      },
+      "flow": [
+        "1. Trigger file alterado em main (ou workflow_dispatch)",
+        "2. Workflow le task + arquivos alvo",
+        "3. Chama OpenAI com prompt estruturado pedindo JSON com changes",
+        "4. Codex retorna: branch_name, commit_message, pr_title, pr_body, changes[]",
+        "5. Workflow aplica changes (create/modify/delete files)",
+        "6. Cria branch codex/*, commita, push",
+        "7. Cria PR com labels [codex, auto-pr]",
+        "8. Se auto_merge=true: faz squash merge automatico",
+        "9. Resultado salvo em autopilot-state (state/bridges/codex-apply-latest.json)"
+      ],
+      "securityRules": [
+        "Paths com .. ou absolutos sao rejeitados",
+        "Commit identifica codex-agent como autor",
+        "Resultado auditado no autopilot-state"
       ]
     },
     "dispatchWorkflow": {
