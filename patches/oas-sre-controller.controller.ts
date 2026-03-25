@@ -61,6 +61,7 @@ type AllowedImage = {
 
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 const DEFAULT_AGENT_CALL_TIMEOUT_MS = 30_000;
+const TRUSTED_AGENT_URL_PATTERN = /^https:\/\/[A-Za-z0-9._-]+\.bb\.com\.br\//;
 
 function asRecord(value: unknown): JsonRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -71,11 +72,29 @@ function safeString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function sanitizeForOutput(value: unknown): string {
+  return String(value ?? "")
+    .replace(/[<>"'&]/g, "")
+    .replace(/[\r\n\t]+/g, " ")
+    .trim()
+    .slice(0, 256);
+}
+
 function safeLogValue(value: unknown): string {
   return String(value ?? "")
     .replace(/[\r\n\t]+/g, " ")
     .trim()
     .slice(0, 256);
+}
+
+function validateTrustedUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    return TRUSTED_AGENT_URL_PATTERN.test(url);
+  } catch {
+    return false;
+  }
 }
 
 function readAgentCallTimeoutMs(): number {
@@ -233,7 +252,7 @@ function validateSreControllerPayload(body: unknown): ValidationResult {
   if (!allowedImage) {
     const allowed = allowedImages().map((img) => img.key);
     errors.push(
-      `Image '${imageRaw}' is not allowed. Allowed images: ${allowed.join(", ")}.`,
+      `Image '${sanitizeForOutput(imageRaw)}' is not allowed. Allowed images: ${allowed.join(", ")}.`,
     );
     return { ok: false, errors };
   }
@@ -351,6 +370,14 @@ async function callAgent(
   headers: Record<string, string>,
   payload: unknown,
 ): Promise<{ status: number; ok: boolean }> {
+  if (!validateTrustedUrl(url)) {
+    console.error(
+      "[oas-sre-controller] blocked untrusted agent URL: %s",
+      safeLogValue(url),
+    );
+    return { status: 403, ok: false };
+  }
+
   const timeoutMs = readAgentCallTimeoutMs();
   const abort = new AbortController();
   const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
@@ -609,9 +636,9 @@ export async function postOasSreController(
     res.status(500).json({
       ok: false,
       error: "Internal error while dispatching OAS automation",
-      detail: msg,
+      detail: sanitizeForOutput(msg),
       execId,
-      dispatches,
+      dispatches: summarizeDispatches(dispatches),
     });
   }
 }
