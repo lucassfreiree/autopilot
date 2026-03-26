@@ -83,6 +83,15 @@ jest.mock("../../controllers/agent-errors.controller", () => ({
   }),
 }));
 
+jest.mock("../../controllers/cronjob-result.controller", () => ({
+  receiveCronjobResult: jest.fn(async (_req: Request, res: Response) => {
+    res.status(200).json({ ok: true });
+  }),
+  getCronjobStatus: jest.fn(async (_req: Request, res: Response) => {
+    res.status(200).json({ ok: true, status: "DONE" });
+  }),
+}));
+
 describe("agentsRouter auth + scopes enforcement", () => {
   const JWT_SECRET = process.env.JWT_SECRET || "router-test-secret";
 
@@ -259,5 +268,69 @@ describe("agentsRouter auth + scopes enforcement", () => {
       .send({ any: "payload" });
 
     expect([200, 201]).toContain(res.status);
+  });
+
+  // ── Cronjob result endpoints (historia #930217) ──
+
+  test("POST /api/cronjob/result rejects when missing Bearer token", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/api/cronjob/result")
+      .send({ compliance_status: "success" });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Unauthorized" });
+  });
+
+  test("POST /api/cronjob/result rejects when callback token lacks SEND scope", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/api/cronjob/result")
+      .set(
+        "Authorization",
+        callbackBearer({ execId: "exec-123", scopes: [TEST_SCOPE_READ] }),
+      )
+      .send({ compliance_status: "success" });
+
+    expect(res.status).toBe(403);
+  });
+
+  test("POST /api/cronjob/result accepts when callback token has SEND scope", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/api/cronjob/result")
+      .set(
+        "Authorization",
+        callbackBearer({ execId: "exec-123", scopes: [TEST_SCOPE_SEND] }),
+      )
+      .send({ compliance_status: "success" });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("GET /api/cronjob/status/:execId rejects when missing Bearer token", async () => {
+    const app = await makeApp();
+    const res = await request(app).get("/api/cronjob/status/exec-123");
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Unauthorized" });
+  });
+
+  test("GET /api/cronjob/status/:execId rejects when token lacks READ scope", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .get("/api/cronjob/status/exec-123")
+      .set("Authorization", bearer([TEST_SCOPE_EXECUTE]));
+
+    expect(res.status).toBe(403);
+  });
+
+  test("GET /api/cronjob/status/:execId accepts when Bearer token has READ scope", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .get("/api/cronjob/status/exec-123")
+      .set("Authorization", bearer([TEST_SCOPE_READ]));
+
+    expect(res.status).toBe(200);
   });
 });
