@@ -2,7 +2,7 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "controller",
-  "commit_sha": "a02a305",
-  "note": "Diagnose esteira #216 (3.6.2 run 51) - commit a02a305",
-  "run": 21
+  "commit_sha": "6c60897",
+  "note": "Check esteira #220 (3.6.5 deploy) - commit 6c60897",
+  "run": 22
 }
