@@ -16,13 +16,22 @@ if [[ "$BRANCH" == "$BASE_BRANCH" ]]; then
   exit 1
 fi
 
-if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-  echo "[ERROR] GITHUB_TOKEN is required." >&2
+if ! command -v gh >/dev/null 2>&1; then
+  echo "[ERROR] gh CLI is required." >&2
   exit 1
 fi
 
-if ! command -v gh >/dev/null 2>&1; then
-  echo "[ERROR] gh CLI is required." >&2
+# Token resolution order:
+# 1) GITHUB_TOKEN
+# 2) GH_TOKEN
+# 3) gh auth token (if user already authenticated)
+TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+if [[ -z "${TOKEN}" ]]; then
+  TOKEN="$(gh auth token 2>/dev/null || true)"
+fi
+
+if [[ -z "${TOKEN}" ]]; then
+  echo "[ERROR] Missing token. Set GITHUB_TOKEN or GH_TOKEN, or run gh auth login." >&2
   exit 1
 fi
 
@@ -38,7 +47,7 @@ echo "[INFO] pushing branch ${BRANCH}"
 git push -u origin "$BRANCH"
 
 # Authenticate gh for this command scope
-export GH_TOKEN="$GITHUB_TOKEN"
+export GH_TOKEN="$TOKEN"
 
 PR_URL=""
 if gh pr view "$BRANCH" --repo "$REPO" >/dev/null 2>&1; then
