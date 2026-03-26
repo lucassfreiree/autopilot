@@ -2,24 +2,16 @@
   "schemaVersion": 2,
   "workspaceId": "ws-default",
   "component": "agent",
-  "lastReleasedSha": "7dac1092949cef20897ec523e0a1f39f37834d82",
-  "lastTag": "2.2.6",
-  "lastVersion": "2.2.6",
-  "updatedAt": "2026-03-25T20:21:34Z",
-  "runId": "23561693791",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23561693791",
-  "promotions": [
-    {
-      "target": "cap",
-      "repo": "bbvinet/psc_releases_cap_sre-aut-agent",
-      "branch": "main",
-      "path": "releases/openshift/hml/deploy/values.yaml",
-      "tag": "2.2.6",
-      "sha": "7dac1092949cef20897ec523e0a1f39f37834d82",
-      "timestamp": "2026-03-25T20:21:34Z",
-      "status": "success"
-    }
-  ],
-  "ciResult": "success",
-  "status": "promoted"
+  "lastReleasedSha": "fbf8b7050d8dc93be411a17c66ffdcd8f187af29",
+  "lastTag": "source-change",
+  "updatedAt": "2026-03-26T18:27:27Z",
+  "runId": "23611169727",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23611169727",
+  "ciResult": "failure",
+  "status": "ci-failed",
+  "changeType": "source-code",
+  "commitMessage": "feat(agent): cronjob callback endpoint + forward to controller (2.2.7) #930217",
+  "promoted": false,
+  "preExistingFailure": false,
+  "gateDecision": "block"
 }
