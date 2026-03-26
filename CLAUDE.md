@@ -423,6 +423,7 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 | auto-merge-to-main.yml | Auto-merge PRs from claude/*/codex/* branches to main (squash) |
 | auto-pr-codex.yml | Auto-create PRs for Codex branches |
 | ops-workflow-observability.yml | Workflow run observability and metrics |
+| ci-status-check.yml | Check corporate CI status for a commit and save to autopilot-state |
 
 ### Codex Automation
 | Workflow | Purpose |
@@ -447,6 +448,7 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 | `trigger/codex-commit.json` | codex-apply.yml |
 | `trigger/codex-deploy.json` | codex-deploy.yml |
 | `trigger/agent-bridge.json` | agent-bridge.yml |
+| `trigger/ci-status.json` | ci-status-check.yml |
 
 ## Deploy Flow — Complete Guide (for Claude, Codex, and Copilot)
 

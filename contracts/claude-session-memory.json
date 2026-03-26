@@ -1929,7 +1929,9 @@
       "Ao encontrar problema: registrar problema + solucao em errorRecovery",
       "Ao completar historia: registrar com TODOS os detalhes",
       "Ao otimizar algo: registrar em optimizations",
-      "NUNCA esperar fim de sessao para atualizar"
+      "NUNCA esperar fim de sessao para atualizar",
+      "SEMPRE sincronizar session memory e CLAUDE.md no repo ANTES de encerrar",
+      "SEMPRE usar branches DEDICADOS por proposito (deploy, docs, fetch, ci-check) — NUNCA misturar"
     ],
     "onEnd": [
       "1. Garantir que executionHistory tem TODOS os passos",
@@ -1937,5 +1939,37 @@
       "3. Commitar memoria + push via PR com merge"
     ],
     "goldenRule": "Se foi feito e nao esta documentado aqui, e um BUG. Documentar TUDO."
+  },
+  "ciStatusCheck": {
+    "description": "Mecanismo para consultar status da esteira corporativa de forma autonoma, sem depender de screenshots do usuario.",
+    "workflow": "ci-status-check.yml",
+    "triggerFile": "trigger/ci-status.json",
+    "resultFile": "state/workspaces/<ws_id>/ci-status-<component>.json",
+    "howToUse": [
+      "1. Editar trigger/ci-status.json com commit_sha, component, workspace_id",
+      "2. Mergear em main → workflow dispara automaticamente",
+      "3. Workflow consulta check-runs e workflow-runs via BBVINET_TOKEN",
+      "4. Resultado salvo em autopilot-state: overall (success/failure/in_progress/no_runs), counts, checkRuns[], workflowRuns[]",
+      "5. Ler ci-status-<component>.json para saber resultado sem pedir ao usuario"
+    ],
+    "createdAt": "2026-03-26",
+    "lesson": "SEMPRE usar este mecanismo para verificar esteira corporativa. NUNCA pedir screenshot ao usuario."
+  },
+  "branchStrategy": {
+    "description": "REGRA: Cada PR deve ter UM proposito unico. Nunca misturar deploy com docs com fetch.",
+    "branches": {
+      "deploy": "claude/deploy-<component>-<version> — SOMENTE trigger/source-change.json + patches",
+      "docs": "claude/docs-<descricao> — SOMENTE CLAUDE.md, session memory, contracts",
+      "fetch": "claude/fetch-<component> — SOMENTE trigger/fetch-files.json",
+      "ciCheck": "claude/ci-check-<descricao> — SOMENTE trigger/ci-status.json ou ci-diagnose.json",
+      "feature": "claude/feat-<descricao> — Novos workflows, scripts, schemas"
+    },
+    "rules": [
+      "NUNCA mergear outro PR enquanto um deploy pipeline esta rodando",
+      "Cada branch = 1 proposito, 1 commit, 1 PR, merge rapido",
+      "Isso evita que concurrency group cancele workflows importantes",
+      "Nome do branch deve ser descritivo para identificacao no dashboard"
+    ],
+    "lesson": "PRs misturados causaram cancelamento de workflows por concurrency. Separar SEMPRE."
   }
 }
