@@ -11,16 +11,9 @@
       "content_ref": "patches/cronjob-result.controller.ts"
     },
     {
-      "action": "search-replace",
+      "action": "replace-file",
       "target_path": "src/routes/agentsRouter.ts",
-      "search": "import { getAgentErrors } from \"../controllers/agent-errors.controller\";",
-      "replace": "import { getAgentErrors } from \"../controllers/agent-errors.controller\";\nimport {\n  receiveCronjobResult,\n  getCronjobStatus,\n} from \"../controllers/cronjob-result.controller\";"
-    },
-    {
-      "action": "search-replace",
-      "target_path": "src/routes/agentsRouter.ts",
-      "search": "router.get(\"/agent/errors\", getAgentErrors);",
-      "replace": "router.get(\"/agent/errors\", getAgentErrors);\n\n// ── Cronjob result endpoints (historia #930217) ──\nrouter.post(\n  \"/api/cronjob/result\",\n  requireAgentCallbackJwt,\n  requireAgentCallbackScopes([SCOPES.SEND]),\n  receiveCronjobResult,\n);\n\nrouter.get(\n  \"/api/cronjob/status/:execId\",\n  requireJwt,\n  requireScopes([SCOPES.READ]),\n  getCronjobStatus,\n);"
+      "content_ref": "patches/agentsRouter.ts"
     },
     {
       "action": "search-replace",
@@ -44,5 +37,5 @@
   "commit_message": "feat(controller): cronjob callback result endpoint + OAS query (3.6.5) #930217",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 55
+  "run": 56
 }
