@@ -328,9 +328,20 @@ Registro de melhorias: category, description, source, status.
 Automacao local do ciclo:
 - `scripts/codex/auto-pr-merge.sh`
 - Uso: `GITHUB_TOKEN=<token> scripts/codex/auto-pr-merge.sh` (ou `GH_TOKEN`, ou `gh auth login`)
-- Faz: configura `origin` (se ausente), push da branch atual, cria PR para `main`, tenta auto-merge e faz fallback para squash merge direto se auto-merge nao estiver disponivel.
+- Opcional: `AUTO_COMMIT=true COMMIT_MESSAGE="chore: ..."` para commit automatico
+- Faz: commit automatico opcional (`git add -A` + `git commit`), configura `origin` (se ausente), push da branch atual, cria PR para `main`, tenta auto-merge e faz fallback para squash merge direto se auto-merge nao estiver disponivel.
 
 > O agente so deve interromper esse fluxo quando faltar informacao critica ou houver bloqueio de seguranca/isolamento de workspace.
+
+### Memoria operacional persistente (sessao atual + proximas)
+
+Este comportamento ficou registrado como fonte de verdade em:
+1. `contracts/codex-agent-contract.json` (`autonomousExecutionPolicy`)
+2. `contracts/claude-session-memory.json` (`deployFlowGuide`)
+3. `CLAUDE.md` (`Deploy Flow — Complete Guide`)
+4. `HANDOFF.md` (este arquivo, continuidade operacional)
+
+Regra fixa: executar `commit -> push -> PR -> merge` automaticamente quando houver contexto suficiente, sem misturar workspaces.
 
 ### Disparar E2E Release
 Editar `trigger/e2e-test.json` e fazer push em main:
