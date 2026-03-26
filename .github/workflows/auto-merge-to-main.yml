@@ -11,7 +11,6 @@ on:
       - ready_for_review
 
 permissions:
-  contents: write
   pull-requests: write
 
 concurrency:
@@ -32,6 +31,20 @@ jobs:
             const pr = context.payload.pull_request;
             const labels = (pr.labels || []).map(l => l.name);
             const hasAutomergeLabel = labels.includes('automerge') || labels.includes('auto-merge');
+            const sameRepository = pr.head.repo.full_name === pr.base.repo.full_name;
+            const trustedAuthor = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(pr.author_association);
+
+            if (!sameRepository) {
+              core.notice(`PR #${pr.number} is from fork (${pr.head.repo.full_name}); skipping for safety.`);
+              core.setOutput('allow', 'false');
+              return;
+            }
+
+            if (!trustedAuthor) {
+              core.notice(`PR #${pr.number} author association ${pr.author_association} is not trusted; skipping.`);
+              core.setOutput('allow', 'false');
+              return;
+            }
 
             if (pr.draft) {
               core.notice(`PR #${pr.number} is draft; skipping.`);

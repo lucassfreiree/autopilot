@@ -331,7 +331,8 @@ Regras:
 1. PR deve ter base `main`
 2. PR nao pode estar em draft
 3. PR deve ter label `automerge` ou `auto-merge`
-4. Auto-merge (squash) e habilitado e o GitHub conclui merge automaticamente quando todos os checks obrigatorios passarem
+4. PR deve ser interno (sem fork) e autoria confiavel (`OWNER`, `MEMBER` ou `COLLABORATOR`)
+5. Auto-merge (squash) e habilitado e o GitHub conclui merge automaticamente quando todos os checks obrigatorios passarem
 
 ### Criar Workspace
 Usar workflow `seed-workspace.yml` via workflow_dispatch.
