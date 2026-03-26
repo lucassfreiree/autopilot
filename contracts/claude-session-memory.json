@@ -1573,6 +1573,11 @@
   "gitPatterns": {
     "branchNaming": "Branches DEVEM comecar com claude/ senao push retorna 403",
     "pushToMain": "BLOQUEADO. Sempre: branch claude/* com PR com squash merge",
+    "commitMessageFormat": {
+      "autopilotRepo": "Prefixar com [claude] para diferenciar de commits do Codex. Exemplo: [claude] feat: enable controller CAP auto-promote",
+      "corporateRepo": "NUNCA referenciar agente (claude/codex) na mensagem. Mensagem limpa como dev normal. Exemplo: feat: add security sanitization",
+      "rule": "Identificacao de agente SOMENTE no autopilot repo, NUNCA nos repos corporativos"
+    },
     "conflictResolution": {
       "trigger_files": "run = max(HEAD, main) + 1. Manter payload do nosso deploy",
       "general": "fetch origin/main. merge. resolver. push. PR fica mergeable"
