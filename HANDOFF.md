@@ -312,6 +312,21 @@ Registro de melhorias: category, description, source, status.
 
 ## Como Operar
 
+### Ciclo operacional automatico do agente (padrao)
+
+1. Clone/fetch e branch a partir de `main` atualizado
+2. Pull/rebase antes de editar
+3. Alteracoes + validacao tecnica
+4. Commit atomico
+5. Push da branch
+6. PR para `main`
+7. Monitoramento de checks/workflows
+8. Correcao automatica de falhas quando possivel
+9. Squash merge apos gates
+10. Monitoramento pos-merge
+
+> O agente so deve interromper esse fluxo quando faltar informacao critica ou houver bloqueio de seguranca/isolamento de workspace.
+
 ### Disparar E2E Release
 Editar `trigger/e2e-test.json` e fazer push em main:
 ```json
