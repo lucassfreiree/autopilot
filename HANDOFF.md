@@ -342,6 +342,11 @@ Este comportamento ficou registrado como fonte de verdade em:
 4. `HANDOFF.md` (este arquivo, continuidade operacional)
 
 Regra fixa: executar `commit -> push -> PR -> merge` automaticamente quando houver contexto suficiente, sem misturar workspaces.
+Regra de produto Autopilot: **nunca** manter apenas local; toda mudanca necessaria deve ser sincronizada no GitHub no mesmo ciclo.
+
+Sincronizacao automatica recomendada:
+- `scripts/codex/sync-autopilot-product.sh`
+- Fluxo: detecta alteracoes locais -> commit automatico -> push -> PR -> merge -> aguarda estado `MERGED`.
 
 ### Disparar E2E Release
 Editar `trigger/e2e-test.json` e fazer push em main:
