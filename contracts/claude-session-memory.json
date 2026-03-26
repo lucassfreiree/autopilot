@@ -1570,6 +1570,67 @@
     },
     "lesson": "Validacao especifica de campos por imagem: responsabilidade da imagem Docker."
   },
+  "historia930217": {
+    "status": "pending",
+    "title": "Cronjob callback endpoint + resultado final para OAS",
+    "createdAt": "2026-03-25",
+    "description": "Implementar no Agent endpoint para receber resultado final de cronjobs e encaminhar ao Controller. Controller armazena e disponibiliza para consulta OAS.",
+    "repos": ["agent", "controller"],
+    "deployOrder": "Controller PRIMEIRO (recebe e armazena), Agent SEGUNDO (recebe callback e encaminha)",
+    "items": {
+      "1_endpoint_callback_agent": {
+        "status": "pending",
+        "repo": "agent",
+        "description": "POST /api/cronjob/callback no Agent para receber payload final do cronjob"
+      },
+      "2_validacao_payload_agent": {
+        "status": "pending",
+        "repo": "agent",
+        "description": "Validar campos obrigatorios: compliance_status, namespace, cluster_type, timestamp + campos por tipo (captured_data/failures/errors)"
+      },
+      "3_encaminhar_controller": {
+        "status": "pending",
+        "repo": "agent",
+        "description": "Encaminhar payload validado para Controller usando padrao pushAgentExecutionLogs"
+      },
+      "4_interface_dto": {
+        "status": "pending",
+        "repo": "both",
+        "description": "Interface/DTO para 3 tipos: success (captured_data), failed (failures[]), error (errors[])"
+      },
+      "5_endpoint_consulta_controller": {
+        "status": "pending",
+        "repo": "controller",
+        "description": "GET /api/cronjob/status/:execId no Controller para OAS consultar resultado"
+      },
+      "6_armazenamento_controller": {
+        "status": "pending",
+        "repo": "controller",
+        "description": "Armazenar/indexar resultado por namespace + execId no Controller"
+      },
+      "7_adapter_compliance_to_log": {
+        "status": "pending",
+        "repo": "controller",
+        "description": "Adaptar payload compliance_status para formato execution log existente"
+      },
+      "8_teste_integracao": {
+        "status": "pending",
+        "repo": "both",
+        "description": "Validar fluxo ponta-a-ponta: Agent callback → Controller armazena → OAS consulta"
+      }
+    },
+    "technicalNotes": {
+      "agentPattern": "Reutilizar padrao pushAgentExecutionLogs para comunicacao Agent→Controller",
+      "controllerPattern": "Reaproveitar estrutura existente de execId, snapshot, persistencia. NAO criar nova estrutura do zero.",
+      "payloadTypes": {
+        "success": {"compliance_status": "success", "captured_data": {}},
+        "failed": {"compliance_status": "failed", "failures": []},
+        "error": {"compliance_status": "error", "errors": []}
+      },
+      "requiredFields": ["compliance_status", "namespace", "cluster_type", "timestamp", "execId"],
+      "indexKey": "namespace + execId"
+    }
+  },
   "gitPatterns": {
     "branchNaming": "Branches DEVEM comecar com claude/ senao push retorna 403",
     "pushToMain": "BLOQUEADO. Sempre: branch claude/* com PR com squash merge",
