@@ -350,6 +350,7 @@ Sincronizacao automatica recomendada:
 - Rastreabilidade: commits do repo autopilot devem incluir marcador `[claude]` para facilitar leitura na esteira.
 - Restricao: **nao** usar esse marcador em commits das esteiras/repositorios empresariais.
 - Teste operacional (2026-03-26): commit de validacao pode usar marcador `[codex-autopilot]` quando solicitado explicitamente pelo usuario para auditoria da esteira.
+- Se workflow `[Agent] Auto PR + Auto-Merge (Codex)` receber 403 `GitHub Actions is not permitted to create or approve pull requests`, tratar como bloqueio de policy do repo para `GITHUB_TOKEN` (nao erro de codigo) e orientar habilitar essa permissao ou usar PAT dedicado.
 
 ### Disparar E2E Release
 Editar `trigger/e2e-test.json` e fazer push em main:
