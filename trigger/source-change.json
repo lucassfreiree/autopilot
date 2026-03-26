@@ -35,7 +35,7 @@
     }
   ],
   "commit_message": "feat(controller): cronjob callback result endpoint + OAS query (3.6.5) #930217",
-  "skip_ci_wait": false,
+  "skip_ci_wait": true,
   "promote": true,
-  "run": 58
+  "run": 59
 }
