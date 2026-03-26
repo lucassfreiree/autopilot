@@ -203,11 +203,14 @@ async function forwardToController(
     };
   } catch (error) {
     const isAbort = error instanceof Error && error.name === "AbortError";
-    const detail = isAbort
-      ? `Controller timeout after ${timeoutMs}ms`
-      : error instanceof Error
-        ? error.message
-        : String(error);
+    let detail: string;
+    if (isAbort) {
+      detail = `Controller timeout after ${timeoutMs}ms`;
+    } else if (error instanceof Error) {
+      detail = error.message;
+    } else {
+      detail = String(error);
+    }
     return { ok: false, status: 0, detail };
   } finally {
     clearTimeout(timeoutId);
