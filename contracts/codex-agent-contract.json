@@ -201,7 +201,7 @@
     "automationScript": {
       "path": "scripts/codex/auto-pr-merge.sh",
       "usage": "GITHUB_TOKEN=<token> scripts/codex/auto-pr-merge.sh (ou GH_TOKEN / gh auth login)",
-      "does": "Configura origin se ausente, resolve token (GITHUB_TOKEN/GH_TOKEN/gh auth token), faz push da branch atual, cria/atualiza PR para main e habilita auto-merge"
+      "does": "Configura origin se ausente, resolve token (GITHUB_TOKEN/GH_TOKEN/gh auth token), faz push da branch atual, cria/atualiza PR para main e tenta auto-merge; se indisponivel, faz squash merge direto"
     }
   }
 }

@@ -328,7 +328,7 @@ Registro de melhorias: category, description, source, status.
 Automacao local do ciclo:
 - `scripts/codex/auto-pr-merge.sh`
 - Uso: `GITHUB_TOKEN=<token> scripts/codex/auto-pr-merge.sh` (ou `GH_TOKEN`, ou `gh auth login`)
-- Faz: configura `origin` (se ausente), push da branch atual, cria PR para `main` e habilita auto-merge.
+- Faz: configura `origin` (se ausente), push da branch atual, cria PR para `main`, tenta auto-merge e faz fallback para squash merge direto se auto-merge nao estiver disponivel.
 
 > O agente so deve interromper esse fluxo quando faltar informacao critica ou houver bloqueio de seguranca/isolamento de workspace.
 
