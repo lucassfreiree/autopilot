@@ -169,11 +169,13 @@
     "schemas/*.schema.json",
     "contracts/codex-agent-contract.json",
     "CLAUDE.md",
-    "scripts/codex/auto-pr-merge.sh"
+    "scripts/codex/auto-pr-merge.sh",
+    "scripts/codex/sync-autopilot-product.sh"
   ],
   "autonomousExecutionPolicy": {
     "description": "Fluxo padrao obrigatorio para execucao autonoma do Codex em alteracoes tecnicas",
     "rule": "Com contexto suficiente, executar sem pedir confirmacao: commit -> push -> PR -> merge (squash)",
+    "autopilotProductRule": "Toda alteracao local relevante no repo autopilot deve ser sincronizada com GitHub automaticamente no mesmo ciclo; nao deixar conhecimento apenas local/sessao.",
     "guardrails": [
       "Nunca operar sem workspace_id identificado",
       "Nunca misturar contextos entre workspaces",
@@ -200,8 +202,13 @@
     "defaultMode": "automatico e continuo; interromper apenas quando faltar informacao critica ou houver bloqueio de seguranca",
     "automationScript": {
       "path": "scripts/codex/auto-pr-merge.sh",
-      "usage": "GITHUB_TOKEN=<token> scripts/codex/auto-pr-merge.sh (ou GH_TOKEN / gh auth login)",
-      "does": "Configura origin se ausente, resolve token (GITHUB_TOKEN/GH_TOKEN/gh auth token), faz push da branch atual, cria/atualiza PR para main e tenta auto-merge; se indisponivel, faz squash merge direto"
+      "usage": "GITHUB_TOKEN=<token> scripts/codex/auto-pr-merge.sh (ou GH_TOKEN / gh auth login). Opcional: AUTO_COMMIT=true COMMIT_MESSAGE='chore: ...'",
+      "does": "Opcionalmente cria commit automatico (git add -A + commit) quando houver alteracoes locais, configura origin se ausente, resolve token (GITHUB_TOKEN/GH_TOKEN/gh auth token), faz push da branch atual, cria/atualiza PR para main e tenta auto-merge; se indisponivel, faz squash merge direto"
+    },
+    "autopilotSyncScript": {
+      "path": "scripts/codex/sync-autopilot-product.sh",
+      "usage": "scripts/codex/sync-autopilot-product.sh",
+      "does": "Executa sincronizacao obrigatoria do produto Autopilot para GitHub: detecta mudancas locais, roda auto-pr-merge com auto-commit, e aguarda o PR atingir estado MERGED."
     }
   }
 }

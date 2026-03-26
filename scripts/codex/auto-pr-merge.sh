@@ -8,12 +8,24 @@ REPO="${REPO:-lucassfreiree/autopilot}"
 BASE_BRANCH="${BASE_BRANCH:-main}"
 MERGE_MODE="${MERGE_MODE:-squash}"
 AUTO_MERGE="${AUTO_MERGE:-true}"
+AUTO_COMMIT="${AUTO_COMMIT:-true}"
+COMMIT_MESSAGE="${COMMIT_MESSAGE:-chore: codex autonomous update}"
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
 if [[ "$BRANCH" == "$BASE_BRANCH" ]]; then
   echo "[ERROR] Current branch is '$BASE_BRANCH'. Create/use a feature branch first." >&2
   exit 1
+fi
+
+if [[ "$AUTO_COMMIT" == "true" ]]; then
+  if [[ -n "$(git status --porcelain)" ]]; then
+    echo "[INFO] local changes detected, creating commit automatically"
+    git add -A
+    git commit -m "$COMMIT_MESSAGE"
+  else
+    echo "[INFO] no local changes to commit"
+  fi
 fi
 
 if ! command -v gh >/dev/null 2>&1; then
