@@ -1,41 +1,35 @@
 {
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
-  "component": "controller",
+  "component": "agent",
   "change_type": "multi-file",
-  "version": "3.6.5",
+  "version": "2.2.7",
   "changes": [
     {
       "action": "replace-file",
-      "target_path": "src/controllers/cronjob-result.controller.ts",
-      "content_ref": "patches/cronjob-result.controller.ts"
+      "target_path": "src/routes/cronjob-callback.ts",
+      "content_ref": "patches/cronjob-callback.ts"
     },
     {
       "action": "replace-file",
-      "target_path": "src/routes/agentsRouter.ts",
-      "content_ref": "patches/agentsRouter.ts"
+      "target_path": "src/routes/apis.ts",
+      "content_ref": "patches/agent-apis.ts"
     },
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.6.4\"",
-      "replace": "\"version\": \"3.6.5\""
+      "search": "\"version\": \"2.2.6\"",
+      "replace": "\"version\": \"2.2.7\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.6.4\"",
-      "replace": "\"version\": \"3.6.5\""
-    },
-    {
-      "action": "search-replace",
-      "target_path": "src/swagger/swagger.json",
-      "search": "\"version\": \"3.6.4\"",
-      "replace": "\"version\": \"3.6.5\""
+      "search": "\"version\": \"2.2.6\"",
+      "replace": "\"version\": \"2.2.7\""
     }
   ],
-  "commit_message": "feat(controller): cronjob callback result endpoint + OAS query (3.6.5) #930217",
+  "commit_message": "feat(agent): cronjob callback endpoint + forward to controller (2.2.7) #930217",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 58
+  "run": 60
 }
