@@ -5,6 +5,26 @@
 
 ---
 
+## Segregacao critica de contextos (OBRIGATORIO)
+
+Regra operacional confirmada pelo proprietario da conta (2026-03-26):
+
+- **Contextos do usuario principal (NUNCA misturar entre si):**
+  - `ws-default` (Getronics)
+  - `ws-cit`
+- **Contextos de terceiro (irmao, totalmente separados):**
+  - `ws-corp-1`
+  - `ws-socnew`
+
+### Politica de isolamento
+
+1. Sempre validar `workspace_id` antes de qualquer acao com mudanca de estado.
+2. Nunca reutilizar triggers, handoffs, estado, auditoria ou contexto tecnico entre grupos diferentes.
+3. Se houver ambiguidade na solicitacao, interromper e pedir confirmacao explicita do `workspace_id`.
+4. Qualquer automacao nova deve preservar isolamento por `workspace_id` como chave primaria.
+
+---
+
 ## O que e o Autopilot
 
 Control plane web-only para orquestracao de releases multi-workspace, multi-agent.
