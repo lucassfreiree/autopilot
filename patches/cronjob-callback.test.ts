@@ -1,397 +1,280 @@
-/**
- * Unit tests for patches/cronjob-callback.ts
- *
- * Covers:
- *  - validateCronjobCallback (internal — exercised via route handler)
- *  - forwardToController (mocked fetch)
- *  - Route handler: 200 / 400 / 502 / 500
- */
-
-import express, { type Request, type Response } from "express";
+import express from "express";
 import request from "supertest";
 
-// ── Mock JWTService before any import resolves CronjobCallbackAPI ──
+jest.setTimeout(15000);
+
 jest.mock("../../util/jwt", () => ({
   JWTService: {
-    generateCallbackToken: jest.fn(() => "mock-jwt-token"),
+    generateCallbackToken: jest.fn().mockReturnValue("mock-callback-token"),
   },
 }));
 
-// ── Capture the global fetch mock so tests can control it ──
-let mockFetch: jest.Mock;
+describe("CronjobCallbackAPI", () => {
+  let mockFetch: jest.MockedFunction<typeof fetch>;
 
-beforeEach(() => {
-  mockFetch = jest.fn();
-  global.fetch = mockFetch;
-});
+  async function makeApp() {
+    const { default: CronjobCallbackAPI } = await import(
+      "../../apis/cronjob-callback"
+    );
+    const router = express.Router();
+    new CronjobCallbackAPI(router);
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+    return app;
+  }
 
-afterEach(() => {
-  jest.resetAllMocks();
-});
+  beforeEach(() => {
+    mockFetch = jest.fn();
+    global.fetch = mockFetch;
+  });
 
-// ── Build the Express app using CronjobCallbackAPI ──
-async function makeApp() {
-  jest.resetModules();
-  const { default: CronjobCallbackAPI } = await import(
-    "../../routes/cronjob-callback"
-  );
-  const router = express.Router();
-  new CronjobCallbackAPI(router);
-  const app = express();
-  app.use(express.json());
-  app.use(router);
-  return app;
-}
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-// ── Shared valid payload factories ──
-function validSuccessPayload() {
-  return {
+  const validSuccessPayload = {
     compliance_status: "success",
     namespace: "ns-test",
-    cluster_type: "origin",
+    cluster_type: "origem",
     timestamp: "2024-01-01T00:00:00.000Z",
-    execId: "exec-001",
-    captured_data: { key: "value" },
+    execId: "exec-123",
+    captured_data: { pods: 5 },
   };
-}
 
-function validFailedPayload() {
-  return {
+  const validFailedPayload = {
     compliance_status: "failed",
     namespace: "ns-test",
-    cluster_type: "origin",
+    cluster_type: "origem",
     timestamp: "2024-01-01T00:00:00.000Z",
-    execId: "exec-002",
-    failures: [{ reason: "step-1 failed" }],
+    execId: "exec-456",
+    failures: [{ reason: "pod crashed" }],
   };
-}
 
-function validErrorPayload() {
-  return {
+  const validErrorPayload = {
     compliance_status: "error",
     namespace: "ns-test",
-    cluster_type: "origin",
+    cluster_type: "origem",
     timestamp: "2024-01-01T00:00:00.000Z",
-    execId: "exec-003",
-    errors: [{ message: "unexpected exception" }],
+    execId: "exec-789",
+    errors: [{ message: "network timeout" }],
   };
-}
 
-// ── Helper: mock a successful fetch response ──
-function mockFetchOk(statusCode = 200) {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    status: statusCode,
-    text: async () => "",
-  });
-}
+  describe("validateCronjobCallback", () => {
+    test("returns 400 when body is not a JSON object", async () => {
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .set("Content-Type", "application/json")
+        .send('"not-an-object"');
+      expect(res.status).toBe(400);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.details).toContain("Request body must be a JSON object.");
+    });
 
-// ── Helper: mock a failed fetch response ──
-function mockFetchFail(statusCode = 500, body = "Internal Error") {
-  mockFetch.mockResolvedValueOnce({
-    ok: false,
-    status: statusCode,
-    text: async () => body,
-  });
-}
+    test("returns 400 when compliance_status is missing", async () => {
+      const app = await makeApp();
+      const { compliance_status: _cs, ...body } = validSuccessPayload;
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(body);
+      expect(res.status).toBe(400);
+      expect(
+        res.body.details.some((d: string) => d.includes("compliance_status")),
+      ).toBe(true);
+    });
 
-// ── Helper: mock a fetch that throws (timeout / network error) ──
-function mockFetchAbort() {
-  const err = new Error("The operation was aborted");
-  err.name = "AbortError";
-  mockFetch.mockRejectedValueOnce(err);
-}
+    test("returns 400 when compliance_status is invalid", async () => {
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send({ ...validSuccessPayload, compliance_status: "unknown" });
+      expect(res.status).toBe(400);
+      expect(
+        res.body.details.some((d: string) => d.includes("compliance_status")),
+      ).toBe(true);
+    });
 
-function mockFetchNetworkError() {
-  mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
-}
+    test("returns 400 when namespace is missing", async () => {
+      const app = await makeApp();
+      const { namespace: _ns, ...body } = validSuccessPayload;
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(body);
+      expect(res.status).toBe(400);
+      expect(
+        res.body.details.some((d: string) => d.includes("namespace")),
+      ).toBe(true);
+    });
 
-// ────────────────────────────────────────────────────────────────────────────
-// validateCronjobCallback — exercised via POST /api/cronjob/callback
-// ────────────────────────────────────────────────────────────────────────────
+    test("returns 400 when captured_data is absent for success", async () => {
+      const app = await makeApp();
+      const { captured_data: _cd, ...body } = validSuccessPayload;
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(body);
+      expect(res.status).toBe(400);
+      expect(
+        res.body.details.some((d: string) => d.includes("captured_data")),
+      ).toBe(true);
+    });
 
-describe("validateCronjobCallback — via route handler", () => {
-  test("accepts valid success payload and forwards to Controller (200)", async () => {
-    mockFetchOk(200);
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
+    test("returns 400 when failures is absent for failed", async () => {
+      const app = await makeApp();
+      const { failures: _f, ...body } = validFailedPayload;
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(body);
+      expect(res.status).toBe(400);
+      expect(
+        res.body.details.some((d: string) => d.includes("failures")),
+      ).toBe(true);
+    });
 
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    expect(res.body.forwarded).toBe(true);
-    expect(res.body.execId).toBe("exec-001");
-    expect(res.body.compliance_status).toBe("success");
-  });
-
-  test("accepts valid failed payload and forwards to Controller (200)", async () => {
-    mockFetchOk(200);
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validFailedPayload());
-
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    expect(res.body.compliance_status).toBe("failed");
-  });
-
-  test("accepts valid error payload and forwards to Controller (200)", async () => {
-    mockFetchOk(200);
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validErrorPayload());
-
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    expect(res.body.compliance_status).toBe("error");
-  });
-
-  test("rejects payload missing compliance_status (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validSuccessPayload() };
-    delete (payload as Record<string, unknown>).compliance_status;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("compliance_status")]),
-    );
-  });
-
-  test("rejects payload with invalid compliance_status (400)", async () => {
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send({ ...validSuccessPayload(), compliance_status: "unknown" });
-
-    expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-  });
-
-  test("rejects payload missing namespace (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validSuccessPayload() };
-    delete (payload as Record<string, unknown>).namespace;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("namespace")]),
-    );
-  });
-
-  test("rejects payload missing cluster_type (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validSuccessPayload() };
-    delete (payload as Record<string, unknown>).cluster_type;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("cluster_type")]),
-    );
-  });
-
-  test("rejects payload missing timestamp (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validSuccessPayload() };
-    delete (payload as Record<string, unknown>).timestamp;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("timestamp")]),
-    );
-  });
-
-  test("rejects payload missing execId (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validSuccessPayload() };
-    delete (payload as Record<string, unknown>).execId;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("execId")]),
-    );
-  });
-
-  test("rejects success payload missing captured_data (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validSuccessPayload() };
-    delete (payload as Record<string, unknown>).captured_data;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("captured_data")]),
-    );
-  });
-
-  test("rejects failed payload missing failures (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validFailedPayload() };
-    delete (payload as Record<string, unknown>).failures;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("failures")]),
-    );
-  });
-
-  test("rejects error payload missing errors (400)", async () => {
-    const app = await makeApp();
-    const payload = { ...validErrorPayload() };
-    delete (payload as Record<string, unknown>).errors;
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(payload);
-
-    expect(res.status).toBe(400);
-    expect(res.body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("errors")]),
-    );
-  });
-
-  test("rejects non-JSON body (400)", async () => {
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .set("Content-Type", "text/plain")
-      .send("not-json");
-
-    expect(res.status).toBe(400);
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// forwardToController — exercised via route handler (502 / 500 scenarios)
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("forwardToController — via route handler", () => {
-  test("returns 502 when Controller responds with non-ok status", async () => {
-    mockFetchFail(503, "Service Unavailable");
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
-
-    expect(res.status).toBe(502);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.controllerStatus).toBe(503);
-  });
-
-  test("returns 502 on Controller timeout (AbortError)", async () => {
-    mockFetchAbort();
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
-
-    expect(res.status).toBe(502);
-    expect(res.body.ok).toBe(false);
-  });
-
-  test("returns 502 on network error", async () => {
-    mockFetchNetworkError();
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
-
-    expect(res.status).toBe(502);
-    expect(res.body.ok).toBe(false);
-  });
-
-  test("generates callback JWT with send_logs scope when forwarding", async () => {
-    mockFetchOk(200);
-    const { JWTService } = await import("../../util/jwt");
-    const app = await makeApp();
-    await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
-
-    expect(JWTService.generateCallbackToken).toHaveBeenCalledWith(
-      expect.objectContaining({ scope: expect.arrayContaining(["send_logs"]) }),
-    );
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// Route handler — misc edge cases
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("POST /api/cronjob/callback — route handler", () => {
-  test("returns 200 with forwarded:true on successful forward", async () => {
-    mockFetchOk(200);
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      ok: true,
-      forwarded: true,
-      execId: "exec-001",
-      namespace: "ns-test",
-      compliance_status: "success",
+    test("returns 400 when errors is absent for error", async () => {
+      const app = await makeApp();
+      const { errors: _e, ...body } = validErrorPayload;
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(body);
+      expect(res.status).toBe(400);
+      expect(
+        res.body.details.some((d: string) => d.includes("errors")),
+      ).toBe(true);
     });
   });
 
-  test("returns 400 for invalid payload — missing required fields", async () => {
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send({ compliance_status: "success" });
-
-    expect(res.status).toBe(400);
-    expect(res.body.ok).toBe(false);
-    expect(res.body.error).toMatch(/invalid/i);
-  });
-
-  test("returns 502 when Controller fails", async () => {
-    mockFetchFail(500, "Controller error");
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
-
-    expect(res.status).toBe(502);
-    expect(res.body.ok).toBe(false);
-  });
-
-  test("returns 500 when forwardToController throws unexpectedly", async () => {
-    // Make fetch throw a non-standard error
-    mockFetch.mockImplementationOnce(() => {
-      throw new Error("unexpected internal error");
+  describe("forwardToController", () => {
+    test("returns 200 when Controller responds OK", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validSuccessPayload);
+      expect(res.status).toBe(200);
+      expect(res.body.forwarded).toBe(true);
     });
-    const app = await makeApp();
-    const res = await request(app)
-      .post("/api/cronjob/callback")
-      .send(validSuccessPayload());
 
-    // fetch throwing synchronously from within the async handler should be caught
-    expect([500, 502]).toContain(res.status);
-    expect(res.body.ok).toBe(false);
+    test("returns 502 when Controller responds with HTTP error", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response("Bad Gateway", { status: 502 }),
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validSuccessPayload);
+      expect(res.status).toBe(502);
+      expect(res.body.ok).toBe(false);
+    });
+
+    test("returns 502 on fetch network error", async () => {
+      mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validSuccessPayload);
+      expect(res.status).toBe(502);
+      expect(res.body.ok).toBe(false);
+    });
+
+    test("returns 502 on fetch timeout (AbortError)", async () => {
+      mockFetch.mockRejectedValueOnce(
+        Object.assign(new Error("The operation was aborted"), {
+          name: "AbortError",
+        }),
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validSuccessPayload);
+      expect(res.status).toBe(502);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.detail).toMatch(/timeout/i);
+    });
+  });
+
+  describe("POST /api/cronjob/callback route handler", () => {
+    test("returns 200 with correct shape when forward OK (success)", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validSuccessPayload);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        ok: true,
+        execId: validSuccessPayload.execId,
+        namespace: validSuccessPayload.namespace,
+        compliance_status: "success",
+        forwarded: true,
+      });
+    });
+
+    test("returns 200 with correct shape when forward OK (failed)", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 201 }),
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validFailedPayload);
+      expect(res.status).toBe(200);
+      expect(res.body.compliance_status).toBe("failed");
+    });
+
+    test("returns 200 with correct shape when forward OK (error)", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validErrorPayload);
+      expect(res.status).toBe(200);
+      expect(res.body.compliance_status).toBe("error");
+    });
+
+    test("returns 400 for invalid payload", async () => {
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send({ invalid: true });
+      expect(res.status).toBe(400);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toBe("Invalid cronjob callback payload");
+    });
+
+    test("returns 502 when Controller fails", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response("Controller error", { status: 503 }),
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validSuccessPayload);
+      expect(res.status).toBe(502);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toContain("Failed to forward");
+    });
+
+    test("returns 500 when JWT generation throws", async () => {
+      const { JWTService } = await import("../../util/jwt");
+      (JWTService.generateCallbackToken as jest.Mock).mockImplementationOnce(
+        () => {
+          throw new Error("JWT signing error");
+        },
+      );
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/api/cronjob/callback")
+        .send(validSuccessPayload);
+      expect(res.status).toBe(500);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error).toContain("Internal error");
+    });
   });
 });

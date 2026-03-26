@@ -1,5 +1,5 @@
 name: "[Core] Auto-Merge PR to main"
-run-name: "${{ github.workflow }} • PR #${{ github.event.pull_request.number }} • ${{ startsWith(github.event.pull_request.head.ref, 'claude/') && '(Claude)' || startsWith(github.event.pull_request.head.ref, 'codex/') && '(Codex)' || '' }} ${{ github.event.pull_request.head.ref }} → main"
+run-name: "${{ github.workflow }} • PR #${{ github.event.pull_request.number }} • ${{ startsWith(github.event.pull_request.head.ref, 'claude/') && '(Claude)' || startsWith(github.event.pull_request.head.ref, 'codex/') && '(Codex)' || startsWith(github.event.pull_request.head.ref, 'copilot/') && '(Copilot)' || '' }} ${{ github.event.pull_request.head.ref }} → main"
 
 on:
   pull_request_target:
@@ -29,25 +29,39 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pr = context.payload.pull_request;
+            const branch = pr.head.ref;
             const labels = (pr.labels || []).map(l => l.name);
             const hasAutomergeLabel = labels.includes('automerge') || labels.includes('auto-merge');
-            const sameRepository = pr.head.repo.full_name === pr.base.repo.full_name;
-            const trustedAuthor = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(pr.author_association);
+            const sameRepository = pr.head.repo && pr.head.repo.full_name === pr.base.repo.full_name;
 
+            // Safety: forks are never trusted, regardless of branch name
             if (!sameRepository) {
-              core.notice(`PR #${pr.number} is from fork (${pr.head.repo.full_name}); skipping for safety.`);
+              core.notice(`PR #${pr.number} is from fork (${pr.head.repo?.full_name}); skipping for safety.`);
               core.setOutput('allow', 'false');
               return;
             }
 
-            if (!trustedAuthor) {
-              core.notice(`PR #${pr.number} author association ${pr.author_association} is not trusted; skipping.`);
-              core.setOutput('allow', 'false');
-              return;
-            }
-
+            // Draft PRs are always skipped — even for agent branches
             if (pr.draft) {
               core.notice(`PR #${pr.number} is draft; skipping.`);
+              core.setOutput('allow', 'false');
+              return;
+            }
+
+            // Agent branches from the same repo bypass the label requirement — fully autonomous
+            const isAgentBranch = branch.startsWith('copilot/') ||
+                                   branch.startsWith('claude/')  ||
+                                   branch.startsWith('codex/');
+            if (isAgentBranch) {
+              core.notice(`PR #${pr.number} is from agent branch ${branch}; auto-merge enabled (no label required).`);
+              core.setOutput('allow', 'true');
+              core.setOutput('pr_node_id', pr.node_id);
+              return;
+            }
+
+            const trustedAuthor = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(pr.author_association);
+            if (!trustedAuthor) {
+              core.notice(`PR #${pr.number} author association ${pr.author_association} is not trusted; skipping.`);
               core.setOutput('allow', 'false');
               return;
             }

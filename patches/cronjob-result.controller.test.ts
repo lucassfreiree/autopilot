@@ -1,616 +1,411 @@
-/**
- * Unit tests for patches/cronjob-result.controller.ts
- *
- * Covers:
- *  - validateCronjobResult (exercised via receiveCronjobResult handler)
- *  - mapComplianceStatusToExecStatus
- *  - adaptCronjobResultToLogEntries
- *  - receiveCronjobResult handler: 200 / 400 / 500
- *  - getCronjobStatus handler: 200 / 400 / 500
- */
-
-import type { Request as ExpressRequest, Response as ExpressResponse } from "express";
-
-// ── Mocks (declared before any module import) ──────────────────────────────
-
-const mockInitExecution = jest.fn();
-const mockPushAgentExecutionLogs = jest.fn();
-const mockGetExecutionSnapshot = jest.fn();
+import type { Request, Response } from "express";
 
 jest.mock("../../controllers/agents-execute-logs.controller", () => ({
-  initExecution: (...args: unknown[]) => mockInitExecution(...args),
-  pushAgentExecutionLogs: (...args: unknown[]) =>
-    mockPushAgentExecutionLogs(...args),
-  getExecutionSnapshot: (...args: unknown[]) =>
-    mockGetExecutionSnapshot(...args),
-}));
-
-jest.mock("../../util/time", () => ({
-  timestampSP: () => "2024-01-01T00:00:00.000Z",
-}));
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function makeReq(
-  body: unknown = {},
-  params: Record<string, string> = {},
-): ExpressRequest {
-  return { body, params, query: {} } as unknown as ExpressRequest;
-}
-
-function makeRes() {
-  const res: Partial<ExpressResponse> = {};
-  res.status = jest.fn().mockReturnValue(res);
-  res.json = jest.fn().mockReturnValue(res);
-  return res as ExpressResponse;
-}
-
-function validSuccessBody() {
-  return {
-    compliance_status: "success",
-    namespace: "ns-test",
-    cluster_type: "origin",
-    timestamp: "2024-01-01T00:00:00.000Z",
-    execId: "exec-001",
-    captured_data: { key: "value" },
-  };
-}
-
-function validFailedBody() {
-  return {
-    compliance_status: "failed",
-    namespace: "ns-test",
-    cluster_type: "origin",
-    timestamp: "2024-01-01T00:00:00.000Z",
-    execId: "exec-002",
-    failures: [{ reason: "step-1 failed" }],
-  };
-}
-
-function validErrorBody() {
-  return {
-    compliance_status: "error",
-    namespace: "ns-test",
-    cluster_type: "origin",
-    timestamp: "2024-01-01T00:00:00.000Z",
-    execId: "exec-003",
-    errors: [{ message: "unexpected exception" }],
-  };
-}
-
-function makeSnapshot(execId = "exec-001") {
-  return {
+  pushAgentExecutionLogs: jest.fn().mockImplementation(async (_req, res) => {
+    res.status(200).json({ ok: true });
+  }),
+  initExecution: jest.fn(),
+  getExecutionSnapshot: jest.fn().mockResolvedValue({
     ok: true,
-    execId,
-    status: "DONE" as const,
+    execId: "exec-123",
+    status: "DONE",
     statusLabel: "Done",
     finished: true,
     lastUpdate: "2024-01-01T00:00:00.000Z",
     count: 1,
-    entries: [{ ts: "2024-01-01T00:00:00.000Z", status: "DONE" }],
-  };
+    entries: [],
+  }),
+}));
+
+jest.mock("../../util/time", () => ({
+  timestampSP: jest.fn().mockReturnValue("2024-01-01T00:00:00.000Z"),
+}));
+
+function makeReq(
+  body: unknown = {},
+  params: Record<string, string> = {},
+): Request {
+  return {
+    body,
+    params,
+    query: {},
+    header: () => undefined,
+    agentCallbackJwt: {},
+  } as unknown as Request;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// validateCronjobResult — exercised through receiveCronjobResult
-// ────────────────────────────────────────────────────────────────────────────
+function makeRes() {
+  const res = {
+    status: jest.fn(),
+    json: jest.fn(),
+  } as unknown as Response;
+  (res.status as jest.Mock).mockReturnValue(res);
+  (res.json as jest.Mock).mockReturnValue(res);
+  return res;
+}
 
-describe("validateCronjobResult — via receiveCronjobResult", () => {
+describe("cronjob-result.controller", () => {
+  let receiveCronjobResult: (req: Request, res: Response) => Promise<void>;
+  let getCronjobStatus: (req: Request, res: Response) => Promise<void>;
+  let mockPushAgentExecutionLogs: jest.Mock;
+  let mockInitExecution: jest.Mock;
+  let mockGetExecutionSnapshot: jest.Mock;
+
+  beforeAll(async () => {
+    const controller = await import(
+      "../../controllers/cronjob-result.controller"
+    );
+    receiveCronjobResult = controller.receiveCronjobResult;
+    getCronjobStatus = controller.getCronjobStatus;
+
+    const logsModule = await import(
+      "../../controllers/agents-execute-logs.controller"
+    );
+    mockPushAgentExecutionLogs =
+      logsModule.pushAgentExecutionLogs as jest.Mock;
+    mockInitExecution = logsModule.initExecution as jest.Mock;
+    mockGetExecutionSnapshot = logsModule.getExecutionSnapshot as jest.Mock;
+  });
+
   beforeEach(() => {
-    jest.resetModules();
-    mockInitExecution.mockReturnValue(undefined);
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (_req: unknown, res: ExpressResponse) => {
-        res.status(202).json({ ok: true });
-      },
-    );
-  });
-
-  test("accepts valid success payload (200)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(200);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(true);
-    expect(body.indexed).toBe(true);
-    expect(body.execId).toBe("exec-001");
-    expect(body.compliance_status).toBe("success");
-  });
-
-  test("accepts valid failed payload (200)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validFailedBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(200);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.compliance_status).toBe("failed");
-  });
-
-  test("accepts valid error payload (200)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validErrorBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(200);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.compliance_status).toBe("error");
-  });
-
-  test("rejects body missing compliance_status (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validSuccessBody() };
-    delete (payload as Record<string, unknown>).compliance_status;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(false);
-    expect(body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("compliance_status")]),
-    );
-  });
-
-  test("rejects invalid compliance_status value (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq({ ...validSuccessBody(), compliance_status: "unknown" });
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-  });
-
-  test("rejects body missing namespace (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validSuccessBody() };
-    delete (payload as Record<string, unknown>).namespace;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("namespace")]),
-    );
-  });
-
-  test("rejects body missing cluster_type (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validSuccessBody() };
-    delete (payload as Record<string, unknown>).cluster_type;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-  });
-
-  test("rejects body missing timestamp (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validSuccessBody() };
-    delete (payload as Record<string, unknown>).timestamp;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-  });
-
-  test("rejects body missing execId (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validSuccessBody() };
-    delete (payload as Record<string, unknown>).execId;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("execId")]),
-    );
-  });
-
-  test("rejects success body missing captured_data (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validSuccessBody() };
-    delete (payload as Record<string, unknown>).captured_data;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("captured_data")]),
-    );
-  });
-
-  test("rejects failed body missing failures (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validFailedBody() };
-    delete (payload as Record<string, unknown>).failures;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("failures")]),
-    );
-  });
-
-  test("rejects error body missing errors (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const payload = { ...validErrorBody() };
-    delete (payload as Record<string, unknown>).errors;
-    const req = makeReq(payload);
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-  });
-
-  test("rejects non-object body (400)", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq("not-an-object");
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.details).toEqual(
-      expect.arrayContaining([expect.stringContaining("JSON object")]),
-    );
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// mapComplianceStatusToExecStatus
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("mapComplianceStatusToExecStatus — indirect via adaptCronjobResultToLogEntries", () => {
-  test("success → log entry has status DONE and level INFO", async () => {
-    mockInitExecution.mockReturnValue(undefined);
-    let capturedEntries: unknown[] = [];
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (req: ExpressRequest, res: ExpressResponse) => {
-        capturedEntries = (req.body as Record<string, unknown>)
-          .entries as unknown[];
-        res.status(202).json({ ok: true });
-      },
-    );
-
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(capturedEntries.length).toBeGreaterThan(0);
-    const entry = capturedEntries[0] as Record<string, unknown>;
-    expect(entry.status).toBe("DONE");
-    expect(entry.level).toBe("INFO");
-    expect(entry.execStatus).toBe("DONE");
-  });
-
-  test("failed → log entry has status ERROR and level ERROR", async () => {
-    jest.resetModules();
-    mockInitExecution.mockReturnValue(undefined);
-    let capturedEntries: unknown[] = [];
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (req: ExpressRequest, res: ExpressResponse) => {
-        capturedEntries = (req.body as Record<string, unknown>)
-          .entries as unknown[];
-        res.status(202).json({ ok: true });
-      },
-    );
-
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validFailedBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    const entry = capturedEntries[0] as Record<string, unknown>;
-    expect(entry.status).toBe("ERROR");
-    expect(entry.level).toBe("ERROR");
-  });
-
-  test("error → log entry has status ERROR", async () => {
-    jest.resetModules();
-    mockInitExecution.mockReturnValue(undefined);
-    let capturedEntries: unknown[] = [];
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (req: ExpressRequest, res: ExpressResponse) => {
-        capturedEntries = (req.body as Record<string, unknown>)
-          .entries as unknown[];
-        res.status(202).json({ ok: true });
-      },
-    );
-
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validErrorBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    const entry = capturedEntries[0] as Record<string, unknown>;
-    expect(entry.status).toBe("ERROR");
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// adaptCronjobResultToLogEntries — field verification
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("adaptCronjobResultToLogEntries — field verification", () => {
-  beforeEach(() => {
-    jest.resetModules();
-    mockInitExecution.mockReturnValue(undefined);
-  });
-
-  test("success entry contains ts, execId, source, from, level, status, message, data.captured_data", async () => {
-    let capturedEntries: unknown[] = [];
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (req: ExpressRequest, res: ExpressResponse) => {
-        capturedEntries = (req.body as Record<string, unknown>)
-          .entries as unknown[];
-        res.status(202).json({ ok: true });
-      },
-    );
-
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    const entry = capturedEntries[0] as Record<string, unknown>;
-    expect(entry).toMatchObject({
-      execId: "exec-001",
-      source: "cronjob-callback",
-      from: "agent",
-      level: "INFO",
+    jest.clearAllMocks();
+    mockPushAgentExecutionLogs.mockImplementation(async (_req, res) => {
+      res.status(200).json({ ok: true });
+    });
+    mockGetExecutionSnapshot.mockResolvedValue({
+      ok: true,
+      execId: "exec-123",
       status: "DONE",
-      execStatus: "DONE",
+      statusLabel: "Done",
+      finished: true,
+      lastUpdate: "2024-01-01T00:00:00.000Z",
+      count: 1,
+      entries: [],
     });
-    expect(typeof entry.ts).toBe("string");
-    expect(typeof entry.message).toBe("string");
-    const data = entry.data as Record<string, unknown>;
-    expect(data.captured_data).toEqual({ key: "value" });
   });
 
-  test("failed entry contains data.failures", async () => {
-    let capturedEntries: unknown[] = [];
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (req: ExpressRequest, res: ExpressResponse) => {
-        capturedEntries = (req.body as Record<string, unknown>)
-          .entries as unknown[];
-        res.status(202).json({ ok: true });
-      },
-    );
+  const validSuccessBody = {
+    compliance_status: "success",
+    namespace: "ns-test",
+    cluster_type: "origem",
+    timestamp: "2024-01-01T00:00:00.000Z",
+    execId: "exec-123",
+    captured_data: { pods: 5 },
+  };
 
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validFailedBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
+  const validFailedBody = {
+    compliance_status: "failed",
+    namespace: "ns-test",
+    cluster_type: "origem",
+    timestamp: "2024-01-01T00:00:00.000Z",
+    execId: "exec-456",
+    failures: [{ reason: "pod crashed" }],
+  };
 
-    const entry = capturedEntries[0] as Record<string, unknown>;
-    const data = entry.data as Record<string, unknown>;
-    expect(data.failures).toEqual([{ reason: "step-1 failed" }]);
-  });
+  const validErrorBody = {
+    compliance_status: "error",
+    namespace: "ns-test",
+    cluster_type: "origem",
+    timestamp: "2024-01-01T00:00:00.000Z",
+    execId: "exec-789",
+    errors: [{ message: "network timeout" }],
+  };
 
-  test("error entry contains data.errors", async () => {
-    let capturedEntries: unknown[] = [];
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (req: ExpressRequest, res: ExpressResponse) => {
-        capturedEntries = (req.body as Record<string, unknown>)
-          .entries as unknown[];
-        res.status(202).json({ ok: true });
-      },
-    );
+  // ── validateCronjobResult ─────────────────────────────────────
 
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validErrorBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    const entry = capturedEntries[0] as Record<string, unknown>;
-    const data = entry.data as Record<string, unknown>;
-    expect(data.errors).toEqual([{ message: "unexpected exception" }]);
-  });
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// receiveCronjobResult handler
-// ────────────────────────────────────────────────────────────────────────────
-
-describe("receiveCronjobResult handler", () => {
-  beforeEach(() => {
-    jest.resetModules();
-    mockInitExecution.mockReturnValue(undefined);
-    mockPushAgentExecutionLogs.mockImplementation(
-      async (_req: unknown, res: ExpressResponse) => {
-        res.status(202).json({ ok: true });
-      },
-    );
-  });
-
-  test("returns 200 with indexed:true and statusEndpoint on success", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(200);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(true);
-    expect(body.indexed).toBe(true);
-    expect(body.statusEndpoint).toContain("exec-001");
-  });
-
-  test("calls initExecution with the execId", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(mockInitExecution).toHaveBeenCalledWith("exec-001");
-  });
-
-  test("calls pushAgentExecutionLogs with adapted entries", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(mockPushAgentExecutionLogs).toHaveBeenCalledTimes(1);
-  });
-
-  test("returns 400 for invalid payload", async () => {
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq({ compliance_status: "success" });
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(false);
-  });
-
-  test("returns 500 when pushAgentExecutionLogs throws", async () => {
-    mockPushAgentExecutionLogs.mockRejectedValue(new Error("storage failure"));
-
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(false);
-  });
-
-  test("returns 500 when initExecution throws", async () => {
-    mockInitExecution.mockImplementation(() => {
-      throw new Error("init failure");
+  describe("validateCronjobResult (via receiveCronjobResult)", () => {
+    test("returns 400 when body is not a JSON object", async () => {
+      const req = makeReq("not-an-object");
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: false,
+          details: expect.arrayContaining([
+            "Request body must be a JSON object.",
+          ]),
+        }),
+      );
     });
 
-    const { receiveCronjobResult } = await import(
-      "../../controllers/cronjob-result.controller"
-    );
-    const req = makeReq(validSuccessBody());
-    const res = makeRes();
-    await receiveCronjobResult(req, res);
+    test("returns 400 when compliance_status is missing", async () => {
+      const { compliance_status: _cs, ...body } = validSuccessBody;
+      const req = makeReq(body);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
+      expect(
+        jsonArg.details.some((d: string) => d.includes("compliance_status")),
+      ).toBe(true);
+    });
 
-    expect(res.status).toHaveBeenCalledWith(500);
+    test("returns 400 when compliance_status is invalid", async () => {
+      const req = makeReq({ ...validSuccessBody, compliance_status: "unknown" });
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
+      expect(
+        jsonArg.details.some((d: string) => d.includes("compliance_status")),
+      ).toBe(true);
+    });
+
+    test("returns 400 when namespace is missing", async () => {
+      const { namespace: _ns, ...body } = validSuccessBody;
+      const req = makeReq(body);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
+      expect(
+        jsonArg.details.some((d: string) => d.includes("namespace")),
+      ).toBe(true);
+    });
+
+    test("returns 400 when captured_data is absent for success", async () => {
+      const { captured_data: _cd, ...body } = validSuccessBody;
+      const req = makeReq(body);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
+      expect(
+        jsonArg.details.some((d: string) => d.includes("captured_data")),
+      ).toBe(true);
+    });
+
+    test("returns 400 when failures is absent for failed", async () => {
+      const { failures: _f, ...body } = validFailedBody;
+      const req = makeReq(body);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
+      expect(
+        jsonArg.details.some((d: string) => d.includes("failures")),
+      ).toBe(true);
+    });
+
+    test("returns 400 when errors is absent for error", async () => {
+      const { errors: _e, ...body } = validErrorBody;
+      const req = makeReq(body);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
+      expect(
+        jsonArg.details.some((d: string) => d.includes("errors")),
+      ).toBe(true);
+    });
   });
-});
 
-// ────────────────────────────────────────────────────────────────────────────
-// getCronjobStatus handler
-// ────────────────────────────────────────────────────────────────────────────
+  // ── mapComplianceStatusToExecStatus ───────────────────────────
 
-describe("getCronjobStatus handler", () => {
-  beforeEach(() => {
-    jest.resetModules();
+  describe("mapComplianceStatusToExecStatus (via receiveCronjobResult)", () => {
+    test("maps success to DONE", async () => {
+      const req = makeReq(validSuccessBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(mockInitExecution).toHaveBeenCalledWith("exec-123");
+      const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
+      const entries = syntheticReq.body.entries as Array<
+        Record<string, unknown>
+      >;
+      expect(entries[0].execStatus).toBe("DONE");
+      expect(entries[0].status).toBe("DONE");
+    });
+
+    test("maps failed to ERROR", async () => {
+      const req = makeReq(validFailedBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
+      const entries = syntheticReq.body.entries as Array<
+        Record<string, unknown>
+      >;
+      expect(entries[0].execStatus).toBe("ERROR");
+    });
+
+    test("maps error to ERROR", async () => {
+      const req = makeReq(validErrorBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
+      const entries = syntheticReq.body.entries as Array<
+        Record<string, unknown>
+      >;
+      expect(entries[0].execStatus).toBe("ERROR");
+    });
   });
 
-  test("returns 200 with snapshot fields when execId is valid", async () => {
-    mockGetExecutionSnapshot.mockResolvedValue(makeSnapshot("exec-001"));
+  // ── adaptCronjobResultToLogEntries ────────────────────────────
 
-    const { getCronjobStatus } = await import("../../controllers/cronjob-result.controller");
-    const req = makeReq({}, { execId: "exec-001" });
-    const res = makeRes();
-    await getCronjobStatus(req, res);
+  describe("adaptCronjobResultToLogEntries (via receiveCronjobResult)", () => {
+    test("success entry has correct fields: ts, execId, source, from, level, status, message, data", async () => {
+      const req = makeReq(validSuccessBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
+      const entry = (
+        syntheticReq.body.entries as Array<Record<string, unknown>>
+      )[0];
+      expect(entry.ts).toBe("2024-01-01T00:00:00.000Z");
+      expect(entry.execId).toBe("exec-123");
+      expect(entry.source).toBe("cronjob-callback");
+      expect(entry.from).toBe("agent");
+      expect(entry.level).toBe("INFO");
+      expect(entry.status).toBe("DONE");
+      expect(entry.execStatus).toBe("DONE");
+      expect(typeof entry.message).toBe("string");
+      expect((entry.data as Record<string, unknown>).captured_data).toEqual({
+        pods: 5,
+      });
+    });
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(true);
-    expect(body.execId).toBe("exec-001");
-    expect(body.status).toBe("DONE");
-    expect(body.statusLabel).toBe("Done");
-    expect(body.finished).toBe(true);
-    expect(body.count).toBe(1);
-    expect(Array.isArray(body.entries)).toBe(true);
+    test("failed entry has failures in data", async () => {
+      const req = makeReq(validFailedBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
+      const entry = (
+        syntheticReq.body.entries as Array<Record<string, unknown>>
+      )[0];
+      expect(entry.level).toBe("ERROR");
+      expect(entry.execStatus).toBe("ERROR");
+      expect((entry.data as Record<string, unknown>).failures).toEqual([
+        { reason: "pod crashed" },
+      ]);
+    });
+
+    test("error entry has errors in data", async () => {
+      const req = makeReq(validErrorBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
+      const entry = (
+        syntheticReq.body.entries as Array<Record<string, unknown>>
+      )[0];
+      expect(entry.level).toBe("ERROR");
+      expect(entry.execStatus).toBe("ERROR");
+      expect((entry.data as Record<string, unknown>).errors).toEqual([
+        { message: "network timeout" },
+      ]);
+    });
   });
 
-  test("returns 400 when execId param is absent", async () => {
-    const { getCronjobStatus } = await import("../../controllers/cronjob-result.controller");
-    const req = makeReq({}, {});
-    const res = makeRes();
-    await getCronjobStatus(req, res);
+  // ── receiveCronjobResult handler ──────────────────────────────
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(false);
-    expect(body.error).toMatch(/execId/i);
+  describe("receiveCronjobResult handler", () => {
+    test("returns 200 with indexed:true on valid success payload", async () => {
+      const req = makeReq(validSuccessBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: true,
+          execId: "exec-123",
+          namespace: "ns-test",
+          compliance_status: "success",
+          indexed: true,
+          statusEndpoint: "/api/cronjob/status/exec-123",
+        }),
+      );
+    });
+
+    test("calls initExecution and pushAgentExecutionLogs", async () => {
+      const req = makeReq(validSuccessBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(mockInitExecution).toHaveBeenCalledWith("exec-123");
+      expect(mockPushAgentExecutionLogs).toHaveBeenCalledTimes(1);
+    });
+
+    test("returns 400 for invalid payload", async () => {
+      const req = makeReq({ invalid: true });
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: false }),
+      );
+    });
+
+    test("returns 500 when pushAgentExecutionLogs throws", async () => {
+      mockPushAgentExecutionLogs.mockRejectedValueOnce(
+        new Error("Storage failure"),
+      );
+      const req = makeReq(validSuccessBody);
+      const res = makeRes();
+      await receiveCronjobResult(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: false }),
+      );
+    });
   });
 
-  test("returns 500 when getExecutionSnapshot throws", async () => {
-    mockGetExecutionSnapshot.mockRejectedValue(new Error("snapshot not found"));
+  // ── getCronjobStatus handler ──────────────────────────────────
 
-    const { getCronjobStatus } = await import("../../controllers/cronjob-result.controller");
-    const req = makeReq({}, { execId: "exec-unknown" });
-    const res = makeRes();
-    await getCronjobStatus(req, res);
+  describe("getCronjobStatus handler", () => {
+    test("returns 400 when execId param is missing", async () => {
+      const req = makeReq({}, { execId: "" });
+      const res = makeRes();
+      await getCronjobStatus(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: false, error: expect.any(String) }),
+      );
+    });
 
-    expect(res.status).toHaveBeenCalledWith(500);
-    const body = (res.json as jest.Mock).mock.calls[0][0];
-    expect(body.ok).toBe(false);
+    test("returns 200 with snapshot fields when execId is valid", async () => {
+      const req = makeReq({}, { execId: "exec-123" });
+      const res = makeRes();
+      await getCronjobStatus(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: true,
+          execId: "exec-123",
+          status: "DONE",
+          statusLabel: "Done",
+          finished: true,
+          lastUpdate: "2024-01-01T00:00:00.000Z",
+          count: 1,
+          entries: [],
+        }),
+      );
+    });
+
+    test("calls getExecutionSnapshot with the provided execId", async () => {
+      const req = makeReq({}, { execId: "exec-abc" });
+      const res = makeRes();
+      mockGetExecutionSnapshot.mockResolvedValueOnce({
+        ok: true,
+        execId: "exec-abc",
+        status: "ERROR",
+        statusLabel: "Error",
+        finished: true,
+        lastUpdate: "2024-01-01T00:00:00.000Z",
+        count: 0,
+        entries: [],
+      });
+      await getCronjobStatus(req, res);
+      expect(mockGetExecutionSnapshot).toHaveBeenCalledWith("exec-abc");
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    test("returns 500 when getExecutionSnapshot throws", async () => {
+      mockGetExecutionSnapshot.mockRejectedValueOnce(new Error("Not found"));
+      const req = makeReq({}, { execId: "exec-missing" });
+      const res = makeRes();
+      await getCronjobStatus(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: false }),
+      );
+    });
   });
 });

@@ -7,28 +7,13 @@
   "changes": [
     {
       "action": "replace-file",
-      "target_path": "src/controllers/cronjob-result.controller.ts",
-      "content_ref": "patches/cronjob-result.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/routes/agentsRouter.ts",
-      "content_ref": "patches/agentsRouter.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/swagger/swagger.json",
-      "content_ref": "patches/controller-swagger.json"
+      "target_path": "src/__tests__/controllers/cronjob-result.controller.test.ts",
+      "content_ref": "patches/cronjob-result.controller.test.ts"
     },
     {
       "action": "replace-file",
       "target_path": "src/__tests__/routes/agentsRouter.test.ts",
       "content_ref": "patches/agentsRouter.test.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/controllers/cronjob-result.controller.test.ts",
-      "content_ref": "patches/cronjob-result.controller.test.ts"
     },
     {
       "action": "search-replace",
@@ -43,7 +28,7 @@
       "replace": "\"version\": \"3.6.7\""
     }
   ],
-  "commit_message": "feat(controller): add cronjob endpoints + tests + swagger #930217 v3.6.7",
+  "commit_message": "test(controller): add cronjob unit tests + version 3.6.7",
   "skip_ci_wait": false,
   "promote": true,
   "run": 64
