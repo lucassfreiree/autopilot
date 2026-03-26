@@ -125,7 +125,11 @@
       "currentVersion": "3.6.3",
       "pattern": "Apos X.Y.9 vai para X.(Y+1).0 — NUNCA X.Y.10",
       "checkRegistry": "SEMPRE verificar se tag ja existe antes de bumpar",
-      "versionFiles": ["package.json", "package-lock.json", "src/swagger/swagger.json"]
+      "versionFiles": [
+        "package.json",
+        "package-lock.json",
+        "src/swagger/swagger.json"
+      ]
     }
   },
   "securityPatterns": {
@@ -162,6 +166,23 @@
     "contracts/claude-session-memory.json",
     "contracts/shared-agent-context.md",
     "contracts/codex-deploy-guide.md",
-    "schemas/*.schema.json"
-  ]
+    "schemas/*.schema.json",
+    "contracts/codex-agent-contract.json",
+    "CLAUDE.md"
+  ],
+  "autonomousExecutionPolicy": {
+    "description": "Fluxo padrao obrigatorio para execucao autonoma do Codex em alteracoes tecnicas",
+    "rule": "Com contexto suficiente, executar sem pedir confirmacao: commit -> push -> PR -> merge (squash)",
+    "guardrails": [
+      "Nunca operar sem workspace_id identificado",
+      "Nunca misturar contextos entre workspaces",
+      "Nunca mergear PR de deploy se validate-patches falhar",
+      "Sempre monitorar workflows e esteira corporativa apos merge"
+    ],
+    "sourceOfTruth": [
+      "contracts/claude-session-memory.json#deployFlowGuide",
+      "contracts/codex-agent-contract.json#deployFlow",
+      "CLAUDE.md#Deploy Flow — Complete Guide"
+    ]
+  }
 }
