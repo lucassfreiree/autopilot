@@ -85,7 +85,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
-  audit/ (215 files)
+  audit/ (216 files)
   improvements/ (1 files)
   metrics/ (4 files)
   handoffs/ (1 files)
@@ -212,6 +212,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | agent-sync.yml | [Corp] Agent Sync: Claude + ChatGPT | trigger file, manual |
 | alert-notify.yml | [Infra] Alert & Notify | manual |
 | apply-source-change.yml | [Corp] Deploy: Apply Source Change | trigger file, manual |
+| auto-merge-to-main.yml | [Core] Auto-Merge PR to main | unknown |
 | auto-pr-codex.yml | [Agent] Auto PR + Auto-Merge (Codex) | push |
 | backup-state.yml | [Core] Backup: State Snapshot | scheduled, manual |
 | bootstrap.yml | [Core] Bootstrap: Full Setup | manual |
@@ -335,4 +336,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | Handoff to Claude | Dispatch `enqueue-agent-handoff.yml`, `to_agent=claude` |
 
 ---
-*Last synced: 2026-03-26T12:37:42Z | Run: 23594652298*
+*Last synced: 2026-03-26T12:45:13Z | Run: 23594961651*
