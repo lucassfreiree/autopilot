@@ -1,0 +1,298 @@
+name: "[Core] CI Self-Heal"
+run-name: "${{ github.workflow }} • ${{ github.event_name }} • ${{ github.event.check_run.name || 'manual' }}"
+
+on:
+  check_run:
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to attempt self-heal on"
+        required: true
+      branch:
+        description: "Branch name (must match an open PR)"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: read
+  checks: read
+
+concurrency:
+  group: ci-self-heal-${{ github.event.check_run.pull_requests[0].number || github.event.inputs.pr_number || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  REPO: lucassfreiree/autopilot
+  STATE_BRANCH: autopilot-state
+  MAX_HEAL_ATTEMPTS: 3
+
+jobs:
+  # ─── Gate: determine if this failure is worth trying to heal ──────────────
+  gate:
+    name: "Check eligibility"
+    runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.eval.outputs.eligible }}
+      pr_number: ${{ steps.eval.outputs.pr_number }}
+      branch: ${{ steps.eval.outputs.branch }}
+      attempt: ${{ steps.eval.outputs.attempt }}
+    steps:
+      - name: Evaluate event
+        id: eval
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # ── Resolve PR number and branch ─────────────────────────────────
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+            BRANCH="${{ github.event.inputs.branch }}"
+          else
+            # check_run event — only proceed on failure
+            CONCLUSION="${{ github.event.check_run.conclusion }}"
+            if [ "$CONCLUSION" != "failure" ] && [ "$CONCLUSION" != "timed_out" ]; then
+              echo "eligible=false" >> "$GITHUB_OUTPUT"
+              echo "Non-failure conclusion ($CONCLUSION); skipping."
+              exit 0
+            fi
+
+            # Extract PR info from check_run payload
+            PR_JSON=$(echo '${{ toJson(github.event.check_run.pull_requests) }}')
+            PR_NUMBER=$(echo "$PR_JSON" | jq -r '.[0].number // empty' 2>/dev/null || echo "")
+            BRANCH=$(echo "$PR_JSON" | jq -r '.[0].head.ref // empty' 2>/dev/null || echo "")
+
+            if [ -z "$PR_NUMBER" ] || [ -z "$BRANCH" ]; then
+              echo "eligible=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::No PR linked to this check_run; skipping."
+              exit 0
+            fi
+          fi
+
+          # ── Only heal autonomous agent branches ──────────────────────────
+          if [[ ! "$BRANCH" =~ ^(copilot|codex|claude)/ ]]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Branch $BRANCH is not an agent branch; skipping."
+            exit 0
+          fi
+
+          # ── Check PR is still open and not merged ─────────────────────────
+          PR_STATE=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.state' 2>/dev/null || echo "unknown")
+          PR_MERGED=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.merged' 2>/dev/null || echo "false")
+          if [ "$PR_STATE" != "open" ] || [ "$PR_MERGED" = "true" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PR #$PR_NUMBER state=$PR_STATE merged=$PR_MERGED; skipping."
+            exit 0
+          fi
+
+          # ── Read current attempt count from state ─────────────────────────
+          ATTEMPT=$(gh api \
+            "repos/$REPO/contents/state/ci-self-heal/pr-${PR_NUMBER}/attempts.json?ref=$STATE_BRANCH" \
+            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null | jq -r '.count // 0' 2>/dev/null || echo "0")
+
+          if [ "$ATTEMPT" -ge "$MAX_HEAL_ATTEMPTS" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::PR #$PR_NUMBER has reached max heal attempts ($ATTEMPT/$MAX_HEAL_ATTEMPTS)."
+            exit 0
+          fi
+
+          echo "eligible=true"    >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH"   >> "$GITHUB_OUTPUT"
+          echo "attempt=$ATTEMPT" >> "$GITHUB_OUTPUT"
+          echo "::notice::PR #$PR_NUMBER ($BRANCH) eligible for self-heal. Attempt $((ATTEMPT+1))/$MAX_HEAL_ATTEMPTS."
+
+  # ─── Attempt safe fixes ───────────────────────────────────────────────────
+  heal:
+    name: "Apply safe fix"
+    needs: gate
+    if: needs.gate.outputs.eligible == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      fixed: ${{ steps.apply.outputs.fixed }}
+      fix_type: ${{ steps.apply.outputs.fix_type }}
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.branch }}
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js (if present)
+        id: setup-node
+        continue-on-error: true
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Apply safe fixes
+        id: apply
+        run: |
+          set -euo pipefail
+          FIXED=false
+          FIX_TYPE=""
+
+          # ── Fix 1: lockfile drift — regenerate package-lock.json ─────────
+          if [ -f package.json ] && [ -f package-lock.json ]; then
+            echo "::group::Attempting lockfile resync"
+            if npm install --package-lock-only --ignore-scripts 2>/dev/null; then
+              if ! git diff --quiet package-lock.json; then
+                FIXED=true
+                FIX_TYPE="lockfile-drift"
+                echo "Lockfile updated."
+              fi
+            fi
+            echo "::endgroup::"
+          fi
+
+          # ── Fix 2: ESLint autofix ─────────────────────────────────────────
+          if [ "$FIXED" = "false" ] && [ -f package.json ]; then
+            if grep -q '"lint"' package.json 2>/dev/null && \
+               (grep -q 'eslint' package.json 2>/dev/null || [ -f .eslintrc ] || [ -f .eslintrc.json ] || [ -f .eslintrc.js ] || [ -f eslint.config.js ]); then
+              echo "::group::Attempting ESLint autofix"
+              if npm run lint -- --fix 2>/dev/null; then
+                if ! git diff --quiet; then
+                  FIXED=true
+                  FIX_TYPE="lint-autofix"
+                  echo "Lint autofix applied."
+                fi
+              fi
+              echo "::endgroup::"
+            fi
+          fi
+
+          # ── Fix 3: Prettier / generic formatter ──────────────────────────
+          if [ "$FIXED" = "false" ] && [ -f package.json ]; then
+            if grep -q '"format"' package.json 2>/dev/null || [ -f .prettierrc ] || [ -f .prettierrc.json ]; then
+              echo "::group::Attempting Prettier format"
+              if npm run format 2>/dev/null || npx --yes prettier --write . 2>/dev/null; then
+                if ! git diff --quiet; then
+                  FIXED=true
+                  FIX_TYPE="formatter"
+                  echo "Formatter applied."
+                fi
+              fi
+              echo "::endgroup::"
+            fi
+          fi
+
+          echo "fixed=$FIXED"       >> "$GITHUB_OUTPUT"
+          echo "fix_type=$FIX_TYPE" >> "$GITHUB_OUTPUT"
+          echo "::notice::Autofix result: fixed=$FIXED type=$FIX_TYPE"
+
+      - name: Commit and push fix
+        if: steps.apply.outputs.fixed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(ci-self-heal): auto-fix ${{ steps.apply.outputs.fix_type }} [skip ci]"
+          git push origin HEAD:"${{ needs.gate.outputs.branch }}"
+          echo "::notice::Fix committed and pushed to ${{ needs.gate.outputs.branch }}."
+
+  # ─── Persist attempt state + write handoff on exhaustion ─────────────────
+  record:
+    name: "Record attempt"
+    needs: [gate, heal]
+    if: always() && needs.gate.outputs.eligible == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update attempt counter in state
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ needs.gate.outputs.pr_number }}"
+          BRANCH="${{ needs.gate.outputs.branch }}"
+          PREV_ATTEMPT="${{ needs.gate.outputs.attempt }}"
+          NEW_ATTEMPT=$((PREV_ATTEMPT + 1))
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          FIXED="${{ needs.heal.outputs.fixed || 'false' }}"
+          FIX_TYPE="${{ needs.heal.outputs.fix_type || 'none' }}"
+
+          PAYLOAD=$(jq -n \
+            --arg pr   "$PR_NUMBER" \
+            --arg br   "$BRANCH" \
+            --arg cnt  "$NEW_ATTEMPT" \
+            --arg max  "$MAX_HEAL_ATTEMPTS" \
+            --arg fix  "$FIXED" \
+            --arg type "$FIX_TYPE" \
+            --arg ts   "$NOW" \
+            --arg run  "${{ github.run_id }}" \
+            '{pr: $pr, branch: $br, count: ($cnt|tonumber), maxAttempts: ($max|tonumber),
+              lastFixApplied: ($fix == "true"), lastFixType: $type,
+              lastAttemptAt: $ts, lastRunId: $run}')
+
+          STATE_PATH="state/ci-self-heal/pr-${PR_NUMBER}/attempts.json"
+          EXISTING_SHA=$(gh api \
+            "repos/$REPO/contents/${STATE_PATH}?ref=$STATE_BRANCH" \
+            --jq '.sha' 2>/dev/null || echo "")
+
+          ARGS=(
+            "repos/$REPO/contents/${STATE_PATH}"
+            --method PUT
+            -f "branch=$STATE_BRANCH"
+            -f "message=ci-self-heal: attempt $NEW_ATTEMPT for PR #$PR_NUMBER [skip ci]"
+            -f "content=$(echo "$PAYLOAD" | base64 -w0)"
+          )
+          [ -n "$EXISTING_SHA" ] && ARGS+=(-f "sha=$EXISTING_SHA")
+          gh api "${ARGS[@]}" > /dev/null
+
+          echo "::notice::State updated: PR #$PR_NUMBER attempt $NEW_ATTEMPT/$MAX_HEAL_ATTEMPTS"
+
+      - name: Write failure handoff (max attempts reached)
+        if: |
+          needs.heal.outputs.fixed != 'true' &&
+          (fromJson(needs.gate.outputs.attempt) + 1) >= fromJson(env.MAX_HEAL_ATTEMPTS)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ needs.gate.outputs.pr_number }}"
+          BRANCH="${{ needs.gate.outputs.branch }}"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SAFE_NOW=$(date -u +%Y%m%d-%H%M%S)
+
+          HANDOFF=$(jq -n \
+            --arg id   "ci-self-heal-exhausted-pr${PR_NUMBER}-${SAFE_NOW}" \
+            --arg from "ci-self-heal" \
+            --arg to   "claude" \
+            --arg pr   "$PR_NUMBER" \
+            --arg br   "$BRANCH" \
+            --arg ts   "$NOW" \
+            --arg run  "${{ github.run_id }}" \
+            '{id: $id, fromAgent: $from, toAgent: $to,
+              summary: ("Self-heal exhausted after max attempts for PR #" + $pr + " branch " + $br),
+              context: {pr: $pr, branch: $br, runId: $run},
+              createdAt: $ts, priority: "high", status: "pending"}')
+
+          HANDOFF_PATH="state/workspaces/handoffs/ci-self-heal-pr${PR_NUMBER}-${SAFE_NOW}.json"
+          gh api "repos/$REPO/contents/${HANDOFF_PATH}" \
+            --method PUT \
+            -f "branch=$STATE_BRANCH" \
+            -f "message=handoff: ci-self-heal exhausted PR #$PR_NUMBER [skip ci]" \
+            -f "content=$(echo "$HANDOFF" | base64 -w0)" > /dev/null
+          echo "::warning::Handoff written — self-heal exhausted for PR #$PR_NUMBER."
+
+      - name: Write step summary
+        if: always()
+        run: |
+          PR_NUMBER="${{ needs.gate.outputs.pr_number }}"
+          ATTEMPT="${{ needs.gate.outputs.attempt }}"
+          FIXED="${{ needs.heal.outputs.fixed || 'false' }}"
+          FIX_TYPE="${{ needs.heal.outputs.fix_type || 'none' }}"
+          {
+            echo "## 🔧 CI Self-Heal Summary"
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| PR | #$PR_NUMBER |"
+            echo "| Branch | \`${{ needs.gate.outputs.branch }}\` |"
+            echo "| Attempt | $((ATTEMPT + 1)) / $MAX_HEAL_ATTEMPTS |"
+            echo "| Fix applied | $FIXED |"
+            echo "| Fix type | $FIX_TYPE |"
+          } >> "$GITHUB_STEP_SUMMARY"

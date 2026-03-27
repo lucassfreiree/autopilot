@@ -1,0 +1,230 @@
+name: "[Core] Post-Merge Monitor"
+run-name: "${{ github.workflow }} • PR #${{ github.event.pull_request.number }} • ${{ github.event.pull_request.head.ref }}"
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: post-merge-monitor-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+env:
+  REPO: lucassfreiree/autopilot
+  STATE_BRANCH: autopilot-state
+  BACKUP_BRANCH: autopilot-backups
+
+jobs:
+  # ─── Skip if not actually merged ─────────────────────────────────────────
+  check-merged:
+    name: "Verify merge"
+    runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.check.outputs.merged }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      branch: ${{ steps.check.outputs.branch }}
+      sha: ${{ steps.check.outputs.sha }}
+    steps:
+      - name: Check if PR was merged
+        id: check
+        run: |
+          MERGED="${{ github.event.pull_request.merged }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          SHA="${{ github.event.pull_request.merge_commit_sha }}"
+          echo "merged=$MERGED"     >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH"     >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA"           >> "$GITHUB_OUTPUT"
+          if [ "$MERGED" != "true" ]; then
+            echo "::notice::PR #$PR_NUMBER was closed without merging; skipping post-merge monitor."
+          fi
+
+  # ─── Health check ─────────────────────────────────────────────────────────
+  health-check:
+    name: "Health check"
+    needs: check-merged
+    if: needs.check-merged.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      health_status: ${{ steps.health.outputs.status }}
+      health_details: ${{ steps.health.outputs.details }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: |
+            ops/scripts
+            scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Run health probe
+        id: health
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          STATUS="healthy"
+          DETAILS=""
+
+          # ── Probe 1: Verify autopilot-state branch is accessible ─────────
+          if gh api "repos/$REPO/branches/$STATE_BRANCH" > /dev/null 2>&1; then
+            DETAILS="${DETAILS}state-branch:ok "
+          else
+            STATUS="degraded"
+            DETAILS="${DETAILS}state-branch:FAIL "
+          fi
+
+          # ── Probe 2: Verify main branch exists ───────────────────────────
+          if gh api "repos/$REPO/branches/main" > /dev/null 2>&1; then
+            DETAILS="${DETAILS}main-branch:ok "
+          else
+            STATUS="degraded"
+            DETAILS="${DETAILS}main-branch:FAIL "
+          fi
+
+          # ── Probe 3: Check recent workflow run status (last 5) ────────────
+          RECENT_FAILURES=$(gh api \
+            "repos/$REPO/actions/runs?per_page=5&branch=main&status=failure" \
+            --jq '.workflow_runs | length' 2>/dev/null || echo "0")
+          if [ "$RECENT_FAILURES" -gt 3 ]; then
+            STATUS="degraded"
+            DETAILS="${DETAILS}recent-failures:HIGH($RECENT_FAILURES) "
+          else
+            DETAILS="${DETAILS}recent-failures:ok($RECENT_FAILURES) "
+          fi
+
+          echo "status=$STATUS"   >> "$GITHUB_OUTPUT"
+          echo "details=$DETAILS" >> "$GITHUB_OUTPUT"
+          echo "::notice::Health check result: status=$STATUS details=$DETAILS"
+
+  # ─── Write audit trail + backup signal ───────────────────────────────────
+  audit-and-backup:
+    name: "Audit trail & backup signal"
+    needs: [check-merged, health-check]
+    if: needs.check-merged.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write audit trail to autopilot-state
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SAFE_NOW=$(date -u +%Y%m%d-%H%M%S)
+          PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+          BRANCH="${{ needs.check-merged.outputs.branch }}"
+          SHA="${{ needs.check-merged.outputs.sha }}"
+          HEALTH="${{ needs.health-check.outputs.health_status }}"
+          DETAILS="${{ needs.health-check.outputs.health_details }}"
+
+          AUDIT=$(jq -n \
+            --arg id    "post-merge-pr${PR_NUMBER}-${SAFE_NOW}" \
+            --arg pr    "$PR_NUMBER" \
+            --arg br    "$BRANCH" \
+            --arg sha   "$SHA" \
+            --arg ts    "$NOW" \
+            --arg run   "${{ github.run_id }}" \
+            --arg hs    "$HEALTH" \
+            --arg hd    "$DETAILS" \
+            '{id: $id, event: "post-merge-monitor", prNumber: ($pr|tonumber),
+              branch: $br, mergeSha: $sha, timestamp: $ts, runId: $run,
+              healthCheck: {status: $hs, details: $hd}}')
+
+          AUDIT_PATH="state/audit/post-merge-pr${PR_NUMBER}-${SAFE_NOW}.json"
+          gh api "repos/$REPO/contents/${AUDIT_PATH}" \
+            --method PUT \
+            -f "branch=$STATE_BRANCH" \
+            -f "message=audit: post-merge monitor PR #$PR_NUMBER [skip ci]" \
+            -f "content=$(echo "$AUDIT" | base64 -w0)" > /dev/null
+          echo "::notice::Audit written to $AUDIT_PATH on $STATE_BRANCH"
+
+      - name: Write backup snapshot signal to autopilot-backups
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SAFE_NOW=$(date -u +%Y%m%d-%H%M%S)
+          PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+          BRANCH="${{ needs.check-merged.outputs.branch }}"
+          HEALTH="${{ needs.health-check.outputs.health_status }}"
+
+          SIGNAL=$(jq -n \
+            --arg pr  "$PR_NUMBER" \
+            --arg br  "$BRANCH" \
+            --arg ts  "$NOW" \
+            --arg run "${{ github.run_id }}" \
+            --arg hs  "$HEALTH" \
+            '{type: "post-merge-signal", prNumber: ($pr|tonumber), branch: $br,
+              timestamp: $ts, runId: $run, healthStatus: $hs}')
+
+          SIGNAL_PATH="signals/post-merge-pr${PR_NUMBER}-${SAFE_NOW}.json"
+          gh api "repos/$REPO/contents/${SIGNAL_PATH}" \
+            --method PUT \
+            -f "branch=$BACKUP_BRANCH" \
+            -f "message=signal: post-merge PR #$PR_NUMBER [skip ci]" \
+            -f "content=$(echo "$SIGNAL" | base64 -w0)" > /dev/null
+          echo "::notice::Backup signal written to $SIGNAL_PATH on $BACKUP_BRANCH"
+
+      - name: Emit rollback signal on regression
+        if: needs.health-check.outputs.health_status == 'degraded'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SAFE_NOW=$(date -u +%Y%m%d-%H%M%S)
+          PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+          BRANCH="${{ needs.check-merged.outputs.branch }}"
+          SHA="${{ needs.check-merged.outputs.sha }}"
+          DETAILS="${{ needs.health-check.outputs.health_details }}"
+
+          ROLLBACK=$(jq -n \
+            --arg pr     "$PR_NUMBER" \
+            --arg br     "$BRANCH" \
+            --arg sha    "$SHA" \
+            --arg ts     "$NOW" \
+            --arg run    "${{ github.run_id }}" \
+            --arg detail "$DETAILS" \
+            '{type: "rollback-signal", prNumber: ($pr|tonumber), branch: $br,
+              mergeSha: $sha, timestamp: $ts, runId: $run,
+              reason: "post-merge health check degraded",
+              details: $detail, status: "pending-review",
+              note: "Manual review required before executing rollback"}')
+
+          ROLLBACK_PATH="state/audit/rollback-signal-pr${PR_NUMBER}-${SAFE_NOW}.json"
+          gh api "repos/$REPO/contents/${ROLLBACK_PATH}" \
+            --method PUT \
+            -f "branch=$STATE_BRANCH" \
+            -f "message=rollback-signal: degraded after PR #$PR_NUMBER [skip ci]" \
+            -f "content=$(echo "$ROLLBACK" | base64 -w0)" > /dev/null
+          echo "::warning::Rollback signal emitted for PR #$PR_NUMBER (health: degraded)"
+
+      - name: Write step summary
+        if: always()
+        run: |
+          PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+          BRANCH="${{ needs.check-merged.outputs.branch }}"
+          HEALTH="${{ needs.health-check.outputs.health_status || 'unknown' }}"
+          DETAILS="${{ needs.health-check.outputs.health_details || '' }}"
+          {
+            echo "## 📊 Post-Merge Monitor"
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| PR | #$PR_NUMBER |"
+            echo "| Branch | \`$BRANCH\` |"
+            echo "| Health | $HEALTH |"
+            echo "| Details | $DETAILS |"
+            echo ""
+            if [ "$HEALTH" = "degraded" ]; then
+              echo "> ⚠️ **Regression detected** — rollback signal emitted. Manual review required."
+            else
+              echo "> ✅ Post-merge health check passed."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

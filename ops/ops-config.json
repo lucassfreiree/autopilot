@@ -70,5 +70,64 @@
       "fields": ["timestamp", "workspace", "agent", "action", "description", "result", "details"],
       "tool": "ops/scripts/utils/ops-logger.sh (source and use ops_log function)"
     }
+  },
+  "autonomousControlPlane": {
+    "version": "1.0.0",
+    "description": "Manual gate minimization policy for Autonomous Control Plane v1",
+    "updatedAt": "2026-03-27T12:00:00Z",
+    "manualGatesPolicy": {
+      "description": "Only the following operations require manual human approval. Everything else is automated.",
+      "manualOnly": [
+        {
+          "operation": "release-freeze",
+          "workflow": "release-freeze.yml",
+          "reason": "Freezing releases blocks all autonomous deploy flows; requires conscious human decision",
+          "toggle": "MANUAL_GATE_RELEASE_FREEZE"
+        },
+        {
+          "operation": "corporate-release-approval",
+          "workflow": "release-approval.yml",
+          "reason": "Corporate release to production requires explicit human sign-off",
+          "toggle": "MANUAL_GATE_CORP_RELEASE_APPROVAL"
+        },
+        {
+          "operation": "destructive-rollback",
+          "workflow": "restore-state.yml",
+          "reason": "Rolling back state or code is irreversible without a new deploy; requires human confirmation",
+          "toggle": "MANUAL_GATE_DESTRUCTIVE_ROLLBACK"
+        }
+      ],
+      "automated": [
+        "autonomous-pr-lane",
+        "ci-self-heal",
+        "post-merge-monitor",
+        "codex-apply",
+        "codex-deploy",
+        "health-check",
+        "backup-state",
+        "continuous-improvement",
+        "audit-trail-writes",
+        "label-management",
+        "auto-merge-squash"
+      ]
+    },
+    "toggles": {
+      "AUTONOMOUS_PR_LANE_ENABLED": true,
+      "CI_SELF_HEAL_ENABLED": true,
+      "CI_SELF_HEAL_MAX_ATTEMPTS": 3,
+      "POST_MERGE_MONITOR_ENABLED": true,
+      "AUTOPILOT_DISPATCHER_ENABLED": true,
+      "AUTO_MERGE_ENABLED": true,
+      "MANUAL_GATE_RELEASE_FREEZE": true,
+      "MANUAL_GATE_CORP_RELEASE_APPROVAL": true,
+      "MANUAL_GATE_DESTRUCTIVE_ROLLBACK": true
+    },
+    "workflows": {
+      "autonomous-pr-lane": ".github/workflows/autonomous-pr-lane.yml",
+      "ci-self-heal": ".github/workflows/ci-self-heal.yml",
+      "post-merge-monitor": ".github/workflows/post-merge-monitor.yml",
+      "autopilot-dispatcher": ".github/workflows/autopilot-dispatcher.yml"
+    },
+    "agentBranchPrefixes": ["copilot/", "codex/", "claude/"]
   }
 }

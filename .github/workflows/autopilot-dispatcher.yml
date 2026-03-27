@@ -1,0 +1,221 @@
+name: "[Core] Autopilot Dispatcher"
+run-name: "${{ github.workflow }} • intent: ${{ github.event.inputs.intent }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      intent:
+        description: |
+          Intenção a rotear (exemplos: "implementar X", "corrigir CI",
+          "monitorar deploy", "promover release", "health check")
+        required: true
+      payload:
+        description: "Payload JSON opcional para o workflow de destino"
+        required: false
+        default: "{}"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: autopilot-dispatcher-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  REPO: lucassfreiree/autopilot
+
+jobs:
+  route:
+    name: "Route intent"
+    runs-on: ubuntu-latest
+    outputs:
+      route: ${{ steps.resolve.outputs.route }}
+      description: ${{ steps.resolve.outputs.description }}
+      workflow: ${{ steps.resolve.outputs.workflow }}
+    steps:
+      - name: Resolve intent → route
+        id: resolve
+        run: |
+          set -euo pipefail
+          INTENT=$(echo "${{ github.event.inputs.intent }}" | tr '[:upper:]' '[:lower:]' | xargs)
+          ROUTE="unknown"
+          DESCRIPTION=""
+          WORKFLOW=""
+
+          # ── Route table (Portuguese + English phrases) ───────────────────
+          # Priority: most specific patterns first
+
+          # Implementar / develop / code
+          if echo "$INTENT" | grep -qiE "^implementar|^implement|^criar|^create|^desenvolver|^develop|^codificar|^code"; then
+            ROUTE="codex-apply"
+            DESCRIPTION="Rotear para Codex Apply Lane: implementação de código"
+            WORKFLOW="codex-apply.yml"
+
+          # Corrigir CI / fix CI / self-heal
+          elif echo "$INTENT" | grep -qiE "corrigir ci|fix ci|self.?heal|consertar ci|reparar ci|ci.*falhou|ci.*falha|ci.*erro"; then
+            ROUTE="ci-self-heal"
+            DESCRIPTION="Rotear para CI Self-Heal Lane: diagnóstico e correção de falhas de CI"
+            WORKFLOW="ci-self-heal.yml"
+
+          # Corrigir / fix (generic)
+          elif echo "$INTENT" | grep -qiE "^corrigir|^fix|^consertar|^reparar|^resolver"; then
+            ROUTE="ci-self-heal"
+            DESCRIPTION="Rotear para CI Self-Heal Lane: tentativa de correção automática"
+            WORKFLOW="ci-self-heal.yml"
+
+          # Promover release / promote / deploy
+          elif echo "$INTENT" | grep -qiE "promover release|promote release|promover cap|promote cap|deploy.*release|release.*deploy"; then
+            ROUTE="codex-deploy"
+            DESCRIPTION="Rotear para Codex Deploy Lane: promoção de release com checks de freeze/approval"
+            WORKFLOW="codex-deploy.yml"
+
+          # Monitorar deploy / monitor deploy / observability
+          elif echo "$INTENT" | grep -qiE "monitorar deploy|monitor deploy|monitorar|observabilidade|observability|monitor"; then
+            ROUTE="health-observability"
+            DESCRIPTION="Rotear para Health + Observability Lane: monitoramento pós-deploy"
+            WORKFLOW="health-check.yml"
+
+          # Health check
+          elif echo "$INTENT" | grep -qiE "health.?check|verificar saude|checar saude|saude do sistema|system health"; then
+            ROUTE="health-observability"
+            DESCRIPTION="Rotear para Health Check: verificação de saúde do sistema"
+            WORKFLOW="health-check.yml"
+
+          # Backup / snapshot
+          elif echo "$INTENT" | grep -qiE "backup|snapshot|salvar estado|save state"; then
+            ROUTE="backup"
+            DESCRIPTION="Rotear para Backup Lane: snapshot de estado"
+            WORKFLOW="backup-state.yml"
+
+          # Sincronizar agente / sync agent
+          elif echo "$INTENT" | grep -qiE "sincronizar agente|sync agent|agent.?sync|sincronizar"; then
+            ROUTE="agent-sync"
+            DESCRIPTION="Rotear para Agent Sync: sincronização de agentes"
+            WORKFLOW="agent-sync.yml"
+
+          # Melhoria contínua / continuous improvement
+          elif echo "$INTENT" | grep -qiE "melhoria|improvement|melhorar|improve|continuous"; then
+            ROUTE="continuous-improvement"
+            DESCRIPTION="Rotear para Continuous Improvement Lane"
+            WORKFLOW="continuous-improvement.yml"
+
+          # Fallback: triage handoff
+          else
+            ROUTE="triage-fallback"
+            DESCRIPTION="Intenção não reconhecida — encaminhando para triage manual"
+            WORKFLOW=""
+          fi
+
+          echo "route=$ROUTE"           >> "$GITHUB_OUTPUT"
+          echo "description=$DESCRIPTION" >> "$GITHUB_OUTPUT"
+          echo "workflow=$WORKFLOW"     >> "$GITHUB_OUTPUT"
+
+          echo "::notice::Intent: '$INTENT' → Route: $ROUTE ($WORKFLOW)"
+
+  # ─── Execute routed workflow ──────────────────────────────────────────────
+  dispatch:
+    name: "Execute route: ${{ needs.route.outputs.route }}"
+    needs: route
+    if: needs.route.outputs.workflow != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch target workflow
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          WORKFLOW="${{ needs.route.outputs.workflow }}"
+          PAYLOAD='${{ github.event.inputs.payload }}'
+
+          # Validate payload is valid JSON; fallback to empty object
+          if ! echo "$PAYLOAD" | jq . > /dev/null 2>&1; then
+            PAYLOAD="{}"
+            echo "::warning::Payload is not valid JSON; using empty object."
+          fi
+
+          echo "::notice::Dispatching $WORKFLOW with payload: $PAYLOAD"
+
+          # v1: dispatching without forwarding payload inputs (workflows use their own defaults).
+          # Payload forwarding via --field requires knowing the target workflow's input schema,
+          # which varies per workflow. Future versions can extend this with per-route input mapping.
+          gh workflow run "$WORKFLOW" \
+            --repo "$REPO" \
+            --ref main \
+            2>/dev/null && echo "::notice::Workflow $WORKFLOW dispatched successfully." \
+            || echo "::warning::Could not dispatch $WORKFLOW (may require specific inputs). See summary for manual steps."
+
+  # ─── Fallback triage ─────────────────────────────────────────────────────
+  triage-fallback:
+    name: "Triage unknown intent"
+    needs: route
+    if: needs.route.outputs.route == 'triage-fallback'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write triage handoff
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          INTENT="${{ github.event.inputs.intent }}"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SAFE_NOW=$(date -u +%Y%m%d-%H%M%S)
+
+          HANDOFF=$(jq -n \
+            --arg id   "dispatcher-triage-${SAFE_NOW}" \
+            --arg from "autopilot-dispatcher" \
+            --arg to   "claude" \
+            --arg intent "$INTENT" \
+            --arg ts   "$NOW" \
+            --arg run  "${{ github.run_id }}" \
+            '{id: $id, fromAgent: $from, toAgent: $to,
+              summary: ("Unknown intent requires human/agent triage: " + $intent),
+              context: {intent: $intent, runId: $run},
+              createdAt: $ts, priority: "medium", status: "pending"}')
+
+          gh api "repos/$REPO/contents/state/workspaces/handoffs/dispatcher-triage-${SAFE_NOW}.json" \
+            --method PUT \
+            -f "branch=autopilot-state" \
+            -f "message=triage: unknown intent from dispatcher [skip ci]" \
+            -f "content=$(echo "$HANDOFF" | base64 -w0)" > /dev/null 2>&1 \
+            || echo "::warning::Could not write handoff to state branch (may need RELEASE_TOKEN)."
+
+          echo "::warning::Intent not recognized. Triage handoff created."
+
+  # ─── Step summary ─────────────────────────────────────────────────────────
+  summary:
+    name: "Execution summary"
+    needs: [route, dispatch, triage-fallback]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write summary
+        run: |
+          ROUTE="${{ needs.route.outputs.route }}"
+          DESCRIPTION="${{ needs.route.outputs.description }}"
+          WORKFLOW="${{ needs.route.outputs.workflow }}"
+          INTENT="${{ github.event.inputs.intent }}"
+          {
+            echo "## 🚀 Autopilot Dispatcher"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Intent | \`$INTENT\` |"
+            echo "| Route | \`$ROUTE\` |"
+            echo "| Target workflow | \`${WORKFLOW:-triage-fallback}\` |"
+            echo ""
+            echo "### Description"
+            echo "$DESCRIPTION"
+            echo ""
+            echo "### Route Table"
+            echo "| Pattern | Route |"
+            echo "|---|---|"
+            echo "| \`implementar X\` | codex-apply.yml |"
+            echo "| \`corrigir CI\` | ci-self-heal.yml |"
+            echo "| \`monitorar deploy\` | health-check.yml |"
+            echo "| \`promover release\` | codex-deploy.yml |"
+            echo "| \`backup\` | backup-state.yml |"
+            echo "| \`melhoria\` | continuous-improvement.yml |"
+            echo "| \`sincronizar agente\` | agent-sync.yml |"
+            echo "| *(unknown)* | triage-fallback (handoff) |"
+          } >> "$GITHUB_STEP_SUMMARY"

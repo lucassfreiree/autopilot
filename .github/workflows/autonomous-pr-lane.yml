@@ -1,0 +1,158 @@
+name: "[Core] Autonomous PR Lane"
+run-name: "${{ github.workflow }} • PR #${{ github.event.pull_request.number }} • ${{ github.event.pull_request.head.ref }}"
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: autonomous-pr-lane-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  REPO: lucassfreiree/autopilot
+
+jobs:
+  label-and-automerge:
+    name: "Label & Enable Auto-merge"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate eligibility
+        id: policy
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const branch = pr.head.ref;
+            const sameRepo = pr.head.repo && pr.head.repo.full_name === pr.base.repo.full_name;
+
+            // Safety: never trust forks
+            if (!sameRepo) {
+              core.notice(`PR #${pr.number} is from a fork (${pr.head.repo?.full_name}); skipping.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            // Draft PRs are skipped until ready_for_review
+            if (pr.draft) {
+              core.notice(`PR #${pr.number} is a draft; skipping until ready.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            // Only act on designated autonomous agent branches
+            const isAgentBranch = branch.startsWith('copilot/') ||
+                                   branch.startsWith('codex/')   ||
+                                   branch.startsWith('claude/');
+            if (!isAgentBranch) {
+              core.notice(`PR #${pr.number} branch "${branch}" is not an agent branch; skipping.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            core.notice(`PR #${pr.number} (${branch}) is eligible for autonomous lane.`);
+            core.setOutput('eligible', 'true');
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_node_id', pr.node_id);
+
+      - name: Add autonomous labels
+        if: steps.policy.outputs.eligible == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt('${{ steps.policy.outputs.pr_number }}');
+            const desired  = ['automerge', 'autonomous'];
+            const pr = context.payload.pull_request;
+            const existing = (pr.labels || []).map(l => l.name);
+            const toAdd = desired.filter(l => !existing.includes(l));
+
+            if (toAdd.length === 0) {
+              core.notice('Labels already present; nothing to add.');
+              return;
+            }
+
+            // Ensure labels exist in the repository before adding them
+            for (const label of toAdd) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label
+                });
+              } catch (_) {
+                // Create label if missing
+                const colors = { automerge: '0e8a16', autonomous: '1d76db' };
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label,
+                  color: colors[label] || 'ededed',
+                  description: label === 'automerge'
+                    ? 'PR will be auto-merged when all checks pass'
+                    : 'PR created by an autonomous agent lane'
+                });
+                core.notice(`Created missing label: ${label}`);
+              }
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              labels: toAdd
+            });
+            core.notice(`Labels added: ${toAdd.join(', ')}`);
+
+      - name: Enable auto-merge (squash)
+        if: steps.policy.outputs.eligible == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNodeId = '${{ steps.policy.outputs.pr_node_id }}';
+            const prNumber = '${{ steps.policy.outputs.pr_number }}';
+            try {
+              await github.graphql(`
+                mutation($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: SQUASH
+                  }) {
+                    pullRequest { number autoMergeRequest { mergeMethod } }
+                  }
+                }
+              `, { pullRequestId: prNodeId });
+              core.notice(`Auto-merge (squash) enabled for PR #${prNumber}.`);
+            } catch (error) {
+              core.warning(`Could not enable auto-merge for PR #${prNumber}: ${error.message}`);
+            }
+
+      - name: Write step summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr  = context.payload.pull_request;
+            const eligible = '${{ steps.policy.outputs.eligible }}';
+            const lines = [
+              '## 🤖 Autonomous PR Lane',
+              `- **PR:** #${pr.number} — \`${pr.head.ref}\``,
+              `- **Eligible:** ${eligible === 'true' ? '✅ Yes' : '⛔ No'}`,
+            ];
+            if (eligible === 'true') {
+              lines.push('- **Labels applied:** `automerge`, `autonomous`');
+              lines.push('- **Auto-merge:** enabled (squash)');
+            }
+            await core.summary.addRaw(lines.join('\n')).write();
