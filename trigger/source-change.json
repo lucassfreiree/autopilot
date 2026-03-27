@@ -1,25 +1,30 @@
 {
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
-  "component": "agent",
+  "component": "controller",
   "change_type": "multi-file",
-  "version": "2.3.0",
+  "version": "3.6.8",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"2.2.9\"",
-      "replace": "\"version\": \"2.3.0\""
+      "search": "\"version\": \"3.6.7\"",
+      "replace": "\"version\": \"3.6.8\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"2.2.9\"",
-      "replace": "\"version\": \"2.3.0\""
+      "search": "\"version\": \"3.6.7\"",
+      "replace": "\"version\": \"3.6.8\""
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/swagger/swagger.json",
+      "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "test(agent): autopilot e2e flow validation v2.3.0",
+  "commit_message": "feat(controller): version bump v3.6.8 + swagger sync",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 65
+  "run": 66
 }
