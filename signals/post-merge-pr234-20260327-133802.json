@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 234,
+  "branch": "copilot/copilottest-autonomous-flow",
+  "timestamp": "2026-03-27T13:38:02Z",
+  "runId": "23648884096",
+  "healthStatus": "degraded"
+}
