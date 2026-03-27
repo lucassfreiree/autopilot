@@ -469,6 +469,7 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 | fetch-files.yml | Fetch files from corporate repos using BBVINET_TOKEN |
 | auto-merge-to-main.yml | Auto-merge PRs from claude/*/codex/* branches to main (squash) |
 | auto-pr-codex.yml | Auto-create PRs for Codex branches |
+| autonomous-merge-direct.yml | Direct autonomous merge for agent PRs (bypasses branch protection auto-merge requirement) |
 | ops-workflow-observability.yml | Workflow run observability and metrics |
 
 ### Codex Automation

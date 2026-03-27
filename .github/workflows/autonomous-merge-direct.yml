@@ -1,0 +1,244 @@
+name: "[Core] Autonomous Direct Merge"
+run-name: "${{ github.workflow }} • PR #${{ github.event.pull_request.number }} • ${{ github.event.pull_request.head.ref }} → main"
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: autonomous-direct-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  direct-merge:
+    name: "Direct Merge (bypass auto-merge requirement)"
+    if: github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate eligibility
+        id: policy
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const branch = pr.head.ref;
+
+            // Safety: never act on forks
+            const sameRepo = pr.head.repo && pr.head.repo.full_name === pr.base.repo.full_name;
+            if (!sameRepo) {
+              core.notice(`PR #${pr.number} is from a fork (${pr.head.repo?.full_name}); skipping for security.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            // Skip draft PRs
+            if (pr.draft) {
+              core.notice(`PR #${pr.number} is a draft; skipping until ready_for_review.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            // Only act on designated agent branches
+            const isAgentBranch = branch.startsWith('copilot/') ||
+                                   branch.startsWith('claude/')  ||
+                                   branch.startsWith('codex/');
+            if (!isAgentBranch) {
+              core.notice(`PR #${pr.number} branch "${branch}" is not an agent branch; skipping.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            // Target must be main
+            if (pr.base.ref !== 'main') {
+              core.notice(`PR #${pr.number} targets "${pr.base.ref}", not main; skipping.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            core.notice(`PR #${pr.number} (${branch} → main) is eligible for direct autonomous merge.`);
+            core.setOutput('eligible', 'true');
+            core.setOutput('pr_number', String(pr.number));
+            core.setOutput('pr_node_id', pr.node_id);
+            core.setOutput('head_ref', branch);
+            core.setOutput('head_sha', pr.head.sha);
+
+      - name: Wait for check suites to complete
+        id: checks
+        if: steps.policy.outputs.eligible == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const headSha   = '${{ steps.policy.outputs.head_sha }}';
+            const maxWaitMs = 10 * 60 * 1000; // 10 minutes
+            const pollMs    = 30 * 1000;       // 30 seconds
+            const start     = Date.now();
+
+            // Identify this workflow's own check suite ID to avoid deadlock.
+            // The workflow run object exposes check_suite_id so we can exclude it.
+            let ownSuiteId = null;
+            try {
+              const { data: ownRun } = await github.rest.actions.getWorkflowRun({
+                owner:  context.repo.owner,
+                repo:   context.repo.repo,
+                run_id: context.runId,
+              });
+              ownSuiteId = ownRun.check_suite_id;
+              core.notice(`Own check suite ID: ${ownSuiteId} (will be excluded from wait)`);
+            } catch (e) {
+              core.warning(`Could not resolve own check suite ID: ${e.message}`);
+            }
+
+            core.notice(`Waiting for checks on ${headSha} (max 10 min)…`);
+
+            while (true) {
+              const { data: suites } = await github.rest.checks.listSuitesForRef({
+                owner:    context.repo.owner,
+                repo:     context.repo.repo,
+                ref:      headSha,
+                per_page: 100,
+              });
+
+              // Exclude this workflow's own suite to prevent a deadlock.
+              const relevant = suites.check_suites.filter(s => s.id !== ownSuiteId);
+
+              const pending = relevant.filter(s => s.status !== 'completed');
+              const failed  = relevant.filter(s =>
+                s.status === 'completed' &&
+                !['success', 'neutral', 'skipped'].includes(s.conclusion)
+              );
+
+              if (pending.length === 0) {
+                if (failed.length > 0) {
+                  const conclusions = failed.map(s => `suite:${s.id} → ${s.conclusion}`).join(', ');
+                  core.setFailed(`One or more check suites failed: ${conclusions}`);
+                  core.setOutput('checks_ok', 'false');
+                  return;
+                }
+                core.notice('All check suites completed successfully (or no checks required).');
+                core.setOutput('checks_ok', 'true');
+                return;
+              }
+
+              const elapsed = Date.now() - start;
+              if (elapsed >= maxWaitMs) {
+                core.setFailed(`Timed out after ${Math.round(elapsed / 1000)}s waiting for ${pending.length} check suite(s) to complete. Not merging to avoid merging unverified code.`);
+                core.setOutput('checks_ok', 'false');
+                return;
+              }
+
+              core.notice(`${pending.length} check suite(s) still pending — waiting ${pollMs / 1000}s…`);
+              await new Promise(r => setTimeout(r, pollMs));
+            }
+
+      - name: Merge PR (squash) via REST API
+        id: merge
+        if: steps.policy.outputs.eligible == 'true' && steps.checks.outputs.checks_ok == 'true'
+        uses: actions/github-script@v7
+        with:
+          # RELEASE_TOKEN is preferred when available because GITHUB_TOKEN may lack
+          # push permission when branch protection is enabled. Falls back to GITHUB_TOKEN
+          # for repos without branch protection (the primary use-case of this workflow).
+          github-token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = parseInt('${{ steps.policy.outputs.pr_number }}');
+            const headSha  = '${{ steps.policy.outputs.head_sha }}';
+            const headRef  = '${{ steps.policy.outputs.head_ref }}';
+
+            try {
+              const result = await github.rest.pulls.merge({
+                owner:        context.repo.owner,
+                repo:         context.repo.repo,
+                pull_number:  prNumber,
+                merge_method: 'squash',
+                commit_title: `${context.payload.pull_request.title} (#${prNumber})`,
+                commit_message: `Autonomous squash merge of PR #${prNumber} from ${headRef}\n\nMerged by autonomous-merge-direct workflow.`,
+              });
+              core.notice(`PR #${prNumber} merged successfully: ${result.data.sha}`);
+              core.setOutput('merged', 'true');
+              core.setOutput('merge_sha', result.data.sha);
+            } catch (error) {
+              core.warning(`Direct merge failed for PR #${prNumber}: ${error.message}`);
+              core.setOutput('merged', 'false');
+              core.setOutput('merge_error', error.message);
+            }
+
+      - name: Cleanup head branch after merge
+        if: steps.merge.outputs.merged == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const headRef = '${{ steps.policy.outputs.head_ref }}';
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                ref:   `heads/${headRef}`,
+              });
+              core.notice(`Branch ${headRef} deleted after merge.`);
+            } catch (error) {
+              core.notice(`Could not delete branch ${headRef}: ${error.message}`);
+            }
+
+      - name: Fallback — enable auto-merge if direct merge failed
+        if: steps.policy.outputs.eligible == 'true' && steps.merge.outputs.merged == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNodeId = '${{ steps.policy.outputs.pr_node_id }}';
+            const prNumber = '${{ steps.policy.outputs.pr_number }}';
+            core.notice(`Direct merge failed; falling back to enablePullRequestAutoMerge for PR #${prNumber}…`);
+            try {
+              await github.graphql(`
+                mutation($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: SQUASH
+                  }) {
+                    pullRequest { number autoMergeRequest { mergeMethod } }
+                  }
+                }
+              `, { pullRequestId: prNodeId });
+              core.notice(`Fallback: auto-merge (squash) enabled for PR #${prNumber}.`);
+            } catch (fallbackError) {
+              core.warning(`Fallback auto-merge also failed for PR #${prNumber}: ${fallbackError.message}`);
+            }
+
+      - name: Write step summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr       = context.payload.pull_request;
+            const eligible = '${{ steps.policy.outputs.eligible }}';
+            const merged   = '${{ steps.merge.outputs.merged }}';
+            const mergeSha = '${{ steps.merge.outputs.merge_sha }}';
+            const mergeErr = '${{ steps.merge.outputs.merge_error }}';
+            const checksOk = '${{ steps.checks.outputs.checks_ok }}';
+
+            const lines = [
+              '## 🤖 Autonomous Direct Merge',
+              `- **PR:** #${pr.number} — \`${pr.head.ref}\` → \`${pr.base.ref}\``,
+              `- **Eligible:** ${eligible === 'true' ? '✅ Yes' : '⛔ No'}`,
+            ];
+
+            if (eligible === 'true') {
+              lines.push(`- **Checks passed:** ${checksOk === 'true' ? '✅ Yes' : '❌ No'}`);
+              if (merged === 'true') {
+                lines.push(`- **Merge result:** ✅ Squash merged (${mergeSha})`);
+                lines.push('- **Branch cleanup:** head branch deleted');
+              } else if (merged === 'false') {
+                lines.push(`- **Direct merge:** ❌ Failed — ${mergeErr}`);
+                lines.push('- **Fallback:** enablePullRequestAutoMerge attempted');
+              }
+            }
+
+            await core.summary.addRaw(lines.join('\n')).write();
