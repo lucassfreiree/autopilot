@@ -19,7 +19,7 @@ jobs:
     if: github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
-      - name: Evaluate eligibility
+      - name: Evaluate eligibility and auto-ready draft PRs
         id: policy
         uses: actions/github-script@v7
         with:
@@ -32,13 +32,6 @@ jobs:
             const sameRepo = pr.head.repo && pr.head.repo.full_name === pr.base.repo.full_name;
             if (!sameRepo) {
               core.notice(`PR #${pr.number} is from a fork (${pr.head.repo?.full_name}); skipping for security.`);
-              core.setOutput('eligible', 'false');
-              return;
-            }
-
-            // Skip draft PRs
-            if (pr.draft) {
-              core.notice(`PR #${pr.number} is a draft; skipping until ready_for_review.`);
               core.setOutput('eligible', 'false');
               return;
             }
@@ -56,6 +49,28 @@ jobs:
             // Target must be main
             if (pr.base.ref !== 'main') {
               core.notice(`PR #${pr.number} targets "${pr.base.ref}", not main; skipping.`);
+              core.setOutput('eligible', 'false');
+              return;
+            }
+
+            // Auto-mark draft PRs from agents as ready for review
+            if (pr.draft) {
+              core.notice(`PR #${pr.number} is a draft from agent branch ${branch}; marking as ready for review...`);
+              try {
+                await github.graphql(`
+                  mutation($pullRequestId: ID!) {
+                    markPullRequestReadyForReview(input: {
+                      pullRequestId: $pullRequestId
+                    }) {
+                      pullRequest { number isDraft }
+                    }
+                  }
+                `, { pullRequestId: pr.node_id });
+                core.notice(`PR #${pr.number} marked as ready for review. Will be picked up on ready_for_review event.`);
+              } catch (error) {
+                core.warning(`Could not mark PR #${pr.number} as ready: ${error.message}`);
+              }
+              // Exit — the ready_for_review event will re-trigger this workflow
               core.setOutput('eligible', 'false');
               return;
             }
