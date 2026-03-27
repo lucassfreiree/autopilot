@@ -1,35 +1,25 @@
 {
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
-  "component": "controller",
+  "component": "agent",
   "change_type": "multi-file",
-  "version": "3.6.7",
+  "version": "2.3.0",
   "changes": [
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/controllers/cronjob-result.controller.test.ts",
-      "content_ref": "patches/cronjob-result.controller.test.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/routes/agentsRouter.test.ts",
-      "content_ref": "patches/agentsRouter.test.ts"
-    },
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.6.6\"",
-      "replace": "\"version\": \"3.6.7\""
+      "search": "\"version\": \"2.2.9\"",
+      "replace": "\"version\": \"2.3.0\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.6.6\"",
-      "replace": "\"version\": \"3.6.7\""
+      "search": "\"version\": \"2.2.9\"",
+      "replace": "\"version\": \"2.3.0\""
     }
   ],
-  "commit_message": "test(controller): add cronjob unit tests + version 3.6.7",
+  "commit_message": "test(agent): autopilot e2e flow validation v2.3.0",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 64
+  "run": 65
 }
