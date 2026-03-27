@@ -407,6 +407,34 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 
 ---
 
+## EFFICIENCY RULES (minimize confirmations)
+
+### BATCH ALL FILE CHANGES
+- NEVER edit files one-by-one — group ALL edits into a SINGLE push_files or commit
+- Use the `push_files` API to push multiple file changes in ONE operation
+- Example: patches + trigger + references + memory = ONE commit, not 4 separate edits
+- This reduces user confirmations from 4+ to just 1
+
+### SINGLE-STEP OPERATIONS
+- Create branch + push files + create PR = minimize roundtrips
+- NEVER ask user to do something manually that you can do via API
+- NEVER say "go click Ready for Review" — use GraphQL to mark ready
+- NEVER say "go merge the PR" — use merge_pull_request tool
+
+### DRAFT PR HANDLING
+- If you accidentally create a draft PR, immediately mark as ready via:
+  GraphQL mutation markPullRequestReadyForReview
+- The workflow `autonomous-merge-direct.yml` also auto-marks agent drafts as ready
+
+### ZERO-ASK POLICY
+- If you know how to do it: DO IT
+- If you don't know: read the docs (contracts/copilot-deploy-guide.md, ops/docs/deploy-process/)
+- If docs don't cover it: try the most logical approach
+- Only ask the user as ABSOLUTE LAST RESORT when genuinely blocked
+
+
+---
+
 ## COMMON TASKS
 
 | Task | How |
@@ -490,4 +518,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-27T17:14:41Z | Run: 23658540139*
+*Last synced: 2026-03-27T18:04:51Z | Run: 23660568180*
