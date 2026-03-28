@@ -79,6 +79,14 @@ You already know everything below. Apply it immediately.
 - **Boot sequence OBRIGATORIO: ler copilot-session-memory → claude-live-status → claude-session-memory antes de QUALQUER acao** → Fix: Executar os 4 passos da boot sequence no inicio de cada sessao
 - **Se erro em deploy: diagnosticar + corrigir + re-deploy AUTOMATICAMENTE sem perguntar ao usuario** → Fix: 1. Identificar erro nos logs. 2. Corrigir patch. 3. Bumpar versao. 4. Incrementar run. 5. Novo push_files → PR → merge → monitorar.
 - **Documentacao completa de deploy em ops/docs/deploy-process/ (12 fases). Nunca inventar — sempre consultar os docs.** → Fix: Para cada fase do deploy, consultar o arquivo correspondente em ops/docs/deploy-process/
+- **copilot-post-deploy-sync.yml git push to main FAILS with branch protection — MUST use RELEASE_TOKEN or branch+PR flow** → Fix: Use RELEASE_TOKEN for git push, or create branch copilot/auto-sync-{version} → PR → squash merge
+- **claude-live-status.json may NOT exist — handle FileNotFound gracefully in boot sequence** → Fix: Wrap boot step 2 in try/catch. If file missing, log warning and continue. NEVER create it (Claude's file).
+- **.github/copilot-instructions.md is AUTO-GENERATED — NEVER edit directly** → Fix: To change Copilot instructions, edit contracts/copilot-mega-prompt.md or contracts/copilot-super-prompt.md. Workflow syncs automatically.
+- **Before creating any PR, ALWAYS check if an identical or similar PR already exists to avoid duplicates** → Fix: Use list_pull_requests or search for open PRs with matching branch/title before creating
+- **autonomous-merge-direct.yml handles ALL agent PRs automatically — no manual merge needed** → Fix: After creating PR with draft:false, autonomous-merge-direct.yml waits for checks then squash merges. If direct merge fails, falls back to enablePullRequestAutoMerge.
+- **trigger/source-change.json current state: version 3.6.8, run 66, component controller, workspace ws-default** → Fix: Next deploy MUST use version >= 3.6.9 (or 3.7.0 if after 3.6.9) and run >= 67
+- **The Autopilot has 3 agent types: Claude (primary, has filesystem), Copilot (backup, API-only), Codex (secondary). Each has own session-memory, agent-contract, and branch prefix.** → Fix: Claude: claude/*, Copilot: copilot/*, Codex: codex/*. Never cross-modify agent files.
+- **COMPLETE BOOT SEQUENCE for every session: 1) Read copilot-session-memory.json 2) Try read claude-live-status.json (may not exist) 3) Read claude-session-memory.json 4) Read trigger/source-change.json for current version/run 5) Show estado atual to user** → Fix: Execute ALL steps. If any file missing, log and continue. Never skip memory read.
 
 ### Error Patterns (quick fix reference)
 - `post_deploy_sync_push_403`: git push direto no main falha com branch protection. Usar branch copilot/post-deploy-sync-* + gh pr create + gh pr merge --squash --auto com RELEASE_TOKEN.
@@ -94,18 +102,21 @@ You already know everything below. Apply it immediately.
 - `draft_pr_cant_merge`: PR esta em draft. Marcar como ready via GraphQL markPullRequestReadyForReview.
 - `multiple_confirmations`: Estava usando create_or_update_file (1 confirm por arquivo). Fix: usar push_files (1 confirm para N arquivos)
 - `asking_user_manual_action`: Estava pedindo 'clique em Ready for Review'. Fix: usar update_pull_request(draft: false) via API
+- `sync_push_403`: copilot-post-deploy-sync.yml does git push to protected main. Fix: use RELEASE_TOKEN or branch+PR+merge flow.
+- `claude_live_status_missing`: contracts/claude-live-status.json referenced but does not exist. Fix: skip gracefully, only Claude creates this file.
+- `duplicate_pr`: PR already exists for same branch/fix. Fix: check open PRs before creating.
 
 ### Recent Sessions
-- [2026-03-27] Criado sistema automatico de sync pos-deploy isolado do Claude. Corrigido drift de versao (3.6.6->3.6.8). Criado copilot-isolation-rules.md.
 - [2026-03-28] Conhecimento do Coding Agent absorvido. Aprendido: Coding Agent roda em background via issue assignment, Custom Agents em .github/agents/, Skills em .github/skills/, Hooks em .github/hooks/ auto-aprovam tools, copilot-setup-steps.yml roda antes do agent.
 - [2026-03-27] Mega prompt absorvido. Gravados em memoria: boot sequence, deploy flow completo (10 fases), 20 regras de ouro, tooling (push_files obrigatorio), erros conhecidos, isolamento, progresso com checkboxes.
+- [2026-03-28] Full autonomy learning session. Diagnosed copilot-post-deploy-sync.yml failure (git push to protected main = 403). Confirmed claude-live-status.json does not exist (only Claude creates it). Verified all .github agents/skills/hooks structure. Created PR #252 to fix sync workflow. Absorbed complete operational knowledge for future sessions.
 
 ### Key Decisions
-- [2026-03-27] Deploy flow e identico para todos os agentes
-- [2026-03-27] Copilot tem workflow automatico separado do Claude — NUNCA modifica arquivos do Claude
-- [2026-03-27] push_files e a UNICA ferramenta para editar arquivos — create_or_update_file BANIDO
 - [2026-03-27] Mega prompt absorvido — contracts/copilot-mega-prompt.md e a referencia completa
 - [2026-03-27] Antes de perguntar ao usuario, tentar resolver sozinho lendo docs e memoria
+- [2026-03-28] copilot-post-deploy-sync.yml MUST use RELEASE_TOKEN with branch+PR+merge flow instead of git push to main
+- [2026-03-28] If claude-live-status.json does not exist, skip boot step 2 gracefully — do NOT fail or create the file
+- [2026-03-28] Session memory update is the MOST IMPORTANT action — always do it even if other tasks fail
 
 ### Full Memory File
 To see complete memory or update it: `contracts/copilot-session-memory.json`
@@ -626,4 +637,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-28T17:49:08Z | Run: 23690836701*
+*Last synced: 2026-03-28T18:23:10Z | Run: 23691455920*
