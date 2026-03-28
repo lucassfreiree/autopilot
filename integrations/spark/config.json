@@ -1,9 +1,9 @@
 {
   "sparkApp": {
     "name": "autopilot-dashboard",
-    "repo": "",
+    "repo": "lucassfreiree/spark-dashboard",
     "description": "Dashboard de operações do Autopilot — monitoramento de deploys, agentes e pipelines",
-    "status": "pending-creation",
+    "status": "active",
     "note": "Criar via Spark UI com o prompt em spark-dashboard-prompt.md, depois preencher repo aqui"
   },
   "sync": {
