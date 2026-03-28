@@ -3,19 +3,19 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.6.8",
+  "version": "3.6.9",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.6.7\"",
-      "replace": "\"version\": \"3.6.8\""
+      "search": "\"version\": \"3.6.8\"",
+      "replace": "\"version\": \"3.6.9\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.6.7\"",
-      "replace": "\"version\": \"3.6.8\""
+      "search": "\"version\": \"3.6.8\"",
+      "replace": "\"version\": \"3.6.9\""
     },
     {
       "action": "replace-file",
@@ -23,8 +23,8 @@
       "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "feat(controller): version bump v3.6.8 + swagger sync",
+  "commit_message": "chore: version bump v3.6.9",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 66
+  "run": 67
 }
