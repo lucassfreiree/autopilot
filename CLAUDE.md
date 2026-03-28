@@ -175,7 +175,7 @@ Esta política deve ser aplicada por TODOS os agentes (Claude, Codex, Copilot, C
 6. **Sucesso do apply-source-change NAO garante sucesso do CI corporativo** (vale para todas as empresas)
 7. **Em caso de duvida, o padrao e isolamento** — nunca assumir que contextos podem ser compartilhados
 8. Os SHAs sao DIFERENTES entre autopilot e cada repo corporativo
-9. **ws-socnew e ws-corp-1 SAO BLOQUEADOS** — pertencemm a terceiros, nao operar sem autorizacao explícita
+9. **ws-socnew e ws-corp-1 SAO BLOQUEADOS** — pertencem a terceiros, nao operar sem autorizacao explicita
 
 ### Getronics-Specific Rules
 1. Esteira de Build NPM (runner corporativo) — monitorar via `ci-diagnose.yml`
