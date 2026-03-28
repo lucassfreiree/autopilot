@@ -116,22 +116,14 @@ jobs:
             VERSION="${{ steps.trigger.outputs.version }}"
             RUN="${{ steps.trigger.outputs.run }}"
             BRANCH="copilot/post-deploy-sync-v${VERSION}-run${RUN}"
-            COMMIT_MSG="[copilot] chore: auto-sync post-deploy v${VERSION} run ${RUN} [skip ci]
-
-Automated by copilot-post-deploy-sync.yml
-- Updated references/controller-cap/values.yaml image tag
-- Updated contracts/copilot-session-memory.json
-- DOES NOT touch any Claude files"
+            COMMIT_MSG=$(printf '[copilot] chore: auto-sync post-deploy v%s run %s [skip ci]\n\nAutomated by copilot-post-deploy-sync.yml\n- Updated references/controller-cap/values.yaml image tag\n- Updated contracts/copilot-session-memory.json\n- DOES NOT touch any Claude files' "$VERSION" "$RUN")
             git checkout -b "$BRANCH"
             git commit -m "$COMMIT_MSG"
             git push origin "$BRANCH"
-            PR_URL=$(gh pr create \
-              --title "[copilot] chore: auto-sync post-deploy v${VERSION} run ${RUN}" \
-              --body "Automated post-deploy sync by copilot-post-deploy-sync.yml.
-- Component: ${COMPONENT}
-- Version: ${VERSION}
-- Run: ${RUN}" \
-              --base main \
+            PR_URL=$(gh pr create \ 
+              --title "[copilot] chore: auto-sync post-deploy v${VERSION} run ${RUN}" \ 
+              --body "Automated post-deploy sync by copilot-post-deploy-sync.yml.\n          - Component: ${COMPONENT}\n          - Version: ${VERSION}\n          - Run: ${RUN}" \ 
+              --base main \ 
               --head "$BRANCH")
             echo "PR created: $PR_URL"
             PR_NUMBER=$(gh pr view "$BRANCH" --json number --jq '.number')
