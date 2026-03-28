@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 247,
+  "branch": "claude/embed-memory",
+  "timestamp": "2026-03-28T13:21:55Z",
+  "runId": "23686113401",
+  "healthStatus": "degraded"
+}
