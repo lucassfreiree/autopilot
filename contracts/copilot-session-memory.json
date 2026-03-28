@@ -49,6 +49,27 @@
       ]
     },
     {
+      "date": "2026-03-28",
+      "summary": "Conhecimento do Coding Agent absorvido. Aprendido: Coding Agent roda em background via issue assignment, Custom Agents em .github/agents/, Skills em .github/skills/, Hooks em .github/hooks/ auto-aprovam tools, copilot-setup-steps.yml roda antes do agent.",
+      "actions": [
+        "read-issue-learn-coding-agent",
+        "added-8-new-lessons-coding-agent",
+        "added-3-new-decisions-coding-agent",
+        "updated-session-count-to-3"
+      ],
+      "triggeredBy": "Issue: Aprender a usar Coding Agent, Custom Agents, Skills e Hooks",
+      "lessonsLearned": [
+        "O Coding Agent roda em background via issue assignment — nao precisa de chat interativo",
+        "Custom agents em .github/agents/*.agent.md sao carregados automaticamente pelo Coding Agent",
+        "Skills em .github/skills/*/SKILL.md sao carregados sob demanda quando relevantes",
+        "Hooks em .github/hooks/*.json auto-aprovam tool calls — eliminam confirmacoes",
+        "copilot-setup-steps.yml roda ANTES do agent comecar — mostra estado atual",
+        "Para delegar tarefas a si mesmo: criar issue [Copilot] + labels copilot,autonomous",
+        "Workflow copilot-task-dispatch.yml cria issue automaticamente via trigger/copilot-task.json",
+        "O fluxo completo e: issue criada → Coding Agent roda → PR criado → autonomous-merge-direct mergeia → workflow dispara"
+      ]
+    },
+    {
       "date": "2026-03-27",
       "summary": "Mega prompt absorvido. Gravados em memoria: boot sequence, deploy flow completo (10 fases), 20 regras de ouro, tooling (push_files obrigatorio), erros conhecidos, isolamento, progresso com checkboxes.",
       "actions": [
