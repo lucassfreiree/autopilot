@@ -537,6 +537,13 @@ The ideal deploy flow uses only 3 tool calls:
 
 That's it. 3 confirmations total for a full deploy. NOT 10+.
 
+### CRITICAL: YOU DO THE MERGE — NEVER WAIT
+After create_pull_request, IMMEDIATELY call merge_pull_request.
+Do NOT wait for the sweeper. Do NOT wait for the user. Do NOT wait for anything.
+YOU create the PR AND merge it yourself in the SAME session.
+If merge fails (checks pending), wait 30 seconds and retry.
+The sweeper (cron 2 min) is only a BACKUP — you are the primary merger.
+
 ### NEVER USE create_or_update_file
 - ALWAYS use `push_files` instead — it handles multiple files in one call
 - `push_files` can also create the branch automatically if it doesn't exist
@@ -639,4 +646,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-28T19:10:31Z | Run: 23692305788*
+*Last synced: 2026-03-28T19:13:22Z | Run: 23692357819*
