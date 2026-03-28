@@ -1,53 +1,107 @@
 ---
 name: backup-claude
-description: Resume work from Claude Code if it crashes or becomes unavailable. Read Claude's live status and continue where it stopped.
+description: Protocolo de backup do Claude Code. Use quando Claude estiver indisponível, travado, ou quando precisar retomar uma tarefa que Claude deixou em andamento.
 ---
 
 # Backup Claude Skill
 
-## When to use
-- User says "Claude caiu", "Claude parou", "Claude not responding"
-- claude-live-status.json shows active session but lastUpdated > 30 min ago
-- User asks Copilot to take over from Claude
+## Quando usar
+- Claude não responde há muito tempo
+- Workflow travado com PR aberto do Claude
+- Usuario menciona "Claude caiu", "assumir", "backup"
+- `contracts/claude-live-status.json` mostra `status: idle` mas há PRs abertos
 
-## Resume Protocol
+## Boot como Backup
 
-### Step 1: Read Claude's state
+### 1. Ler status do Claude
 ```
 get_file_contents("contracts/claude-live-status.json")
+→ Extrair: currentSession.status, currentSession.task, currentSession.phase
+→ activeDeploy: version, component, triggerRun
+→ openPRs: lista de PRs abertos
+→ runningWorkflows: lista de workflows rodando
 ```
-Check: currentSession.status, activeDeploy, pendingWork, openPRs, runningWorkflows
 
-### Step 2: Read Claude's full context
+Se `claude-live-status.json` não existir → skip graceful, continuar com outros passos.
+
+### 2. Ler memória completa do Claude
 ```
 get_file_contents("contracts/claude-session-memory.json")
+→ Extrair: versioningRules, workflowMonitoring, knownFailures
+→ Identificar tarefa em andamento
 ```
-Extract: versions, deploy flow, error patterns, auth architecture
 
-### Step 3: Check open PRs from Claude
+**IMPORTANTE:** Ler apenas. NUNCA modificar esses arquivos.
+
+### 3. Verificar PRs abertos do Claude
 ```
 list_pull_requests(state: "open")
-→ Filter branches starting with "claude/"
-→ If found: check if ready to merge
+→ Filtrar: branches começando com "claude/"
+→ Verificar: draft status, checks status
 ```
 
-### Step 4: Resume by phase
-| Phase | Action |
-|-------|--------|
-| prepare | Check patches/ for incomplete files |
-| trigger | Check trigger/source-change.json |
-| commit | Push pending changes via push_files |
-| pr | Merge open PR (update_pull_request draft:false → merge) |
-| merge | Check if workflow fired |
-| monitor-workflow | Poll autopilot-state for audit commits |
-| monitor-ci | Check release-state for CI result |
-| fix | Apply pendingFixes and re-deploy |
-| promote | Verify promoted=true in release-state |
+### 4. Verificar workflows rodando
+```
+list_workflow_runs(status: "in_progress", per_page: 10)
+→ Identificar workflows do Claude ainda rodando
+→ Aguardar ou continuar dependendo do estado
+```
 
-### Step 5: Update live status
-After completing, update `contracts/claude-live-status.json` with:
-- lastUpdatedBy: "copilot"
-- currentSession.status: current state
-- lastCompletedAction: what you did
+### 5. Mapear próximos passos
 
-## Full protocol: contracts/copilot-backup-protocol.md
+Com base no que Claude deixou, identificar:
+
+| Estado encontrado | Ação |
+|---|---|
+| PR aberto do Claude, checks passando | Mergear via `merge_pull_request` |
+| PR aberto do Claude, checks falhando | Analisar falha + criar fix em branch `copilot/fix-...` |
+| apply-source-change rodando | Monitorar (skill: `monitor-workflow`) |
+| apply-source-change falhou | Diagnosticar + fix (skill: `fix-ci-failure`) |
+| Nenhum PR aberto, deploy incompleto | Retomar do ponto de parada |
+| Tudo parece OK | Verificar se memoria precisa ser atualizada |
+
+## Diferenças Copilot vs Claude
+
+| Operação | Claude | Copilot |
+|---|---|---|
+| Branch prefix | `claude/*` | `copilot/*` |
+| Commit prefix | `[claude]` | `[copilot]` |
+| Files do Claude | Modifica | **NUNCA modifica** |
+| claude-session-memory.json | Modifica | **NUNCA modifica** |
+
+## Protocolo de Retomada
+
+### Cenário A: Deploy em andamento
+1. Verificar `trigger/source-change.json` — run e versão
+2. Verificar `state/workspaces/ws-default/controller-release-state.json` (branch: autopilot-state)
+3. Se apply-source-change não trigou: incrementar `run` novamente e criar novo PR `copilot/retry-deploy-...`
+4. Monitorar até conclusão (skill: `monitor-workflow`)
+
+### Cenário B: PR do Claude travado em draft
+```
+update_pull_request(
+  pullNumber: PR_NUMBER,
+  draft: false
+)
+→ autonomous-merge-direct.yml vai mergear automaticamente
+```
+
+### Cenário C: CI falhou após deploy do Claude
+1. Usar skill: `fix-ci-failure` para diagnóstico
+2. Criar patch de correção em `patches/`
+3. Fazer novo deploy via `copilot/fix-ci-...`
+
+### Cenário D: Nada em andamento
+Verificar se há handoffs pendentes:
+```
+get_file_contents(
+  path: "state/workspaces/ws-default/handoffs/",
+  branch: "autopilot-state"
+)
+→ Executar handoff pendente se existir
+```
+
+## Referências
+- Protocolo completo: `contracts/copilot-backup-protocol.md`
+- Deploy guide: `contracts/copilot-deploy-guide.md`
+- Deploy docs (12 fases): `ops/docs/deploy-process/`
