@@ -209,3 +209,33 @@ jobs:
           else
             echo "::warning ::Failed to push state to $SPARK_REPO"
           fi
+
+      - name: Push dashboard HTML to Spark repo
+        if: steps.config.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          SPARK_REPO="${{ steps.config.outputs.repo }}"
+          HTML_FILE="references/spark-dashboard/public/index.html"
+
+          if [ ! -f "$HTML_FILE" ]; then
+            echo "::notice ::Dashboard HTML not found at $HTML_FILE — skipping"
+            exit 0
+          fi
+
+          HTML_B64=$(base64 < "$HTML_FILE" | tr -d '\n')
+          EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/public/index.html" --jq '.sha' 2>/dev/null || echo "")
+
+          PAYLOAD=$(jq -n \
+            --arg content "$HTML_B64" \
+            --arg sha "$EXISTING_SHA" \
+            --arg message "chore: sync dashboard UI [automated]" \
+            '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)')
+
+          if gh api "repos/$SPARK_REPO/contents/public/index.html" \
+            --method PUT \
+            --input - <<< "$PAYLOAD" 2>&1; then
+            echo "::notice ::Dashboard HTML synced to $SPARK_REPO"
+          else
+            echo "::warning ::Failed to push dashboard HTML to $SPARK_REPO (repo may not exist yet)"
+          fi
