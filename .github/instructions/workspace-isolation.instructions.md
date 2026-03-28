@@ -1,60 +1,44 @@
 ---
-applyTo: "state/**,trigger/**,contracts/**"
+applyTo: "**"
 ---
 
-# Workspace Isolation Instructions
+# Workspace Isolation Policy
 
-## REGRA ABSOLUTA: ISOLAMENTO TOTAL ENTRE WORKSPACES
+**This policy applies to ALL operations in this repository.**
 
-Cada workspace representa uma empresa diferente. Dados, credenciais e operações NUNCA se misturam.
+## Authorized Workspaces
 
-## Workspaces e Status
+| Workspace ID | Owner | Status | Token |
+|---|---|---|---|
+| `ws-default` | Getronics (account owner) | **ACTIVE** | `BBVINET_TOKEN` |
+| `ws-cit` | CIT (account owner) | **ACTIVE** | `CIT_TOKEN` |
+| `ws-socnew` | **THIRD PARTY** | **🔒 LOCKED — DO NOT OPERATE** | N/A |
+| `ws-corp-1` | **THIRD PARTY** | **🔒 LOCKED — DO NOT OPERATE** | N/A |
 
-| Workspace | Empresa | Token | Status |
-|-----------|---------|-------|--------|
-| `ws-default` | Getronics | `BBVINET_TOKEN` | ✅ ATIVO |
-| `ws-cit` | CIT | `CIT_TOKEN` | ✅ ATIVO |
-| `ws-socnew` | **TERCEIRO (irmão do proprietário)** | N/A | 🔴 **BLOQUEADO** |
-| `ws-corp-1` | **TERCEIRO** | N/A | 🔴 **BLOQUEADO** |
+## Rule: ws-socnew and ws-corp-1 are BLOCKED
 
-## `ws-socnew` e `ws-corp-1` — POLÍTICA DE BLOQUEIO
+`ws-socnew` and `ws-corp-1` belong to a third party (account owner's brother).
 
-**Esses workspaces pertencem a terceiros (irmão do proprietário da conta).**
+**Any operation on these workspaces — including reading state, triggering workflows, creating issues, or modifying configuration — requires EXPLICIT and DOCUMENTED authorization from `lucassfreiree` (the account owner).**
 
-- NUNCA executar operações nesses workspaces sem **autorização EXPLÍCITA e ESCRITA** do proprietário da conta `lucassfreiree`
-- NUNCA ler, escrever ou modificar `state/workspaces/ws-socnew/` ou `state/workspaces/ws-corp-1/`
-- NUNCA usar os repos corporativos de `ws-socnew` ou `ws-corp-1`
-- NUNCA executar workflows em nome desses workspaces
-- Se um handoff ou trigger referenciar `ws-socnew` ou `ws-corp-1`: PARAR e alertar o proprietário
+Even if these workspaces appear in lists, dropdowns, or configuration files, treat them as **LOCKED**.
 
-**Em caso de dúvida: não operar. Perguntar primeiro.**
+## Isolation Rules
 
-## Identificação de Workspace (OBRIGATÓRIO antes de qualquer ação)
+1. **NEVER assume a default workspace** — always identify from conversation context before acting
+2. **NEVER mix** data, commits, credentials, or state between workspaces
+3. **Each workspace** uses exclusively its own token (`credentials.tokenSecretName` in `workspace.json`)
+4. **Identify workspace** from context before any operation:
+   - Getronics / controller / agent / NestJS / bbvinet / esteira → `ws-default`
+   - CIT / DevOps / Terraform / K8s / cloud / monitoring / infra → `ws-cit`
+   - Ambiguous → **ASK the user before proceeding**
+5. **Never cross-contaminate**: do not use `BBVINET_TOKEN` for CIT operations or vice versa
+6. **Third-party workspaces**: if user asks to operate on `ws-socnew` or `ws-corp-1`, STOP and ask for explicit authorization before doing anything
 
-1. Checar `workspace_id` no trigger file ou contexto da conversa
-2. Pistas linguísticas:
-   - Getronics / controller / agent / NestJS / bbvinet / esteira / psc-sre → `ws-default`
-   - CIT / DevOps / Terraform / K8s / cloud / monitoring / IaC → `ws-cit`
-3. Ambíguo? → **PERGUNTAR ao usuário antes de prosseguir**
+## Verification Checklist (before any state-changing operation)
 
-## Regras por Workspace
-
-### ws-default (Getronics)
-- Token: `BBVINET_TOKEN`
-- Repos: `bbvinet/psc-sre-automacao-controller`, `bbvinet/psc-sre-automacao-agent`
-- CAP: `bbvinet/psc_releases_cap_sre-aut-controller`, `bbvinet/psc_releases_cap_sre-aut-agent`
-- Deploy: apenas via `apply-source-change.yml`
-- CI: Esteira de Build NPM (runner corporativo)
-
-### ws-cit (CIT)
-- Token: `CIT_TOKEN`
-- Stack: DevOps / K8s / Terraform / Cloud
-- Operações iniciais: sem pipeline de deploy — foco em organização e tooling
-- Scripts: `ops/scripts/`, runbooks: `ops/runbooks/`
-
-## Proibições Absolutas
-- NUNCA hardcodar `ws-default` como workspace "padrão" em código ou workflows
-- NUNCA compartilhar secrets entre workspaces
-- NUNCA fazer operação que afete dois workspaces simultaneamente
-- NUNCA assumir que o contexto atual é de um workspace sem verificar
-- NUNCA misturar logs, states ou audit trails de workspaces diferentes
+- [ ] Workspace identified from context (not assumed)
+- [ ] Target workspace is NOT `ws-socnew` or `ws-corp-1` (or explicit authorization confirmed)
+- [ ] Correct token will be used for this workspace
+- [ ] Session lock checked: `state/workspaces/<ws_id>/locks/session-lock.json`
+- [ ] No data from other workspaces will be mixed in this operation

@@ -2,79 +2,43 @@
 applyTo: "schemas/**"
 ---
 
-# Schemas Instructions
+# Schema Files Instructions
 
-## Convenções de Schema JSON
+Files in `schemas/` are JSON schemas that validate all Autopilot state objects.
 
-### Estrutura obrigatória
-Todo schema deve ter:
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "NomeDoSchema",
-  "description": "Descrição clara do propósito",
-  "type": "object",
-  "required": ["schemaVersion", ...],
-  "properties": {
-    "schemaVersion": {
-      "type": "integer",
-      "description": "Versão do schema para compatibilidade",
-      "minimum": 1
-    }
-  }
-}
-```
+## Schema List
+| File | Validates |
+|---|---|
+| `approval.schema.json` | Release approvals |
+| `audit.schema.json` | Audit trail entries |
+| `handoff.schema.json` | Agent handoff queue items |
+| `health-state.schema.json` | Health check results |
+| `improvement.schema.json` | Improvement records |
+| `improvement-report.schema.json` | Improvement scan reports |
+| `lock.schema.json` | Session and operation locks |
+| `metrics.schema.json` | Daily metrics snapshots |
+| `release-freeze.schema.json` | Release freeze state |
+| `release-state.schema.json` | Release state (agent/controller) |
+| `workspace.schema.json` | Workspace configuration |
 
-### Campo `schemaVersion`
-- OBRIGATÓRIO em todos os objetos de estado
-- Tipo: inteiro (não string)
-- Incrementar quando houver mudança breaking
-- Manter para trás compatível quando possível
+## Rules for Creating or Modifying Schemas
 
-## Schemas Existentes
+1. **`schemaVersion` is mandatory** — every schema must have and maintain a `schemaVersion` field
+2. **Backward compatibility** — existing required fields must not be removed or renamed without a version bump
+3. **Optional fields** — new fields should be optional (`not in required[]`) to preserve backward compatibility
+4. **`workspace_id`** — any schema that is workspace-scoped must include `workspace_id` as a required field
+5. **No hardcoded workspace IDs** — schemas validate structure, not specific values
 
-| Schema | Valida | SchemaVersion atual |
-|--------|--------|---------------------|
-| `release-state.schema.json` | Estado de release por workspace | 1 |
-| `health-state.schema.json` | Resultado de health check | 1 |
-| `lock.schema.json` | Locks de sessão e operação | 1 |
-| `audit.schema.json` | Entradas de audit trail | 1 |
-| `handoff.schema.json` | Items de handoff entre agentes | 1 |
-| `workspace.schema.json` | Configuração de workspace | 1 |
-| `metrics.schema.json` | Snapshots de métricas diários | 1 |
-| `improvement.schema.json` | Registros de melhorias | 1 |
-| `improvement-report.schema.json` | Relatórios de scans de melhoria | 1 |
-| `release-freeze.schema.json` | Estado de freeze de releases | 1 |
-| `approval.schema.json` | Aprovações de releases | 1 |
+## Workspace Isolation in Schemas
+- Schemas must NEVER reference specific workspace IDs (`ws-socnew`, `ws-corp-1`, etc.)
+- The `workspace_id` field must accept any string — isolation is enforced at the workflow level
 
-## Regras de Evolução de Schema
+## Testing Schema Changes
+- After modifying a schema, validate all existing state files against it
+- Use `ajv` or similar JSON Schema validator
+- If existing state files fail validation after a change, the change is breaking — reconsider
 
-### Mudanças compatíveis (não incrementar schemaVersion)
-- Adicionar campo opcional com `default`
-- Adicionar novo valor a enum (se backward compatible)
-- Relaxar validação de formato
-
-### Mudanças breaking (incrementar schemaVersion + migrar objetos existentes)
-- Remover campo obrigatório
-- Renomear campo
-- Mudar tipo de campo
-- Tornar campo obrigatório
-
-### Deprecação (preferir a remoção)
-```json
-"oldField": {
-  "type": "string",
-  "description": "DEPRECATED: use newField instead",
-  "deprecated": true
-}
-```
-
-## Validação
-- Validar instâncias de estado contra schema antes de escrever
-- Workflows devem usar `ajv` ou `jsonschema` para validação
-- Instâncias inválidas devem ser rejeitadas com erro claro
-
-## Localização de Estado
-- Branch `autopilot-state` é a fonte da verdade
-- Schemas ficam em `schemas/` no branch `main`
-- Instâncias de estado ficam em `state/workspaces/<ws_id>/`
+## Do Not
+- NEVER remove `schemaVersion` from any schema
+- NEVER make previously-optional fields required (breaking change)
+- NEVER reference `.intranet.` URLs or corporate-specific values in schemas

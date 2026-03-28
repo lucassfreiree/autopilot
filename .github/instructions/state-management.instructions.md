@@ -1,103 +1,88 @@
 ---
-applyTo: "state/**"
+applyTo: "**"
 ---
 
 # State Management Instructions
 
-## Fonte da Verdade
+Rules for reading and writing the `autopilot-state` branch (the source of truth for all runtime state).
 
-O branch `autopilot-state` contém o estado runtime do Autopilot. **Nunca editar diretamente** — workflows são responsáveis por todas as mutações.
+## Branch: `autopilot-state`
 
-## Estrutura de Estado por Workspace
+The `autopilot-state` branch is the single source of truth for:
+- Workspace configurations
+- Release states
+- Session locks
+- Audit trails
+- Health scores
+- Agent handoffs
+- Metrics
+
+**NEVER modify this branch directly via git push. All writes must go through workflows.**
+
+## State Structure
 
 ```
 state/workspaces/<workspace_id>/
-  workspace.json              # Config do workspace (repos, branches, paths)
+  workspace.json              # Workspace config
   controller-release-state.json
   agent-release-state.json
   health.json
-  release-freeze.json         # Criado sob demanda
+  release-freeze.json         # Created on demand
   locks/
-    session-lock.json          # Lock de sessão multi-agente
-    <operation>-lock.json      # Locks por operação (TTL)
+    session-lock.json         # Multi-agent session lock
+    <operation>-lock.json     # Per-operation locks
   audit/
-    <operation>-<timestamp>.json  # Entradas imutáveis de audit
-  handoffs/                   # Fila de handoffs entre agentes
-  improvements/               # Registros de melhoria
+    <operation>-<timestamp>.json  # IMMUTABLE — never delete
+  handoffs/
+  improvements/
   metrics/
-    YYYY-MM-DD.json            # Snapshots diários de métricas
+    YYYY-MM-DD.json
 ```
 
-## Workspaces Existentes
+## Workspace Access Rules
 
-| Workspace | Empresa | Operável? |
-|-----------|---------|-----------|
-| `ws-default` | Getronics | ✅ Sim |
-| `ws-cit` | CIT | ✅ Sim |
-| `ws-socnew` | Terceiro | 🔴 **NÃO — bloqueado** |
-| `ws-corp-1` | Terceiro | 🔴 **NÃO — bloqueado** |
+| Workspace | Access |
+|---|---|
+| `ws-default` | Read/write via `BBVINET_TOKEN` workflows |
+| `ws-cit` | Read/write via `CIT_TOKEN` workflows |
+| `ws-socnew` | **READ ONLY for emergency diagnosis — NEVER write without authorization** |
+| `ws-corp-1` | **READ ONLY for emergency diagnosis — NEVER write without authorization** |
 
-**NUNCA ler, escrever ou modificar estado de `ws-socnew` ou `ws-corp-1` sem autorização explícita.**
+## Session Lock Protocol (MANDATORY before any write)
 
-## Locks (CRÍTICO)
+1. Read `state/workspaces/<ws_id>/locks/session-lock.json`
+2. If `agentId != "none"` AND `expiresAt > now` → **STOP — create handoff instead**
+3. Acquire lock via `session-guard.yml` before proceeding
+4. Release lock after operation completes OR fails (always release)
 
-### Antes de qualquer operação de estado:
+## Audit Trail Rules
+
+- Every state mutation MUST produce an audit entry
+- Audit entries are IMMUTABLE — never delete them
+- Format: `state/workspaces/<ws_id>/audit/<operation>-<timestamp>.json`
+- Validate against `schemas/audit.schema.json`
+
+## Reading State (GitHub API)
+
 ```bash
-# Verificar lock
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/locks/session-lock.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d | jq '{agentId: .agentId, expiresAt: .expiresAt}'
-
-# Se agentId != "none" E expiresAt > now: PARAR → criar handoff
-```
-
-### Operações que requerem lock:
-- Push para repos corporativos
-- Modificar branch `autopilot-state`
-- Promover CAP (values.yaml)
-- Seed de workspace
-- Backup/restore de estado
-- Freeze/unfreeze de releases
-
-### Operações sem lock:
-- Ler workspace config
-- Health check
-- Ler audit/metrics
-
-## Audit Trail
-
-Toda mutação de estado deve ter audit entry:
-```json
-{
-  "schemaVersion": 1,
-  "timestamp": "2026-03-28T12:00:00Z",
-  "agentId": "claude-code",
-  "operation": "deploy",
-  "workspace_id": "ws-default",
-  "component": "controller",
-  "version": "3.6.9",
-  "result": "success",
-  "details": {}
-}
-```
-
-## Leitura de Estado
-```bash
-# Config do workspace
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/workspace.json?ref=autopilot-state" \
+# Read any state file
+gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/<FILE>?ref=autopilot-state" \
   --jq '.content' | base64 -d
 
-# Estado de release
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/controller-release-state.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d
-
-# Health
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/health.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d
+# Always validate jq output
+jq -r '.field // "default"' 2>/dev/null || echo "fallback"
 ```
 
-## Regras Críticas
-- NUNCA push direto para `autopilot-state` — apenas via workflows
-- `workspace.json` deve ser atualizado tanto em `main` quanto em `autopilot-state`
-- `schemaVersion` obrigatório em todos os objetos de estado
-- Logs de CI ficam em `state/workspaces/<ws_id>/ci-logs-<component>-<job_id>.txt`
-- `jq` sempre com fallback: `jq -r '.field // "default"' 2>/dev/null || echo ""`
+## Error Handling in State Operations
+
+- Always validate jq output: `jq '.field // ""' 2>/dev/null || echo ""`
+- Use `set -euo pipefail` in all bash steps
+- Never silently swallow errors — log before continuing
+- Use base64 encoding when passing content between workflow jobs
+
+## Backup Before Destructive Operations
+
+Always trigger `backup-state.yml` before:
+- Restoring state (`restore-state.yml`)
+- Bootstrapping a workspace
+- Any operation that could delete or overwrite state files

@@ -1,81 +1,79 @@
 ---
 name: workspace-isolation-check
-description: Verifica o isolamento correto entre workspaces antes de executar qualquer operação. Use SEMPRE antes de operações que envolvam state, deploy ou repos corporativos. Crítico para evitar operações não autorizadas em ws-socnew e ws-corp-1.
+description: Verify workspace isolation before any operation. Use BEFORE any state-changing operation to ensure you are not operating on a third-party workspace.
 ---
 
 # Workspace Isolation Check Skill
 
-## Quando usar
-- SEMPRE antes de qualquer operação que envolva:
-  - Deploy para repos corporativos
-  - Leitura/escrita em `state/workspaces/`
-  - Trigger de workflows com `workspace_id`
-  - Operações em repos `bbvinet/*`
-- Quando o contexto da conversa não deixar claro qual workspace
+## When to use
+- BEFORE any state-changing operation (deploy, trigger, seed, backup, etc.)
+- When the user mentions a workspace you are not sure about
+- When trigger files reference an unknown `workspace_id`
+- MANDATORY before any operation that involves `ws-socnew` or `ws-corp-1`
 
-## Passos do Check
+## Step 1: Identify the workspace from context
 
-### 1. Identificar workspace pelo contexto
+| Context clue | Workspace |
+|---|---|
+| Getronics / controller / agent / NestJS / bbvinet / esteira / psc-sre | `ws-default` |
+| CIT / DevOps / Terraform / K8s / cloud / monitoring / IaC / infra | `ws-cit` |
+| SocNew / socnew | `ws-socnew` → **STOP — THIRD PARTY** |
+| Corp-1 / corp1 | `ws-corp-1` → **STOP — THIRD PARTY** |
+| Ambiguous | **ASK the user before proceeding** |
+
+## Step 2: Check the LOCKED list
+
 ```
-Getronics / controller / agent / NestJS / bbvinet / esteira / psc-sre → ws-default
-CIT / DevOps / Terraform / K8s / cloud / monitoring / IaC           → ws-cit
-```
+THIRD-PARTY WORKSPACES (LOCKED):
+  ws-socnew  — belongs to a third party (account owner's brother)
+  ws-corp-1  — belongs to a third party
 
-### 2. Verificar se workspace é operável
-```
-ws-default → ✅ ATIVO (BBVINET_TOKEN)
-ws-cit     → ✅ ATIVO (CIT_TOKEN)
-ws-socnew  → 🔴 BLOQUEADO — PARAR IMEDIATAMENTE
-ws-corp-1  → 🔴 BLOQUEADO — PARAR IMEDIATAMENTE
-```
-
-**Se workspace for `ws-socnew` ou `ws-corp-1`:**
-> ⛔ OPERAÇÃO BLOQUEADA
-> Este workspace pertence a um terceiro (irmão do proprietário da conta).
-> Não é possível executar operações neste workspace sem autorização explícita e escrita do proprietário da conta `lucassfreiree`.
-> Por favor, confirme explicitamente se deseja prosseguir com este workspace.
-
-### 3. Verificar lock (para operações de estado)
-```bash
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/locks/session-lock.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d | jq -r 'if .agentId != "none" then "LOCKED by \(.agentId) until \(.expiresAt)" else "UNLOCKED" end' 2>/dev/null || echo "No lock"
+IF target workspace is ws-socnew or ws-corp-1:
+  → STOP immediately
+  → Tell the user: "This workspace belongs to a third party. I need explicit authorization from lucassfreiree before operating on it."
+  → Wait for explicit written authorization before proceeding
 ```
 
-### 4. Verificar token disponível
+## Step 3: Verify session lock
+
 ```
-ws-default → secrets.BBVINET_TOKEN deve estar configurado
-ws-cit     → secrets.CIT_TOKEN deve estar configurado
-Ambos     → secrets.RELEASE_TOKEN para operações de release
+get_file_contents(
+  path: "state/workspaces/<ws_id>/locks/session-lock.json",
+  ref: "autopilot-state"
+)
 ```
 
-### 5. Confirmar contexto correto
-```bash
-# Ler config do workspace para confirmar repos e paths
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/workspace.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d | jq '{company: .company, workspace_id: .workspace_id, status: .status}'
-```
+If `agentId != "none"` AND `expiresAt > now`:
+→ Another agent is active. Create a handoff instead of forcing.
 
-## Output Esperado
+## Step 4: Confirm token
 
-### Check passou ✅
-```
-Workspace: ws-default (Getronics)
-Status: ATIVO
-Lock: UNLOCKED
-Token: BBVINET_TOKEN (disponível)
-→ Seguro para prosseguir
-```
+| Workspace | Expected token |
+|---|---|
+| `ws-default` | `BBVINET_TOKEN` |
+| `ws-cit` | `CIT_TOKEN` |
 
-### Check falhou — workspace bloqueado 🔴
-```
-Workspace: ws-socnew
-Status: BLOQUEADO (pertence a terceiro)
-→ OPERAÇÃO ABORTADA — solicitar autorização explícita ao proprietário
-```
+Verify the workflow or trigger uses the correct token for the identified workspace.
 
-### Check falhou — lock ativo ⚠️
+## Step 5: Proceed or stop
+
+| Result | Action |
+|---|---|
+| Workspace is `ws-default` or `ws-cit`, lock free, correct token | ✅ Proceed |
+| Workspace is `ws-socnew` or `ws-corp-1` | 🛑 STOP — request authorization |
+| Workspace ambiguous | ❓ ASK user |
+| Lock held by another agent | ⏳ Wait or create handoff |
+| Wrong token | 🛑 STOP — do not cross-contaminate |
+
+## Isolation Confirmation Message (show to user before proceeding)
+
 ```
-Workspace: ws-default
-Lock: LOCKED by claude-code until 2026-03-28T20:00:00Z
-→ Aguardar expiração ou criar handoff para o agente ativo
+## Workspace Isolation Check ✅
+- Workspace: ws-default (Getronics)
+- Owner: Account owner (authorized)
+- Token: BBVINET_TOKEN
+- Lock: Free
+- Third party: No
+
+Ready to proceed.
 ```

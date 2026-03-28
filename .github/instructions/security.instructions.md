@@ -1,105 +1,64 @@
 ---
-applyTo: "**/*.ts,**/*.js,patches/**,contracts/**"
+applyTo: "**"
 ---
 
 # Security Instructions
 
-## Princípios Gerais
-- Segurança por padrão (secure by default)
-- Menor privilégio (principle of least privilege)
-- Nunca expor secrets em logs, outputs ou commits
-- Validar inputs antes de usar em qualquer operação
+Security rules that apply to ALL files and operations in this repository.
 
-## Secrets e Credenciais
+## Secrets and Credentials — NEVER
 
-### Regras absolutas
-- NUNCA hardcodar secrets, tokens ou senhas em código
-- NUNCA logar valores de secrets (mesmo mascarados parcialmente)
-- NUNCA commitar secrets (nem em histórico, nem em comentários)
-- Tokens por workspace — nunca compartilhar entre ws-default, ws-cit e workspaces de terceiros
+- NEVER commit tokens, API keys, passwords, certificates, or private keys
+- NEVER include secrets in: commit messages, PR descriptions, issue bodies, workflow logs, CLAUDE.md, AGENTS.md, HANDOFF.md, or any tracked document
+- NEVER hardcode secrets in workflow files — always use `${{ secrets.SECRET_NAME }}`
+- NEVER log secret values even with `echo` or `::debug::` — GitHub masks known secrets but new ones may not be masked
 
-### Referência de secrets
-```typescript
-// CORRETO — referenciar por nome
-const token = process.env.BBVINET_TOKEN;
+## Corporate Data — NEVER in This Repo
 
-// ERRADO — hardcoded
-const token = "ghp_xxxxx";
-```
+- NEVER store corporate source code in `lucassfreiree/autopilot`
+- NEVER store `.intranet.` URLs in tracked files (enforced by `compliance/personal-product/product-compliance.policy.json`)
+- NEVER store internal IP addresses, hostnames, or network topology
+- Patches in `patches/` are templates only — they must not contain real corporate data
 
-## Autenticação JWT
+## Token Isolation
 
-### Regras de Claims
-```typescript
-// CORRETO — scope singular
-const scope = payload.scope;
+Each workspace has exactly one authorized token:
+| Workspace | Token Secret | Third Party? |
+|---|---|---|
+| `ws-default` | `BBVINET_TOKEN` | No |
+| `ws-cit` | `CIT_TOKEN` | No |
+| `ws-socnew` | — | **YES — LOCKED** |
+| `ws-corp-1` | — | **YES — LOCKED** |
 
-// ERRADO — scopes plural
-const scopes = payload.scopes;  // NÃO existe no sistema
-```
+- NEVER use `BBVINET_TOKEN` for CIT operations
+- NEVER use `CIT_TOKEN` for Getronics operations
+- NEVER create tokens or credentials for `ws-socnew` or `ws-corp-1`
 
-### Validação de input
-```typescript
-// CORRETO — validar input antes de usar
-const id = parseSafeIdentifier(req.params.id);
-const result = await fetch(`${baseUrl}/resource/${id}`);
+## Code Security Patterns
 
-// ERRADO — validateTrustedUrl dentro de helpers de fetch
-async function postJson(url: string, data: unknown) {
-  validateTrustedUrl(url);  // NÃO FAZER — quebra testes mock
-  return fetch(url, { method: 'POST', body: JSON.stringify(data) });
-}
-```
+| Pattern | Rule |
+|---|---|
+| Input validation | Use `parseSafeIdentifier()` on all inputs — NEVER inside `fetch`/`postJson` |
+| Error output | Use `sanitizeForOutput()` on error messages to prevent XSS |
+| JWT claims | Read `payload.scope` (singular) — NEVER `payload.scopes` (plural) |
+| URL validation | `validateTrustedUrl()` at the input layer only, not inside HTTP helpers |
+| Swagger content | ASCII only — accented characters cause encoding issues and data exposure risk |
+| Auth errors | NEVER silence with `|| true` — log first, then decide |
 
-## Sanitização de Output
-```typescript
-// SEMPRE sanitizar mensagens de erro expostas externamente
-res.status(400).json({ error: sanitizeForOutput(err.message) });
+## Compliance Scanner
 
-// NUNCA expor stack traces ou detalhes internos
-res.status(500).json({ error: err.stack });  // ERRADO
-```
+`compliance/personal-product/product-compliance.policy.json` scans for:
+- `.intranet.` domain patterns
+- Corporate identifier leakage
 
-## Workflows do GitHub Actions
+Run it before committing any documentation changes.
 
-### Permissões mínimas
-```yaml
-permissions:
-  contents: read  # mínimo necessário
-  # adicionar apenas o que for estritamente necessário
-```
+## Minimum Permissions Principle
 
-### Secrets em workflows
-```yaml
-# CORRETO
-env:
-  TOKEN: ${{ secrets.BBVINET_TOKEN }}
+- Workflow `permissions:` must specify only what is needed
+- `permissions: write-all` requires a justification comment
+- `GITHUB_TOKEN` permissions should be scoped: `contents: read`, `pull-requests: write`, etc.
 
-# ERRADO — nunca expor valor
-run: echo "Token is ${{ secrets.BBVINET_TOKEN }}"
-```
+## Reporting Security Issues
 
-### Actions de terceiros
-- Sempre usar hash SHA para actions externas, não tags
-- Auditar actions antes de usar
-
-## Isolamento de Workspaces (Segurança)
-- `ws-socnew` e `ws-corp-1` são de terceiros — NUNCA operar sem autorização explícita
-- Cada workspace usa exclusivamente seu próprio token
-- Dados corporativos NUNCA transitam entre workspaces
-- Ver `workspace-isolation.instructions.md` para detalhes completos
-
-## Swagger / OpenAPI
-```json
-// CORRETO — ASCII apenas
-"description": "Callback de cronjob recebido pelo agente"
-
-// ERRADO — acentos geram caracteres garbled
-"description": "Callback de cronjob recebido pelo agente"
-```
-
-## IaC e Kubernetes
-- Secrets do K8s nunca embutidos em manifests — usar `secretKeyRef`
-- RBAC com permissões mínimas por serviceAccount
-- Imagens em produção: digest fixo (`image@sha256:...`), não `:latest`
-- Network policies: default deny, allowlist explícito
+Use the `.github/ISSUE_TEMPLATE/workspace-isolation-violation.md` template for isolation violations.

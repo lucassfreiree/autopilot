@@ -1,65 +1,77 @@
 # Pull Request
 
-## Tipo de mudança
-<!-- Marque com [x] o que se aplica -->
-- [ ] 🚀 Deploy / Release (novo deploy para repos corporativos)
-- [ ] 🔧 Fix de CI/CD (correção de pipeline ou workflow)
-- [ ] 📝 Documentação (CLAUDE.md, AGENTS.md, runbooks, etc.)
-- [ ] 🏗️ Infraestrutura (schemas, contratos, workflows core)
-- [ ] 🔒 Segurança (correção de vulnerabilidade ou melhoria de segurança)
-- [ ] ✨ Feature (nova funcionalidade no control plane)
-- [ ] 🧹 Chore (limpeza, refatoração, atualização de dependências)
+## Summary
 
-## Workspace afetado
-<!-- Marque com [x] o workspace relevante -->
-- [ ] `ws-default` (Getronics)
-- [ ] `ws-cit` (CIT)
-- [ ] Todos os workspaces
-- [ ] Nenhum (mudança somente no control plane)
+<!-- Briefly describe what this PR does and why -->
 
-> ⚠️ **ws-socnew** e **ws-corp-1** são workspaces de terceiros e NÃO devem ser afetados por este PR sem autorização explícita do proprietário.
+---
 
-## Descrição
-<!-- O que esta mudança faz? Por que é necessária? -->
+## Type of Change
 
-## Mudanças realizadas
-<!-- Liste os arquivos principais modificados e o que foi feito em cada um -->
-- 
-- 
+- [ ] 🚀 Deploy — new version of controller or agent
+- [ ] 🔧 Patch — code change to corporate repo (`patches/`)
+- [ ] 📋 Trigger — workflow trigger file update (`trigger/`)
+- [ ] 🏗️ Infrastructure — workflow, schema, or control plane change
+- [ ] 📚 Documentation — CLAUDE.md, AGENTS.md, HANDOFF.md, ops/docs
+- [ ] 🔒 Security — security fix or compliance update
+- [ ] 🤖 Agent — new or updated agent, skill, or instruction
+- [ ] ♻️ Memory — session memory update
 
-## Validações executadas
-<!-- Marque com [x] o que foi validado -->
-- [ ] Lint: nenhum erro de ESLint
-- [ ] TypeScript: `tsc --noEmit` sem erros
-- [ ] Testes: `jest --ci` passou
-- [ ] Swagger: apenas ASCII (sem acentos ou caracteres especiais)
-- [ ] Trigger `run` incrementado (se aplicável)
-- [ ] Versão correta em 5 arquivos (se deploy)
-- [ ] Workspace isolamento verificado (workspace-isolation-check skill)
-- [ ] Sem secrets hardcodados
-- [ ] `ws-socnew` e `ws-corp-1` não foram afetados
+---
 
-## Checklist de segurança
-- [ ] JWT claims usam `scope` (singular), não `scopes`
-- [ ] `validateTrustedUrl` não está dentro de helpers de fetch/postJson
-- [ ] `parseSafeIdentifier()` usado para inputs em rotas
-- [ ] Nenhum secret exposto em logs ou outputs
-- [ ] Permissões mínimas nos workflows modificados
+## Workspace Isolation Check
 
-## Deploy (preencher se for deploy)
-| Campo | Valor |
-|-------|-------|
-| Componente | controller / agent |
-| Versão anterior | |
-| Nova versão | |
-| Trigger run | |
-| Promote CAP | sim / não |
+**Target workspace:** `ws-___`
 
-## Riscos e rollback
-<!-- Qual o risco desta mudança? Como reverter se necessário? -->
-**Risco:** 
-**Rollback:** 
+- [ ] Workspace identified from context (NOT assumed)
+- [ ] Target workspace is **NOT** `ws-socnew` or `ws-corp-1` — OR explicit authorization from `lucassfreiree` is documented below
+- [ ] Correct token will be used for this workspace
+- [ ] No data from other workspaces mixed in this PR
 
-## Referências
-<!-- Links para issues, PRs relacionados, docs, runbooks -->
-- 
+> **Third-party workspace authorization** (if applicable):
+> Workspace: ___ | Authorization: ___ | Date: ___
+
+---
+
+## Security Checklist
+
+- [ ] No secrets, tokens, or credentials in committed files
+- [ ] No `.intranet.` URLs in tracked files
+- [ ] No corporate source code stored in this repo
+- [ ] Workflow permissions are scoped to minimum needed (not `write-all`)
+- [ ] Input validation uses `parseSafeIdentifier()` (NOT inside `fetch`/`postJson`)
+- [ ] Error messages use `sanitizeForOutput()`
+
+---
+
+## Deploy Checklist (if applicable)
+
+- [ ] `trigger/source-change.json` `run` field incremented
+- [ ] Version bumped in all 5 required files (see `version-bump` skill)
+- [ ] `validate-patches.yml` will run (or has been run) for patch changes
+- [ ] `references/controller-cap/values.yaml` updated with new image tag
+- [ ] `contracts/copilot-session-memory.json` updated with new version
+
+---
+
+## Documentation Checklist (if applicable)
+
+- [ ] New workflows added to CLAUDE.md workflow table
+- [ ] New trigger files added to CLAUDE.md trigger table
+- [ ] New agents/skills/instructions documented
+- [ ] Session memory updated (or will be updated at session end)
+- [ ] `ws-socnew` and `ws-corp-1` documented as BLOCKED where relevant
+
+---
+
+## Testing
+
+- [ ] `validate-patches.yml` passed (for patch changes)
+- [ ] Existing tests not broken
+- [ ] For infrastructure changes: tested in non-production environment first
+
+---
+
+## Notes for Reviewers
+
+<!-- Any additional context, known limitations, or follow-up items -->

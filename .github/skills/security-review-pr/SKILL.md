@@ -1,109 +1,85 @@
 ---
 name: security-review-pr
-description: Revisão de segurança de pull requests. Use antes de mergear PRs que envolvam código de aplicação, workflows, secrets, IaC ou configurações de workspace.
+description: Review a pull request for security issues — secret exposure, excessive permissions, corporate data leakage, and workspace isolation violations.
 ---
 
 # Security Review PR Skill
 
-## Quando usar
-- Antes de mergear PRs com código TypeScript/JavaScript
-- PRs que alteram workflows do GitHub Actions
-- PRs que alteram configurações de secrets ou permissões
-- PRs com patches para repos corporativos (`patches/`)
-- PRs que alteram schemas ou contratos de agentes
+## When to use
+- Any PR that touches `.github/workflows/`, `patches/`, `contracts/`, `schemas/`
+- Any PR from an external contributor
+- When a compliance scanner reports a violation
+- Before merging any PR that involves token usage or workspace operations
 
-## Checklist de Revisão
+## Review Checklist
 
-### 🔴 Crítico (bloquear PR se encontrado)
+### 1. Secret Exposure
+- [ ] No tokens, API keys, passwords in committed files
+- [ ] No secrets in commit messages or PR descriptions
+- [ ] Workflow steps do not `echo` secret values
+- [ ] `${{ secrets.NAME }}` pattern used — no hardcoded values
 
-#### Secrets e Credenciais
-- [ ] Nenhum secret, token, senha ou chave hardcodada
-- [ ] Nenhum valor de secret em logs ou outputs de workflow
-- [ ] Nenhum secret em variáveis de ambiente desnecessárias
+### 2. Corporate Data
+- [ ] No `.intranet.` URLs in any tracked file
+- [ ] No internal hostnames, IPs, or network topology
+- [ ] `patches/` files are templates only — no real corporate data
+- [ ] Compliance: `compliance/personal-product/product-compliance.policy.json` scan passed
 
-#### Isolamento de Workspace
-- [ ] `ws-socnew` e `ws-corp-1` não são operados sem autorização
-- [ ] Workspace_id é sempre explícito (nunca hardcoded como `ws-default`)
-- [ ] Tokens corretos por workspace (`BBVINET_TOKEN` → ws-default, `CIT_TOKEN` → ws-cit)
+### 3. Workspace Isolation
+- [ ] No hardcoded `ws-socnew` or `ws-corp-1` in workflows, triggers, or scripts
+- [ ] Each workspace uses its own token — no cross-contamination
+- [ ] `workspace_id` read from inputs, never hardcoded
+- [ ] Third-party workspace state not exposed in logs or outputs
 
-#### Autenticação
-- [ ] JWT claims: `payload.scope` (singular), nunca `payload.scopes`
-- [ ] `validateTrustedUrl` não está dentro de helpers de fetch/postJson
-- [ ] `parseSafeIdentifier()` usado para inputs em rotas
+### 4. Workflow Permissions
+- [ ] No `permissions: write-all` without justification comment
+- [ ] `GITHUB_TOKEN` permissions scoped to minimum needed
+- [ ] `contents: write` only when files are committed
 
-### 🟡 Alto (corrigir antes de mergear)
+### 5. Code Security Patterns
+- [ ] `parseSafeIdentifier()` on all inputs — NOT inside `fetch`/`postJson`
+- [ ] `sanitizeForOutput()` on error messages
+- [ ] `payload.scope` (singular) — never `payload.scopes`
+- [ ] No `|| true` silencing auth errors
+- [ ] No nested ternaries (ESLint `no-nested-ternary`)
 
-#### Código
-- [ ] Sem `eval()` ou execução dinâmica de código
-- [ ] Sem `console.log` de dados sensíveis
-- [ ] Inputs validados antes de uso em queries ou comandos shell
-- [ ] `sanitizeForOutput()` em mensagens de erro expostas
+### 6. Error Handling
+- [ ] `set -euo pipefail` in all bash steps
+- [ ] `echo "::error::"` before any exit
+- [ ] No `|| true` without prior logging
 
-#### Workflows
-- [ ] Permissões mínimas no GITHUB_TOKEN
-- [ ] Actions externas pinadas por SHA
-- [ ] `pull_request_target` sem exposição de secrets para forks
-- [ ] `set -euo pipefail` em todos os scripts bash
+## How to Review
 
-#### Swagger/OpenAPI
-- [ ] Apenas caracteres ASCII (sem acentos, ç, ã, etc.)
-
-### 🟢 Médio (registrar como finding, pode mergear)
-
-#### IaC
-- [ ] Secrets K8s referenciados, não embutidos
-- [ ] RBAC com permissões mínimas
-- [ ] Imagens com tag específica (não `:latest`)
-
-#### Qualidade de Segurança
-- [ ] Sem dependências novas com vulnerabilidades conhecidas
-- [ ] Error messages não expõem stack trace em produção
-- [ ] Logs suficientes para auditoria sem expor dados sensíveis
-
-## Como executar
-
-### Revisão manual
-1. Ler diff do PR: `gh pr diff <number>`
-2. Aplicar checklist acima
-3. Registrar findings por severidade
-4. Bloquear se encontrar itens críticos
-
-### Revisão de workflow
-```bash
-# Verificar permissões de um workflow
-grep -A5 "permissions:" .github/workflows/<file>.yml
-
-# Verificar uso de secrets
-grep -n "secrets\." .github/workflows/<file>.yml
-
-# Verificar actions externas (devem ter @sha256: ou @v fixo)
-grep -n "uses:" .github/workflows/<file>.yml | grep -v "@sha"
+### Step 1: Get PR files
+```
+get_pull_request_files(pr_number: N)
+→ Look for changes to: .github/workflows/, patches/, contracts/, schemas/, trigger/
 ```
 
-### Revisão de patch TypeScript
-```bash
-# Verificar padrões problemáticos
-grep -n "validateTrustedUrl" patches/*.ts
-grep -n "payload\.scopes" patches/*.ts
-grep -n "console\.log" patches/*.ts
-grep -n "[àáâãäçèéêëìíîïòóôõöùúûü]" patches/*.json  # acentos no swagger
+### Step 2: Search for anti-patterns
+```
+search_code("intranet", repo: "lucassfreiree/autopilot", branch: <pr-branch>)
+search_code("ws-socnew", repo: "lucassfreiree/autopilot", branch: <pr-branch>)
+search_code("ws-corp-1", repo: "lucassfreiree/autopilot", branch: <pr-branch>)
+search_code("permissions: write-all", repo: "lucassfreiree/autopilot", branch: <pr-branch>)
 ```
 
-## Output de Revisão
-```markdown
-## Security Review: PR #<number>
+### Step 3: Report findings
 
-**Resultado:** ✅ Aprovado | ⚠️ Aprovado com ressalvas | 🔴 Bloqueado
-
-### Findings Críticos
-(lista de itens críticos encontrados)
-
-### Findings Altos
-(lista de itens altos encontrados)
-
-### Findings Médios
-(lista de itens médios — informativos)
-
-### Recomendação
-MERGEAR | CORRIGIR ANTES DE MERGEAR | BLOQUEAR
+Format findings as:
 ```
+## Security Review: PR #<N>
+
+### ✅ Passed
+- No secrets detected
+- Workspace isolation respected
+
+### ⚠️ Warnings
+- Line 42 in workflow.yml: `|| true` without logging
+
+### 🛑 Blockers
+- <specific issue with file and line>
+```
+
+## CRITICAL: Third-Party Workspace Rule
+If the PR adds operations on `ws-socnew` or `ws-corp-1` without documented authorization from `lucassfreiree`, it is an automatic **BLOCKER**.

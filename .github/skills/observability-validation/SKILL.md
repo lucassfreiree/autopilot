@@ -1,108 +1,115 @@
 ---
 name: observability-validation
-description: Validação de observabilidade para deploys e mudanças de infraestrutura. Use após deploys para confirmar que o sistema está saudável e monitorável.
+description: Validate Autopilot health, workflow observability, and pipeline status. Use to check if the control plane and corporate CI are healthy.
 ---
 
 # Observability Validation Skill
 
-## Quando usar
-- Após deploy via `apply-source-change.yml`
-- Após promoção de CAP (values.yaml)
-- Após mudanças de configuração em infraestrutura
-- Durante investigação de incidentes (coletar sinais)
-- Ao configurar novo workspace ou ambiente
+## When to use
+- Periodic health check of the control plane
+- After a deploy to verify success
+- When health score drops or alerts fire
+- Before starting a new operation (verify system is healthy)
 
-## Fontes de Observabilidade
+## Step 1: Read Health State
 
-### Autopilot (control plane)
-```bash
-# Health do workspace
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/health.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d
-
-# Estado de release
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/controller-release-state.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d
-
-# Últimas entradas de audit (últimas 5 operações)
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/audit?ref=autopilot-state" \
-  --jq '.[].name' | sort -r | head -5
-
-# Resultado do CI monitor
-gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/ci-monitor-controller.json?ref=autopilot-state" \
-  --jq '.content' | base64 -d | jq '{ciOutcome: .ciOutcome, lastCheck: .lastCheck}'
+```
+get_file_contents(
+  path: "state/workspaces/<ws_id>/health.json",
+  ref: "autopilot-state"
+)
+→ healthScore (target > 80), issues[], lastChecked
 ```
 
-### CI/CD (Getronics — ws-default)
+Health score thresholds:
+| Score | Status | Action |
+|---|---|---|
+| > 80 | ✅ Healthy | No action |
+| 70–80 | ⚠️ Degraded | Monitor, investigate |
+| 50–70 | 🟡 P3 Incident | Assign to sre-devops |
+| < 50 | 🔴 P2 Incident | Assign to incident-investigator |
+
+## Step 2: Check Recent Workflow Runs
+
 ```
-state/workspaces/ws-default/ci-logs-controller-<job_id>.txt  ← logs do CI do controller
-state/workspaces/ws-default/ci-logs-agent-<job_id>.txt       ← logs do CI do agent
-state/workspaces/ws-default/ci-status-controller.json        ← status atual
-```
-
-### Workflows do GitHub Actions
-```bash
-# Últimas execuções de apply-source-change
-gh run list --workflow=apply-source-change.yml --limit=5
-
-# Últimas execuções de ci-monitor-loop
-gh run list --workflow=ci-monitor-loop.yml --limit=5
-
-# Status de um run específico
-gh run view <run_id>
-```
-
-## Checklist Pós-Deploy
-
-### Imediatamente após merge do PR de deploy
-- [ ] `apply-source-change.yml` disparou (aguardar ~30s)
-- [ ] Workflow aparece como `in_progress` ou `completed`
-- [ ] Se `completed failure`: iniciar diagnóstico imediato
-
-### Após `apply-source-change.yml` completar com sucesso
-- [ ] Commit foi feito no repo corporativo (verificar SHA)
-- [ ] `ci-monitor-loop.yml` foi disparado automaticamente
-- [ ] Lock foi liberado (agentId = "none")
-
-### Após CI Corporativo (Esteira de Build NPM)
-- [ ] `ci-monitor-controller.json` → `ciOutcome: "success"`
-- [ ] Docker image foi gerada no registry
-- [ ] CAP foi promovido (values.yaml atualizado com nova tag)
-- [ ] `controller-release-state.json` reflete nova versão
-
-### Health Check Final
-- [ ] `health.json` → status verde para workspace
-- [ ] Audit trail tem entrada do deploy concluído
-- [ ] Versão deployada refletida em `claude-session-memory.json`
-
-## Workflows de Observabilidade
-```bash
-# Health check de workspace
-gh workflow run health-check.yml -f workspace_id=<WS_ID>
-
-# CI status check
-# Editar trigger/ci-status.json com commit_sha e bumpar run
-
-# Diagnose CI failure
-# Editar trigger/ci-diagnose.json com commit_sha e bumpar run
-
-# Alertas de monitoramento
-gh workflow run ops-monitor-alerts.yml -f platform=datadog -f workspace_id=<WS_ID>
+list_commits(sha: "autopilot-state", per_page: 10)
+→ Look for recent audit commits — they confirm workflow completion
+→ "audit: source-change" = apply-source-change completed
+→ "state: controller source-change" = state saved
+→ "lock: session released" = lock freed
 ```
 
-## Templates de Dashboard/Alertas
+## Step 3: Check Release State
+
 ```
-ops/templates/monitoring/prometheus-alerts-template.yml
-ops/templates/monitoring/grafana-dashboard-template.json
+get_file_contents(
+  path: "state/workspaces/ws-default/controller-release-state.json",
+  ref: "autopilot-state"
+)
+→ status: "promoted" + promoted: true = last deploy fully complete
+→ status: "ci-failed" = CI failure, needs fix
+→ status: "in-progress" = deploy running
 ```
 
-## Sinais Verdes vs Vermelhos
+## Step 4: Check Active Locks
 
-| Sinal | Verde ✅ | Vermelho 🔴 |
-|-------|---------|------------|
-| `health.json` status | `healthy` | `degraded` / `unhealthy` |
-| CI outcome | `success` | `failure` |
-| Lock | `agentId: "none"` | agentId ativo + não expirado |
-| Release state | versão atualizada | versão desatualizada |
-| Audit trail | entrada recente | sem entradas recentes |
-| CAP values.yaml | tag da nova versão | tag da versão antiga |
+```
+get_file_contents(
+  path: "state/workspaces/<ws_id>/locks/session-lock.json",
+  ref: "autopilot-state"
+)
+→ agentId: "none" = no active session (healthy)
+→ agentId: "claude-code", expiresAt: past = stale lock (trigger workspace-lock-gc.yml)
+→ agentId: "claude-code", expiresAt: future = active session (do not interfere)
+```
+
+## Step 5: Check Corporate CI
+
+For ws-default (Getronics):
+```
+list_commits(sha: "autopilot-state", per_page: 10)
+→ Find latest ci-logs-controller-*.txt
+get_file_contents(path: "state/workspaces/ws-default/ci-logs-controller-<job_id>.txt", ref: "autopilot-state")
+→ Look for: BUILD SUCCESS, BUILD FAILURE, error patterns
+```
+
+## Step 6: Check Improvement Report
+
+```
+get_file_contents(
+  path: "state/workspaces/<ws_id>/improvements/latest-report.json",
+  ref: "autopilot-state"
+)
+→ healthScore, issues[].severity, trend (improving/degrading/stable)
+```
+
+## Observability Dashboard Summary
+
+Output this summary after validation:
+```
+## Autopilot Observability Report — <timestamp>
+
+### Control Plane
+- Health Score: <N>/100 (<status>)
+- Last deploy: <status> at <time>
+- Active lock: <none|agent@time>
+- Improvement trend: <improving|stable|degrading>
+
+### Corporate CI (ws-default)
+- Last CI result: <success|failure>
+- Last CI timestamp: <time>
+- Last version deployed: <version>
+
+### Workspace Status
+- ws-default: <status>
+- ws-cit: <status>
+- ws-socnew: LOCKED (third party)
+- ws-corp-1: LOCKED (third party)
+
+### Issues Requiring Attention
+- <list any issues found, or "None">
+```
+
+## Automated Health Check
+The `health-check.yml` workflow runs automatically (scheduled) and writes to `health.json`.
+Trigger manually via `workflow_dispatch` on `health-check.yml` with `workspace_id` input.

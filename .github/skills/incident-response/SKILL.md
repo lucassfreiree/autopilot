@@ -1,97 +1,114 @@
 ---
 name: incident-response
-description: Resposta estruturada a incidentes no Autopilot e repos corporativos. Use quando houver falha em produção, CI/CD failure, degradação de serviço ou alerta crítico.
+description: Respond to P1/P2/P3/P4 incidents in Autopilot and corporate pipelines. Diagnose, isolate, remediate, and document.
 ---
 
 # Incident Response Skill
 
-## Quando usar
-- Falha em produção (controller ou agent down)
-- CI/CD pipeline failure (esteira de build NPM)
-- Deploy failure no `apply-source-change.yml`
-- Alertas críticos de infraestrutura
-- Lock de sessão não liberado
-- Workspace em estado inconsistente
+## When to use
+- Issue labeled `incident`, `P1`, or `P2`
+- Health score below 50
+- `apply-source-change.yml` failing 3+ consecutive times
+- Lock active for more than 30 minutes without activity
+- User says "something is broken", "pipeline down", "state corrupted"
 
-## Severidade
+## Severity Quick Reference
 
-| Nível | Critério | SLA de Resposta |
-|-------|---------|-----------------|
-| P1 | Serviço em produção fora do ar | Imediato |
-| P2 | Deploy bloqueado / CI falhando repetidamente | < 30 min |
-| P3 | Degradação de funcionalidade / warning CI | < 2h |
-| P4 | Melhoria / não urgente | Best effort |
+| Level | Examples | Max response |
+|---|---|---|
+| P1 | State corrupted, secret leaked, deploy permanently blocked | Immediate |
+| P2 | Critical workflow failing 3+ times, health < 50, lock stuck 30+ min | 15 min |
+| P3 | Health 50–70, non-critical workflow failing, schema warning | 2 hours |
+| P4 | Improvements, docs, optimizations | 1 week |
 
-## Fluxo de Resposta
+## Phase 1: Declare
 
-### Fase 1: Identificação (< 5 min)
-1. Identificar workspace afetado
-2. Verificar estado atual:
-   ```bash
-   # Health do workspace
-   gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/health.json?ref=autopilot-state" --jq '.content' | base64 -d
-   
-   # Deploy ativo?
-   cat contracts/claude-live-status.json | jq '.activeDeploy'
-   
-   # Lock ativo?
-   gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/locks/session-lock.json?ref=autopilot-state" --jq '.content' | base64 -d
-   ```
-3. Coletar logs de CI se disponível:
-   ```
-   state/workspaces/<ws_id>/ci-logs-<component>-<job_id>.txt
-   ```
-
-### Fase 2: Diagnóstico (< 10 min)
-1. Formular hipóteses (por probabilidade)
-2. Correlacionar timeline: último deploy ↔ primeiro erro
-3. Checar erros comuns:
-   | Erro | Causa | Fix |
-   |------|-------|-----|
-   | 403 push | Branch errada | Renomear para `copilot/*` ou `claude/*` |
-   | Trigger não dispara | `run` não incrementado | Bumpar +1 |
-   | Tag duplicate | Versão existe | Incrementar versão |
-   | Lock preso | Workflow falhou | Rodar `workspace-lock-gc.yml` |
-   | CI Gate falso positivo | Detection quebrado | Ler logs reais em `ci-logs-*.txt` |
-
-### Fase 3: Mitigação (< 15 min)
-1. Aplicar fix via deploy flow padrão se possível
-2. Se lock preso: `gh workflow run workspace-lock-gc.yml`
-3. Se CI falhando: disparar `fix-corporate-ci.yml`
-4. Se fix não disponível: criar handoff para agente adequado
-
-### Fase 4: Validação
-1. Confirmar resolução com evidência objetiva
-2. `ci-monitor-loop.yml` confirma CI passou
-3. Health check retorna verde
-4. Registrar em `contracts/claude-session-memory.json` → `knownFailures`
-
-## Runbooks por Tipo
-
-| Tipo | Runbook |
-|------|---------|
-| Incident genérico | `ops/runbooks/incidents/incident-response.json` |
-| Pipeline failure | `ops/runbooks/pipelines/pipeline-troubleshooting.json` |
-| K8s issues | `ops/runbooks/k8s/k8s-common-issues.json` |
-| Terraform | `ops/runbooks/terraform/terraform-operations.json` |
-
-## Formato de Relatório
-```markdown
-## Incidente: <título>
-- Workspace: <ws_id>
-- Componente: controller | agent
-- Severidade: P1 | P2 | P3 | P4
-- Status: Resolvido | Em investigação
-
-### Causa Raiz
-<evidência objetiva>
-
-### Fix Aplicado
-<o que foi feito>
-
-### Validação
-<evidência de resolução>
-
-### Prevenção
-<o que registrar em session memory para evitar recorrência>
 ```
+For P1/P2: trigger alert-notify.yml with severity and title
+```
+
+## Phase 2: Diagnose
+
+### Check health state
+```
+get_file_contents(
+  path: "state/workspaces/<ws_id>/health.json",
+  ref: "autopilot-state"
+)
+→ healthScore, lastChecked, issues[]
+```
+
+### Check release state
+```
+get_file_contents(
+  path: "state/workspaces/<ws_id>/controller-release-state.json",
+  ref: "autopilot-state"
+)
+→ status, ciResult, lastReleasedSha, promoted
+```
+
+### Check session lock
+```
+get_file_contents(
+  path: "state/workspaces/<ws_id>/locks/session-lock.json",
+  ref: "autopilot-state"
+)
+→ agentId, expiresAt, operation
+```
+
+### Check real CI logs
+```
+list_commits(sha: "autopilot-state", per_page: 20)
+→ Find: ci-logs-controller-*.txt or ci-logs-agent-*.txt
+get_file_contents(path: "state/workspaces/<ws_id>/ci-logs-controller-<job_id>.txt", ref: "autopilot-state")
+```
+
+### Check known failures
+```
+get_file_contents(path: "contracts/claude-session-memory.json")
+→ knownFailures[], errorRecovery{}
+```
+
+## Phase 3: Identify Root Cause
+
+| Log Pattern | Root Cause | Fix |
+|---|---|---|
+| `error TS2769` | TypeScript type mismatch | Add cast / fix types |
+| `no-use-before-define` | Function order | Move definition up |
+| `no-unused-vars` | Dead code | Remove unused function |
+| `FAIL src/__tests__` | Test failure | Fix test or revert patch |
+| `duplicate tag` | Version already exists | Bump version |
+| `lock not released` | Crash during deploy | GC via `workspace-lock-gc.yml` |
+| `state: undefined` | State corruption | Restore from backup |
+
+## Phase 4: Remediate
+
+For CI failures → use `fix-ci-failure` skill
+For lock stuck → trigger `workspace-lock-gc.yml`
+For state corruption → trigger `backup-state.yml` first, then `restore-state.yml`
+For workflow failing → diagnose logs, fix patch, re-deploy
+
+## Phase 5: Validate
+
+Confirm resolution:
+```
+get_file_contents(
+  path: "state/workspaces/<ws_id>/controller-release-state.json",
+  ref: "autopilot-state"
+)
+→ status: "promoted" AND promoted: true = SUCCESS
+```
+
+## Phase 6: Postmortem (P1/P2)
+
+Create audit entry documenting:
+- Timeline of incident
+- Root cause
+- Actions taken
+- Resolution confirmed at
+- Lessons learned (add to session memory)
+
+## WORKSPACE RULE
+NEVER respond to incidents in `ws-socnew` or `ws-corp-1` without explicit authorization from `lucassfreiree`.
+
+## Full SOP: `ops/runbooks/incidents/incident-response.json`
