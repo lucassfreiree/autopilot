@@ -140,9 +140,11 @@ Full separation guide: `ops/docs/workspace-separation.md`
 1. Identificar pistas no contexto: nome da empresa, repos, stack, ferramentas mencionadas
 2. Se Getronics/controller/agent/NestJS/bbvinet/esteira → `ws-default`
 3. Se CIT/DevOps/Terraform/K8s/cloud/monitoring/infra → `ws-cit`
-4. Se ambiguo → **PERGUNTAR ao usuario** antes de prosseguir
-5. Uma vez identificado, ler `state/workspaces/<ws_id>/workspace.json` para config
-6. Quick index: `ops/config/workspaces/<ws_id>.json`
+4. Se SocNew/socnew → `ws-socnew` → **PARAR — workspace de terceiro, solicitar autorização**
+5. Se Corp-1/corp1 → `ws-corp-1` → **PARAR — workspace de terceiro, solicitar autorização**
+6. Se ambiguo → **PERGUNTAR ao usuario** antes de prosseguir
+7. Uma vez identificado, ler `state/workspaces/<ws_id>/workspace.json` para config
+8. Quick index: `ops/config/workspaces/<ws_id>.json`
 
 ### Isolation Rules
 1. **NUNCA** assumir um workspace como padrao — sempre identificar pelo contexto
@@ -153,6 +155,7 @@ Full separation guide: `ops/docs/workspace-separation.md`
 6. **Sucesso do apply-source-change NAO garante sucesso do CI corporativo** (vale para todas as empresas)
 7. **Em caso de duvida, o padrao e isolamento** — nunca assumir que contextos podem ser compartilhados
 8. Os SHAs sao DIFERENTES entre autopilot e cada repo corporativo
+9. **`ws-socnew` e `ws-corp-1` sao de TERCEIROS** — NUNCA operar sem autorização explícita e documentada de `lucassfreiree`
 
 ### Getronics-Specific Rules
 1. Esteira de Build NPM (runner corporativo) — monitorar via `ci-diagnose.yml`
@@ -385,7 +388,17 @@ state/workspaces/ws-default/workspace.json
 |-------------|---------|--------|-------|-------------|
 | `ws-default` | Getronics | Active | Node/TypeScript | Primary workspace (bbvinet corporate repos) |
 | `ws-cit` | CIT | Active | DevOps | DevOps workspace (K8s, Docker, Terraform, CI/CD) |
-| `ws-corp-1` | — | Empty/Template | — | Reserved for additional corporate workspace |
+| `ws-socnew` | SocNew (terceiro) | **🔒 LOCKED — NÃO OPERAR** | — | Pertence a terceiro — requer autorização explícita |
+| `ws-corp-1` | Corp-1 (terceiro) | **🔒 LOCKED — NÃO OPERAR** | — | Pertence a terceiro — requer autorização explícita |
+
+### Workspaces de Terceiros (BLOQUEADOS)
+
+| Workspace ID | Status | Razão |
+|---|---|---|
+| `ws-socnew` | **BLOQUEADO — NÃO TOCAR** | Pertence a terceiro (irmão do proprietário) — requer autorização explícita |
+| `ws-corp-1` | **BLOQUEADO — NÃO TOCAR** | Pertence a terceiro — requer autorização explícita |
+
+**Regra**: Qualquer operação nesses workspaces SOMENTE pode ser executada com confirmação explícita e documentada do proprietário da conta (`lucassfreiree`). Mesmo que o workspace apareça na lista de workspaces disponíveis, tratá-lo como LOCKED. Isso inclui: ler state, disparar workflows, criar issues, modificar configuração, ou qualquer outra ação.
 
 ### State Location
 ```
