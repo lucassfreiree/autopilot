@@ -1,0 +1,127 @@
+name: Auto-merge PRs
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.base.ref == 'main'
+    steps:
+      - name: Auto-ready and merge
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const branch = pr.head.ref;
+            
+            // Safety: never act on forks
+            const sameRepo = pr.head.repo && pr.head.repo.full_name === pr.base.repo.full_name;
+            if (!sameRepo) {
+              core.notice('Fork PR - skipping');
+              return;
+            }
+            
+            // Auto-mark draft as ready
+            if (pr.draft) {
+              try {
+                await github.graphql(`
+                  mutation($id: ID!) {
+                    markPullRequestReadyForReview(input: {pullRequestId: $id}) {
+                      pullRequest { number isDraft }
+                    }
+                  }
+                `, { id: pr.node_id });
+                core.notice(`PR #${pr.number} marked as ready`);
+              } catch (e) {
+                core.warning(`Could not mark ready: ${e.message}`);
+              }
+              return; // Will re-trigger on ready_for_review
+            }
+            
+            // Wait for checks (max 5 min)
+            const maxWait = 5 * 60 * 1000;
+            const start = Date.now();
+            
+            while (Date.now() - start < maxWait) {
+              const { data: suites } = await github.rest.checks.listSuitesForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: pr.head.sha,
+                per_page: 100
+              });
+              
+              let ownSuiteId = null;
+              try {
+                const { data: ownRun } = await github.rest.actions.getWorkflowRun({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: context.runId
+                });
+                ownSuiteId = ownRun.check_suite_id;
+              } catch (e) {
+                core.debug(`Could not fetch own workflow run: ${e.message}`);
+              }
+              
+              const relevant = suites.check_suites.filter(s => s.id !== ownSuiteId);
+              const pending = relevant.filter(s => s.status !== 'completed');
+              const failed = relevant.filter(s => 
+                s.status === 'completed' && 
+                !['success', 'neutral', 'skipped'].includes(s.conclusion)
+              );
+              
+              if (pending.length === 0) {
+                if (failed.length > 0) {
+                  core.setFailed('Checks failed');
+                  return;
+                }
+                break;
+              }
+              
+              await new Promise(r => setTimeout(r, 15000));
+            }
+            
+            // Merge
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash'
+              });
+              core.notice(`PR #${pr.number} merged!`);
+              
+              // Cleanup branch
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${branch}`
+                });
+              } catch (e) {
+                core.debug(`Branch cleanup skipped: ${e.message}`);
+              }
+            } catch (e) {
+              core.warning(`Merge failed: ${e.message}`);
+              // Fallback: enable auto-merge
+              try {
+                await github.graphql(`
+                  mutation($id: ID!) {
+                    enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) {
+                      pullRequest { number }
+                    }
+                  }
+                `, { id: pr.node_id });
+              } catch (e2) {
+                core.warning(`Auto-merge fallback also failed: ${e2.message}`);
+              }
+            }
