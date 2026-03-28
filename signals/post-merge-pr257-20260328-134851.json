@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 257,
+  "branch": "claude/spark-integration",
+  "timestamp": "2026-03-28T13:48:51Z",
+  "runId": "23686570038",
+  "healthStatus": "degraded"
+}
