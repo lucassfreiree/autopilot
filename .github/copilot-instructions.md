@@ -167,6 +167,7 @@ Edit a trigger file on `main` branch, bump the `run` field.
 | `trigger/clone-repos.json` | clone-corporate-repos.yml | GETRONICS | ws-default | BBVINET_TOKEN |
 | `trigger/codex-commit.json` | codex-apply.yml | SHARED | all workspaces | Codex agent commit automation |
 | `trigger/codex-deploy.json` | codex-deploy.yml | GETRONICS | ws-default | BBVINET_TOKEN |
+| `trigger/copilot-task.json` | copilot-task-dispatch.yml | SHARED | all workspaces | Dispatch tasks to Copilot Coding Agent |
 | `trigger/e2e-test.json` | test-corporate-flow.yml | GETRONICS | ws-default | BBVINET_TOKEN |
 | `trigger/fetch-files.json` | fetch-files.yml | GETRONICS | ws-default | BBVINET_TOKEN |
 | `trigger/fix-and-validate.json` | fix-and-validate.yml | GETRONICS | ws-default | BBVINET_TOKEN |
@@ -347,6 +348,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | codex-deploy.yml | [Agent] Codex Deploy: Full Pipeline | trigger file, manual |
 | continuous-improvement.yml | [Infra] Continuous Improvement | scheduled, trigger file, manual |
 | copilot-post-deploy-sync.yml | copilot-post-deploy-sync.yml | unknown |
+| copilot-task-dispatch.yml | [Agent] Copilot Task Dispatch | trigger file, manual |
 | deploy-panel.yml | [Infra] Deploy Panel (GitHub Pages) | push, manual |
 | drift-correction.yml | [Corp] Drift Correction | scheduled, manual |
 | enqueue-agent-handoff.yml | [Agent] Enqueue Handoff | manual |
@@ -398,6 +400,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | codex-autonomous-pr.yml | task |
 | codex-deploy.yml | task, component, workspace_id, model, auto_merge, run |
 | continuous-improvement.yml | workspace_id, auto_fix, scope |
+| copilot-task-dispatch.yml | task, task_type, component, version |
 | drift-correction.yml | workspace_id, dry_run |
 | enqueue-agent-handoff.yml | workspace_id, from_agent, to_agent, component, summary, next_steps, priority |
 | fetch-files.yml | workspace_id, component, files |
@@ -603,4 +606,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-28T13:21:49Z | Run: 23686113522*
+*Last synced: 2026-03-28T13:30:17Z | Run: 23686256562*
