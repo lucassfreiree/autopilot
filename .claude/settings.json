@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\":\"REMEMBER: Before compacting, ensure contracts/claude-session-memory.json has been updated with any new decisions, patterns, or lessons learned during this session.\"}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreCompact\",\"reminder\":\"Before compacting, ensure contracts/claude-session-memory.json has been updated with any new decisions, patterns, or lessons learned during this session.\"}}'",
             "timeout": 5,
             "statusMessage": "Memory checkpoint reminder..."
           }
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\":\"SESSION END REMINDER: Update contracts/claude-session-memory.json with new learnings, commit, and push before closing.\"}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"reminder\":\"Update contracts/claude-session-memory.json with new learnings, commit, and push before closing.\"}}'",
             "timeout": 5,
             "statusMessage": "Session memory reminder..."
           }
