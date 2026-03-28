@@ -3,5 +3,8 @@
   "agentId": "none",
   "operation": "none",
   "acquiredAt": "2026-03-28T19:06:16Z",
-  "expiresAt": "2026-03-28T19:06:16Z"
+  "expiresAt": "2026-03-28T19:06:16Z",
+  "released": true,
+  "releasedAt": "2026-03-28T19:24:58Z",
+  "releasedBy": "lock-gc"
 }
