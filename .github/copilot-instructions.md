@@ -51,7 +51,7 @@ You already know everything below. Apply it immediately.
 - Workspace: ws-default (Getronics)
 
 ### Claude Status
-- Claude: **idle** | Task: none | Phase: none
+- Claude: **active** | Task: Fix dashboard sync + upgrade Spark dashboard intelligence | Phase: commit
 
 ### Lessons Learned (NEVER repeat these errors)
 - **copilot-post-deploy-sync.yml falhava por git push direto no main com branch protection — corrigido** → Fix: Substituir git push por branch copilot/post-deploy-sync-* + gh pr create + gh pr merge --squash --auto
@@ -405,7 +405,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | restore-state.yml | [Core] Restore: State Rollback | manual |
 | seed-workspace.yml | [Core] Seed Workspace | manual |
 | session-guard.yml | [Core] Session Guard | reusable |
-| spark-sync-state.yml | [Infra] Spark Dashboard Sync | scheduled, manual |
+| spark-sync-state.yml | [Infra] Spark Dashboard Sync | scheduled, trigger file, manual |
 | sync-codex-prompt.yml | [Infra] Sync Codex Prompt | trigger file, manual |
 | test-corporate-flow.yml | [Corp] Test: Corporate E2E Flow | trigger file, manual |
 | test-full-flow.yml | [Corp] Test: Full Flow (Controller + Agent) | trigger file, manual |
@@ -639,4 +639,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-28T18:28:42Z | Run: 23691553366*
+*Last synced: 2026-03-28T18:56:49Z | Run: 23692063031*
