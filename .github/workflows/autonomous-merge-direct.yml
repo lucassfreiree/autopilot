@@ -90,18 +90,27 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const headSha   = '${{ steps.policy.outputs.head_sha }}';
+            const owner     = context.repo.owner;
+            const repo      = context.repo.repo;
             const maxWaitMs = 10 * 60 * 1000; // 10 minutes
             const pollMs    = 30 * 1000;       // 30 seconds
             const start     = Date.now();
+
+            // Keywords that identify merge/infra workflows that should never block the merge.
+            const INFRA_KEYWORDS = ['merge', 'sweeper', '[core]', 'autonomous', 'auto-merge'];
+
+            function isInfraWorkflow(name) {
+              if (!name) return false;
+              const lower = name.toLowerCase();
+              return INFRA_KEYWORDS.some(k => lower.includes(k));
+            }
 
             // Identify this workflow's own check suite ID to avoid deadlock.
             // The workflow run object exposes check_suite_id so we can exclude it.
             let ownSuiteId = null;
             try {
               const { data: ownRun } = await github.rest.actions.getWorkflowRun({
-                owner:  context.repo.owner,
-                repo:   context.repo.repo,
-                run_id: context.runId,
+                owner, repo, run_id: context.runId,
               });
               ownSuiteId = ownRun.check_suite_id;
               core.notice(`Own check suite ID: ${ownSuiteId} (will be excluded from wait)`);
@@ -109,18 +118,50 @@ jobs:
               core.warning(`Could not resolve own check suite ID: ${e.message}`);
             }
 
+            // Build the set of infra/merge check suite IDs to ignore by querying
+            // all workflow runs (in_progress + queued) for this commit SHA.
+            async function buildInfraSuiteIds() {
+              const infraIds = new Set();
+              if (ownSuiteId) infraIds.add(ownSuiteId);
+              try {
+                for (const status of ['in_progress', 'queued', 'waiting']) {
+                  const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+                    owner, repo, head_sha: headSha, status, per_page: 100,
+                  });
+                  for (const run of runs.workflow_runs) {
+                    if (isInfraWorkflow(run.name) || isInfraWorkflow(run.display_title)) {
+                      if (run.check_suite_id) {
+                        infraIds.add(run.check_suite_id);
+                        core.notice(`Excluding infra workflow check suite ${run.check_suite_id} (${run.name})`);
+                      }
+                    }
+                  }
+                }
+              } catch (e) {
+                core.warning(`Could not list workflow runs to detect infra suites: ${e.message}`);
+              }
+              return infraIds;
+            }
+
             core.notice(`Waiting for checks on ${headSha} (max 10 min)…`);
 
             while (true) {
+              // Refresh infra suite IDs on every poll to catch newly started workflows.
+              const infraSuiteIds = await buildInfraSuiteIds();
+
               const { data: suites } = await github.rest.checks.listSuitesForRef({
-                owner:    context.repo.owner,
-                repo:     context.repo.repo,
-                ref:      headSha,
-                per_page: 100,
+                owner, repo, ref: headSha, per_page: 100,
               });
 
-              // Exclude this workflow's own suite to prevent a deadlock.
-              const relevant = suites.check_suites.filter(s => s.id !== ownSuiteId);
+              // Exclude this workflow's own suite AND all infra/merge workflow suites.
+              const relevant = suites.check_suites.filter(s => !infraSuiteIds.has(s.id));
+
+              // If there are no non-infra check suites at all, proceed immediately.
+              if (relevant.length === 0) {
+                core.notice('No non-infra check suites found. Proceeding with merge immediately.');
+                core.setOutput('checks_ok', 'true');
+                return;
+              }
 
               const pending = relevant.filter(s => s.status !== 'completed');
               const failed  = relevant.filter(s =>
