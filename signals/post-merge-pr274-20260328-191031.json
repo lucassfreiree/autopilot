@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 274,
+  "branch": "copilot/copilottest-sweeper",
+  "timestamp": "2026-03-28T19:10:31Z",
+  "runId": "23692305769",
+  "healthStatus": "degraded"
+}
