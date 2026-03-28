@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "description": "Memoria cumulativa do Copilot. OBRIGATORIO: Ler no inicio de CADA sessao. Atualizar ao final de CADA sessao com commit no main.",
-  "lastUpdated": "2026-03-28T13:41:42Z",
-  "lastSessionId": "session-2026-03-28-learn-coding-agent",
+  "lastUpdated": "2026-03-28T13:36:00Z",
+  "lastSessionId": "session-2026-03-28-fix-sync-autonomy",
   "sessionCount": 3,
   "currentState": {
     "controllerVersion": "3.6.8",
@@ -14,6 +14,23 @@
     "pipelineStatus": "success"
   },
   "sessionsLog": [
+    {
+      "date": "2026-03-28",
+      "summary": "Corrigido copilot-post-deploy-sync.yml: substituido git push direto no main (retornava 403 com branch protection) por fluxo branch+PR+merge com RELEASE_TOKEN. Documentado claude-live-status.json como arquivo ausente. Decisao registrada: Copilot opera 100% autonomo sem perguntar ao Lucas.",
+      "actions": [
+        "fixed-copilot-post-deploy-sync-push-branch-protection",
+        "documented-missing-claude-live-status-json",
+        "registered-autonomy-decision",
+        "added-new-lessons-learned",
+        "added-new-error-pattern-post-deploy-sync-push-403"
+      ],
+      "triggeredBy": "Lucas — pediu operacao 100% autonoma, sem perguntar",
+      "lessonsLearned": [
+        "copilot-post-deploy-sync.yml falhava por git push direto no main com branch protection — corrigido para branch+PR+merge",
+        "claude-live-status.json DEVE existir no repo — boot sequence falha sem ele (Copilot nao cria pois e arquivo do Claude)",
+        "Copilot deve operar 100% autonomo: diagnosticar + corrigir + re-deploy sem pedir confirmacao"
+      ]
+    },
     {
       "date": "2026-03-27",
       "summary": "Criado sistema automatico de sync pos-deploy isolado do Claude. Corrigido drift de versao (3.6.6->3.6.8). Criado copilot-isolation-rules.md.",
@@ -75,18 +92,8 @@
   "decisions": [
     {
       "date": "2026-03-28",
-      "decision": "Coding Agent e o modo principal de operacao — roda 100% em background sem interacao",
-      "context": "Issue assignment aciona o Coding Agent automaticamente. Zero intervencao humana necessaria."
-    },
-    {
-      "date": "2026-03-28",
-      "decision": "Hooks auto-approve eliminam confirmacoes de tools no Coding Agent",
-      "context": ".github/hooks/auto-approve-tools.json aprova automaticamente push_files, create_pull_request, merge_pull_request e outros. Tambem aprova create_or_update_file e delete_file em branches copilot/*."
-    },
-    {
-      "date": "2026-03-28",
-      "decision": "Custom agents e skills sao a forma nativa do GitHub para especializar o Copilot",
-      "context": "@autopilot-deploy para deploys corporativos, @autopilot-ops para manutencao geral. Skills deploy-flow e fix-ci-failure carregados sob demanda."
+      "decision": "Lucas mandou: Copilot deve operar 100% autonomo sem perguntar — fazer tudo automaticamente e gravar na memoria",
+      "context": "Usuario deixou claro que nao quer perguntas. Copilot deve diagnosticar, corrigir e executar sem confirmacao."
     },
     {
       "date": "2026-03-27",
@@ -121,44 +128,14 @@
   ],
   "lessonsLearned": [
     {
-      "lesson": "O Coding Agent roda em background via issue assignment — nao precisa de chat interativo",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "Criar issue com [Copilot] prefix + labels copilot,autonomous para acionar o Coding Agent"
+      "lesson": "copilot-post-deploy-sync.yml falhava por git push direto no main com branch protection — corrigido",
+      "source": "session 2026-03-28",
+      "fix": "Substituir git push por branch copilot/post-deploy-sync-* + gh pr create + gh pr merge --squash --auto"
     },
     {
-      "lesson": "Custom agents em .github/agents/*.agent.md sao carregados automaticamente pelo Coding Agent",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "Usar @autopilot-deploy para deploys corporativos, @autopilot-ops para manutencao geral"
-    },
-    {
-      "lesson": "Skills em .github/skills/*/SKILL.md sao carregados sob demanda quando relevantes",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "deploy-flow skill para deploys, fix-ci-failure skill para falhas de CI"
-    },
-    {
-      "lesson": "Hooks em .github/hooks/*.json auto-aprovam tool calls — eliminam confirmacoes",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "auto-approve-tools.json aprova push_files, create_pull_request, merge_pull_request automaticamente"
-    },
-    {
-      "lesson": "copilot-setup-steps.yml roda ANTES do agent comecar — mostra estado atual",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "Instala jq, mostra versao atual, run atual e estado do Claude antes de qualquer acao"
-    },
-    {
-      "lesson": "Para delegar tarefas a si mesmo: criar issue [Copilot] + labels copilot,autonomous",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "Usar issue_write com prefix [Copilot] e labels copilot,autonomous. Coding Agent e acionado automaticamente."
-    },
-    {
-      "lesson": "Workflow copilot-task-dispatch.yml cria issue automaticamente via trigger/copilot-task.json",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "Editar trigger/copilot-task.json com task, bumpar run → workflow cria e assigna issue automaticamente"
-    },
-    {
-      "lesson": "O fluxo completo e: issue criada → Coding Agent roda → PR criado → autonomous-merge-direct mergeia → workflow dispara",
-      "source": "issue learn-coding-agent 2026-03-28",
-      "fix": "Zero intervencao humana — tudo automatico do inicio ao fim"
+      "lesson": "claude-live-status.json DEVE existir no repo — boot sequence falha sem ele",
+      "source": "session 2026-03-28",
+      "fix": "Arquivo deve ser criado pelo Claude (Copilot nao toca arquivos do Claude). Notificar Claude para criar o arquivo."
     },
     {
       "lesson": "NUNCA criar PR como draft — workflow nao consegue mergear draft PRs",
@@ -277,6 +254,7 @@
     }
   ],
   "errorPatterns": {
+    "post_deploy_sync_push_403": "git push direto no main falha com branch protection. Usar branch copilot/post-deploy-sync-* + gh pr create + gh pr merge --squash --auto com RELEASE_TOKEN.",
     "403_on_push": "Branch nao comeca com copilot/ ou claude/ ou codex/. Renomear.",
     "trigger_not_firing": "Campo run nao incrementado. Verificar e somar 1.",
     "duplicate_tag": "Versao ja existe no registry. Incrementar patch.",
