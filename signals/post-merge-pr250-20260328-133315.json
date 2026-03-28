@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 250,
+  "branch": "claude/copilot-native-config",
+  "timestamp": "2026-03-28T13:33:15Z",
+  "runId": "23686304574",
+  "healthStatus": "degraded"
+}
