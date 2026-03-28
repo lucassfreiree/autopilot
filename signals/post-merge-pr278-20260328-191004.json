@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 278,
+  "branch": "copilot/update-spark-dashboard-data",
+  "timestamp": "2026-03-28T19:10:04Z",
+  "runId": "23692297089",
+  "healthStatus": "degraded"
+}
