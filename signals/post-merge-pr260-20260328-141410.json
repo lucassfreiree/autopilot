@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 260,
+  "branch": "claude/codex-sync",
+  "timestamp": "2026-03-28T14:14:10Z",
+  "runId": "23687006938",
+  "healthStatus": "degraded"
+}
