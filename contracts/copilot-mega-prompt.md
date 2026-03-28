@@ -186,7 +186,7 @@ push_files → create_pull_request → merge_pull_request.
 Se merge falhar (checks pendentes), esperar 30s e tentar novamente.
 Se falhar de novo, o sweeper (cron 2 min) faz como backup.
 
-### Fase 8: Monitorar workflow (OBRIGATORIO)
+### Fase 8: Monitorar workflow (AUTOMATICO — nao precisa fazer manualmente)
 O merge dispara apply-source-change.yml AUTOMATICAMENTE.
 7 stages:
 ```
@@ -199,13 +199,39 @@ O merge dispara apply-source-change.yml AUTOMATICAMENTE.
 6. Audit          → Trail + libera lock
 ```
 
-Monitorar via API:
+### Fase 9: Monitoramento pos-deploy e auto-fix (100% AUTOMATICO)
+APOS apply-source-change completar, o ci-monitor-loop.yml dispara AUTOMATICAMENTE:
+- Poll da esteira corporativa (Esteira de Build NPM) cada 2 min por ate 30 min
+- Se CI PASSAR: promote-cap.yml dispara automaticamente (atualiza tag no CAP)
+- Se CI FALHAR: ci-diagnose.yml + fix-corporate-ci.yml disparam automaticamente
+  - fix-corporate-ci clona repo, instala deps, corrige ESLint/TS, push fix
+  - Esteira roda novamente com o fix
+- Resultado salvo em ci-monitor-controller.json no autopilot-state
+
+VOCE NAO PRECISA MONITORAR MANUALMENTE. O sistema faz tudo sozinho:
 ```
-list_commits(sha="autopilot-state", per_page=5)
-→ Procurar: "state: controller source-change", "audit: source-change", "lock: session released"
+apply-source-change.yml (7 stages)
+  → ci-monitor-loop.yml (poll 2 min x 15 = 30 min max)
+    → Se sucesso: promote-cap.yml (auto)
+    → Se falha: ci-diagnose.yml + fix-corporate-ci.yml (auto)
 ```
 
-Ou via Actions API:
+Para VERIFICAR resultado depois (opcional):
+```
+get_file_contents(
+  path: "state/workspaces/ws-default/ci-monitor-controller.json",
+  branch: "autopilot-state"
+)
+→ ciOutcome: "success" ou "failure"
+```
+
+Ou via commits no autopilot-state:
+```
+list_commits(sha="autopilot-state", per_page=5)
+→ Procurar: "ci-monitor: controller success" ou "ci-monitor: controller failure"
+```
+
+Ou via Actions:
 ```
 GET repos/lucassfreiree/autopilot/actions/workflows/apply-source-change.yml/runs?per_page=1
 ```
