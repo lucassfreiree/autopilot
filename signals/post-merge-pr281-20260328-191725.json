@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 281,
+  "branch": "claude/auto-fix-loop",
+  "timestamp": "2026-03-28T19:17:25Z",
+  "runId": "23692425998",
+  "healthStatus": "degraded"
+}
