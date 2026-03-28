@@ -24,8 +24,58 @@ This control plane manages **multiple companies**. Each company is an **isolated
 4. If user mentions CIT, DevOps, Terraform, K8s, cloud, monitoring → `ws-cit`
 5. **If ambiguous: ASK the user — NEVER assume a default**
 
-Read your workspace contract: `contracts/codex-agent-contract.json`
+Read your contract: `contracts/codex-agent-contract.json`
 Read shared rules: `contracts/shared-agent-contract.json`
+Read deploy guide: `contracts/codex-deploy-guide.md`
+Full deploy docs: `ops/docs/deploy-process/` (12 phases)
+
+
+## YOUR MEMORY (auto-loaded — NO need to read files)
+
+This is your persistent memory from ALL previous sessions, embedded automatically.
+
+### Current State
+- Controller: 3.6.8 | Agent: 2.2.9
+- Last run: 66 | Status: success
+- Workspace: ws-default (Getronics)
+
+### Claude Status
+- Claude: **idle** | Task: none
+
+### Lessons Learned (NEVER repeat these errors)
+- **Campo run no trigger DEVE ser incrementado — sem incremento workflow NAO dispara** → Fix: Verificar valor atual e somar 1
+- **Versao apos X.Y.9 e X.(Y+1).0 — NUNCA X.Y.10** → Fix: Sempre verificar padrao antes de bumpar
+- **JWT scope claim e 'scope' (singular) — NUNCA 'scopes' (plural)** → Fix: Agent middleware le payload.scope
+- **Swagger SOMENTE ASCII — sem acentos** → Fix: Testar com grep -P '[�-�]' antes de commitar
+- **search-replace NAO funciona com newlines — usar replace-file para multi-line** → Fix: Sempre replace-file quando envolve adicionar/remover linhas
+- **ESLint no-use-before-define — funcoes devem ser definidas ANTES de serem chamadas** → Fix: Ordenar funcoes auxiliares primeiro no arquivo
+- **NUNCA usar validateTrustedUrl dentro de fetch/postJson — quebra testes mock** → Fix: Validar URL no input (parseSafeIdentifier), nao no fetch
+- **CI Gate pre-existing detection esta QUEBRADO** → Fix: Para resultado REAL: ler ci-logs-controller-*.txt do autopilot-state
+- **apply-source-change SUCCESS != deploy completo — esteira corporativa roda depois** → Fix: SEMPRE monitorar esteira corporativa apos workflow do autopilot
+- **SEMPRE partir da base corporativa ATUAL — nunca de patches antigos** → Fix: Fetch arquivos via fetch-files.yml antes de criar patches
+- **NUNCA push direto para main — retorna 403** → Fix: Sempre branch codex/* → PR → squash merge
+- **Version bump em 5 arquivos: package.json, package-lock.json, swagger, values.yaml, session memory** → Fix: Documentacao completa em ops/docs/deploy-process/
+
+### Error Patterns
+- `403_on_push`: Branch nao comeca com codex/ ou claude/. Renomear.
+- `trigger_not_firing`: Campo run nao incrementado. Verificar e somar 1.
+- `duplicate_tag`: Versao ja existe no registry. Incrementar patch.
+- `eslint_no_use_before_define`: Funcao usada antes de definir. Mover para cima.
+- `eslint_no_nested_ternary`: Usar if/else em vez de ternarios aninhados.
+- `ts2769_jwt_sign`: expiresIn precisa de parseExpiresIn() com cast.
+- `swagger_garbled`: Acentos no swagger. Substituir por ASCII.
+- `test_mock_broken`: validateTrustedUrl adicionado em fetch. Remover.
+- `draft_pr_cant_merge`: PR esta em draft. Marcar como ready.
+
+### Recent Sessions
+
+
+### Full Memory File
+To update: `contracts/codex-session-memory.json`
+At END of session: update this file via branch codex/* → PR → merge.
+
+---
+
 
 
 ### Available Workspaces
@@ -59,7 +109,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
-  audit/ (14 files)
+  audit/ (15 files)
   improvements/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
   metrics/ (3 files)
   handoffs/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
@@ -84,8 +134,8 @@ lucassfreiree/autopilot (this repo)
   agent-release-state.json
   controller-release-state.json
   release-freeze.json
-  locks/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
-  audit/ (302 files)
+  locks/ (1 files)
+  audit/ (316 files)
   improvements/ (1 files)
   metrics/ (6 files)
   handoffs/ (1 files)
@@ -235,7 +285,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | codex-autonomous-pr.yml | Codex autonomous PR | manual |
 | codex-deploy.yml | [Agent] Codex Deploy: Full Pipeline | trigger file, manual |
 | continuous-improvement.yml | [Infra] Continuous Improvement | scheduled, trigger file, manual |
-| copilot-post-deploy-sync.yml | copilot-post-deploy-sync.yml | unknown |
+| copilot-post-deploy-sync.yml | [Copilot] Post-Deploy Sync | manual |
 | copilot-setup-steps.yml | Copilot Setup Steps | workflow_call |
 | copilot-task-dispatch.yml | [Agent] Copilot Task Dispatch | trigger file, manual |
 | deploy-panel.yml | [Infra] Deploy Panel (GitHub Pages) | push, manual |
@@ -263,6 +313,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | restore-state.yml | [Core] Restore: State Rollback | manual |
 | seed-workspace.yml | [Core] Seed Workspace | manual |
 | session-guard.yml | [Core] Session Guard | reusable |
+| spark-sync-state.yml | [Infra] Spark Dashboard Sync | scheduled, manual |
 | sync-copilot-prompt.yml | [Infra] Sync Copilot Prompt | trigger file, manual |
 | test-corporate-flow.yml | [Corp] Test: Corporate E2E Flow | trigger file, manual |
 | test-full-flow.yml | [Corp] Test: Full Flow (Controller + Agent) | trigger file, manual |
@@ -289,6 +340,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | codex-autonomous-pr.yml | task |
 | codex-deploy.yml | task, component, workspace_id, model, auto_merge, run |
 | continuous-improvement.yml | workspace_id, auto_fix, scope |
+| copilot-post-deploy-sync.yml | version, run_number |
 | copilot-task-dispatch.yml | task, task_type, component, version |
 | drift-correction.yml | workspace_id, dry_run |
 | enqueue-agent-handoff.yml | workspace_id, from_agent, to_agent, component, summary, next_steps, priority |
@@ -360,4 +412,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | Handoff to Claude | Dispatch `enqueue-agent-handoff.yml`, `to_agent=claude` |
 
 ---
-*Last synced: 2026-03-28T13:33:18Z | Run: 23686304761*
+*Last synced: 2026-03-28T17:49:12Z | Run: 23690836710*

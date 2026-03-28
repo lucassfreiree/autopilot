@@ -54,6 +54,8 @@ You already know everything below. Apply it immediately.
 - Claude: **idle** | Task: none | Phase: none
 
 ### Lessons Learned (NEVER repeat these errors)
+- **copilot-post-deploy-sync.yml falhava por git push direto no main com branch protection — corrigido** → Fix: Substituir git push por branch copilot/post-deploy-sync-* + gh pr create + gh pr merge --squash --auto
+- **claude-live-status.json DEVE existir no repo — boot sequence falha sem ele** → Fix: Arquivo deve ser criado pelo Claude (Copilot nao toca arquivos do Claude). Notificar Claude para criar o arquivo.
 - **NUNCA criar PR como draft — workflow nao consegue mergear draft PRs** → Fix: autonomous-merge-direct.yml auto-marca como ready via GraphQL
 - **Campo run no trigger DEVE ser incrementado — sem incremento workflow NAO dispara** → Fix: Verificar valor atual com jq '.run' trigger/source-change.json e somar 1
 - **Versao apos X.Y.9 e X.(Y+1).0 — NUNCA X.Y.10** → Fix: Sempre verificar padrao antes de bumpar
@@ -79,6 +81,7 @@ You already know everything below. Apply it immediately.
 - **Documentacao completa de deploy em ops/docs/deploy-process/ (12 fases). Nunca inventar — sempre consultar os docs.** → Fix: Para cada fase do deploy, consultar o arquivo correspondente em ops/docs/deploy-process/
 
 ### Error Patterns (quick fix reference)
+- `post_deploy_sync_push_403`: git push direto no main falha com branch protection. Usar branch copilot/post-deploy-sync-* + gh pr create + gh pr merge --squash --auto com RELEASE_TOKEN.
 - `403_on_push`: Branch nao comeca com copilot/ ou claude/ ou codex/. Renomear.
 - `trigger_not_firing`: Campo run nao incrementado. Verificar e somar 1.
 - `duplicate_tag`: Versao ja existe no registry. Incrementar patch.
@@ -94,6 +97,7 @@ You already know everything below. Apply it immediately.
 
 ### Recent Sessions
 - [2026-03-27] Criado sistema automatico de sync pos-deploy isolado do Claude. Corrigido drift de versao (3.6.6->3.6.8). Criado copilot-isolation-rules.md.
+- [2026-03-28] Conhecimento do Coding Agent absorvido. Aprendido: Coding Agent roda em background via issue assignment, Custom Agents em .github/agents/, Skills em .github/skills/, Hooks em .github/hooks/ auto-aprovam tools, copilot-setup-steps.yml roda antes do agent.
 - [2026-03-27] Mega prompt absorvido. Gravados em memoria: boot sequence, deploy flow completo (10 fases), 20 regras de ouro, tooling (push_files obrigatorio), erros conhecidos, isolamento, progresso com checkboxes.
 
 ### Key Decisions
@@ -360,7 +364,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | codex-autonomous-pr.yml | Codex autonomous PR | manual |
 | codex-deploy.yml | [Agent] Codex Deploy: Full Pipeline | trigger file, manual |
 | continuous-improvement.yml | [Infra] Continuous Improvement | scheduled, trigger file, manual |
-| copilot-post-deploy-sync.yml | copilot-post-deploy-sync.yml | unknown |
+| copilot-post-deploy-sync.yml | [Copilot] Post-Deploy Sync | manual |
 | copilot-setup-steps.yml | Copilot Setup Steps | workflow_call |
 | copilot-task-dispatch.yml | [Agent] Copilot Task Dispatch | trigger file, manual |
 | deploy-panel.yml | [Infra] Deploy Panel (GitHub Pages) | push, manual |
@@ -388,6 +392,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | restore-state.yml | [Core] Restore: State Rollback | manual |
 | seed-workspace.yml | [Core] Seed Workspace | manual |
 | session-guard.yml | [Core] Session Guard | reusable |
+| spark-sync-state.yml | [Infra] Spark Dashboard Sync | scheduled, manual |
 | sync-codex-prompt.yml | [Infra] Sync Codex Prompt | trigger file, manual |
 | test-corporate-flow.yml | [Corp] Test: Corporate E2E Flow | trigger file, manual |
 | test-full-flow.yml | [Corp] Test: Full Flow (Controller + Agent) | trigger file, manual |
@@ -414,6 +419,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | codex-autonomous-pr.yml | task |
 | codex-deploy.yml | task, component, workspace_id, model, auto_merge, run |
 | continuous-improvement.yml | workspace_id, auto_fix, scope |
+| copilot-post-deploy-sync.yml | version, run_number |
 | copilot-task-dispatch.yml | task, task_type, component, version |
 | drift-correction.yml | workspace_id, dry_run |
 | enqueue-agent-handoff.yml | workspace_id, from_agent, to_agent, component, summary, next_steps, priority |
@@ -620,4 +626,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-28T13:33:11Z | Run: 23686304748*
+*Last synced: 2026-03-28T17:49:08Z | Run: 23690836701*
