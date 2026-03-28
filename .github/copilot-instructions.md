@@ -96,8 +96,8 @@ You already know everything below. Apply it immediately.
 - `asking_user_manual_action`: Estava pedindo 'clique em Ready for Review'. Fix: usar update_pull_request(draft: false) via API
 
 ### Recent Sessions
-- [2026-03-28] Corrigido copilot-post-deploy-sync.yml: substituido git push direto no main (retornava 403 com branch protection) por fluxo branch+PR+merge com RELEASE_TOKEN. Documentado claude-live-status.json como arquivo ausente. Decisao registrada: Copilot opera 100% autonomo sem perguntar ao Lucas.
 - [2026-03-27] Criado sistema automatico de sync pos-deploy isolado do Claude. Corrigido drift de versao (3.6.6->3.6.8). Criado copilot-isolation-rules.md.
+- [2026-03-28] Conhecimento do Coding Agent absorvido. Aprendido: Coding Agent roda em background via issue assignment, Custom Agents em .github/agents/, Skills em .github/skills/, Hooks em .github/hooks/ auto-aprovam tools, copilot-setup-steps.yml roda antes do agent.
 - [2026-03-27] Mega prompt absorvido. Gravados em memoria: boot sequence, deploy flow completo (10 fases), 20 regras de ouro, tooling (push_files obrigatorio), erros conhecidos, isolamento, progresso com checkboxes.
 
 ### Key Decisions
@@ -625,4 +625,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-28T14:39:53Z | Run: 23687450088*
+*Last synced: 2026-03-28T14:44:14Z | Run: 23687525843*
