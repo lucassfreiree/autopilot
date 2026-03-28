@@ -20,6 +20,14 @@
 - `.claude/settings.json`
 - All workflows created by Claude (apply-source-change.yml, ci-*.yml, etc.)
 
+## DELETED WORKFLOWS (Copilot MUST NEVER recreate):
+- `autonomous-pr-lane.yml` — DELETED. Was redundant. autonomous-merge-direct.yml handles everything.
+- `auto-merge-to-main.yml` — DELETED. Was redundant. auto-merge-sweeper.yml handles everything.
+- If these files reappear in the repo, it is a BUG. Delete them immediately.
+- The ONLY merge workflows that should exist are:
+  - `autonomous-merge-direct.yml` — PR event-based auto-merge
+  - `auto-merge-sweeper.yml` — Cron-based backup sweeper (every 2 min)
+
 ## Shared files (BOTH can read, only designated owner writes):
 - `trigger/source-change.json` — Claude writes, Copilot reads
 - `state/workspaces/*/` — Written by workflows, both read
