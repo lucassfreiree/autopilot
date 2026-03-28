@@ -166,7 +166,7 @@ push_files(
 REGRA: TODOS os arquivos em 1 chamada push_files = 1 confirmacao.
 BANIDO: create_or_update_file (gera 1 confirmacao por arquivo).
 
-### Fase 7: PR e Merge
+### Fase 7: PR e Merge (VOCE FAZ O MERGE — NAO ESPERE NINGUEM)
 ```
 create_pull_request(
   head: "copilot/deploy-controller-X.Y.Z",
@@ -175,10 +175,16 @@ create_pull_request(
   draft: false  ← NUNCA draft!
 )
 
+# IMEDIATAMENTE apos criar o PR, faca o merge voce mesmo:
 merge_pull_request(
   merge_method: "squash"
 )
 ```
+CRITICO: NUNCA esperar o sweeper ou o usuario mergear.
+VOCE cria o PR E faz o merge na sequencia. 3 tool calls:
+push_files → create_pull_request → merge_pull_request.
+Se merge falhar (checks pendentes), esperar 30s e tentar novamente.
+Se falhar de novo, o sweeper (cron 2 min) faz como backup.
 
 ### Fase 8: Monitorar workflow (OBRIGATORIO)
 O merge dispara apply-source-change.yml AUTOMATICAMENTE.

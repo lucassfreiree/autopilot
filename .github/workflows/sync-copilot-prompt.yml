@@ -589,6 +589,13 @@ jobs:
 
           That's it. 3 confirmations total for a full deploy. NOT 10+.
 
+          ### CRITICAL: YOU DO THE MERGE — NEVER WAIT
+          After create_pull_request, IMMEDIATELY call merge_pull_request.
+          Do NOT wait for the sweeper. Do NOT wait for the user. Do NOT wait for anything.
+          YOU create the PR AND merge it yourself in the SAME session.
+          If merge fails (checks pending), wait 30 seconds and retry.
+          The sweeper (cron 2 min) is only a BACKUP — you are the primary merger.
+
           ### NEVER USE create_or_update_file
           - ALWAYS use `push_files` instead — it handles multiple files in one call
           - `push_files` can also create the branch automatically if it doesn't exist

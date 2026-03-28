@@ -90,37 +90,50 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const headSha   = '${{ steps.policy.outputs.head_sha }}';
-            const maxWaitMs = 10 * 60 * 1000; // 10 minutes
-            const pollMs    = 30 * 1000;       // 30 seconds
+            const maxWaitMs = 3 * 60 * 1000; // 3 minutes max (was 10)
+            const pollMs    = 15 * 1000;      // 15 seconds (was 30)
             const start     = Date.now();
 
-            // Identify this workflow's own check suite ID to avoid deadlock.
-            // The workflow run object exposes check_suite_id so we can exclude it.
-            let ownSuiteId = null;
+            // Collect ALL merge-related workflow run IDs to exclude them.
+            // These workflows wait for each other = deadlock if we wait for them.
+            const excludeSuiteIds = new Set();
             try {
               const { data: ownRun } = await github.rest.actions.getWorkflowRun({
-                owner:  context.repo.owner,
-                repo:   context.repo.repo,
-                run_id: context.runId,
+                owner: context.repo.owner, repo: context.repo.repo, run_id: context.runId,
               });
-              ownSuiteId = ownRun.check_suite_id;
-              core.notice(`Own check suite ID: ${ownSuiteId} (will be excluded from wait)`);
-            } catch (e) {
-              core.warning(`Could not resolve own check suite ID: ${e.message}`);
-            }
+              if (ownRun.check_suite_id) excludeSuiteIds.add(ownRun.check_suite_id);
+              core.notice(`Own check suite ID: ${ownRun.check_suite_id}`);
+            } catch (e) { core.warning(`Could not resolve own suite: ${e.message}`); }
 
-            core.notice(`Waiting for checks on ${headSha} (max 10 min)…`);
+            // Also exclude suites from other merge/sweeper workflows to prevent deadlock
+            try {
+              const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner: context.repo.owner, repo: context.repo.repo,
+                status: 'in_progress', per_page: 20,
+              });
+              const mergeWorkflows = ['Auto-Merge Sweeper', 'Autonomous PR Lane', 'Auto-Merge PR to main', 'Autonomous Direct Merge'];
+              for (const run of runs.workflow_runs) {
+                if (mergeWorkflows.some(n => run.name.includes(n)) && run.check_suite_id) {
+                  excludeSuiteIds.add(run.check_suite_id);
+                }
+              }
+              if (excludeSuiteIds.size > 1) {
+                core.notice(`Excluding ${excludeSuiteIds.size} merge-related suites to prevent deadlock`);
+              }
+            } catch (e) { core.warning(`Could not list running workflows: ${e.message}`); }
+
+            // Also exclude suites that are "queued" (waiting for approval) — these will never complete
+            core.notice(`Waiting for checks on ${headSha} (max 3 min)…`);
 
             while (true) {
               const { data: suites } = await github.rest.checks.listSuitesForRef({
-                owner:    context.repo.owner,
-                repo:     context.repo.repo,
-                ref:      headSha,
-                per_page: 100,
+                owner: context.repo.owner, repo: context.repo.repo, ref: headSha, per_page: 100,
               });
 
-              // Exclude this workflow's own suite to prevent a deadlock.
-              const relevant = suites.check_suites.filter(s => s.id !== ownSuiteId);
+              // Exclude merge workflows + queued/action_required suites (they'll never complete on their own)
+              const relevant = suites.check_suites.filter(s =>
+                !excludeSuiteIds.has(s.id) && s.status !== 'queued'
+              );
 
               const pending = relevant.filter(s => s.status !== 'completed');
               const failed  = relevant.filter(s =>
