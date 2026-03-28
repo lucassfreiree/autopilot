@@ -69,6 +69,14 @@ You already know everything below. Apply it immediately.
 - **COPILOT NUNCA modifica arquivos do Claude — isolamento total** → Fix: Todos workflows do Copilot tem lista de arquivos permitidos. Se nao esta na lista, NAO TOCA.
 - **Sync pos-deploy DEVE ser automatico — copilot-post-deploy-sync.yml** → Fix: Workflow roda automatico apos apply-source-change. Atualiza values.yaml + copilot memory.
 - **references/controller-cap/values.yaml DEVE refletir versao real deployada** → Fix: copilot-post-deploy-sync.yml atualiza automaticamente apos cada deploy
+- **SEMPRE usar push_files para TODAS as operacoes de arquivo — NUNCA create_or_update_file. push_files faz N arquivos em 1 chamada = 1 confirmacao** → Fix: Substituir qualquer uso de create_or_update_file por push_files com array de files
+- **Fluxo ideal de deploy = 3 tool calls: push_files → create_pull_request → merge_pull_request** → Fix: Planejar todas as alteracoes antecipadamente para fazer push_files com todos os arquivos de uma vez
+- **NUNCA pedir ao usuario para fazer algo manualmente — usar API para tudo** → Fix: Se precisar marcar PR como ready: usar update_pull_request(draft: false). Se precisar mergear: usar merge_pull_request.
+- **NUNCA dizer 'clique em Ready for Review' — usar update_pull_request(draft: false) ou GraphQL markPullRequestReadyForReview** → Fix: update_pull_request(owner, repo, pullNumber, draft: false)
+- **SEMPRE mostrar progresso com checkboxes [x] concluido, [~] em andamento, [ ] pendente** → Fix: Usar formato: [x] passo 1, [~] passo 2 em andamento, [ ] passo 3
+- **Boot sequence OBRIGATORIO: ler copilot-session-memory → claude-live-status → claude-session-memory antes de QUALQUER acao** → Fix: Executar os 4 passos da boot sequence no inicio de cada sessao
+- **Se erro em deploy: diagnosticar + corrigir + re-deploy AUTOMATICAMENTE sem perguntar ao usuario** → Fix: 1. Identificar erro nos logs. 2. Corrigir patch. 3. Bumpar versao. 4. Incrementar run. 5. Novo push_files → PR → merge → monitorar.
+- **Documentacao completa de deploy em ops/docs/deploy-process/ (12 fases). Nunca inventar — sempre consultar os docs.** → Fix: Para cada fase do deploy, consultar o arquivo correspondente em ops/docs/deploy-process/
 
 ### Error Patterns (quick fix reference)
 - `403_on_push`: Branch nao comeca com copilot/ ou claude/ ou codex/. Renomear.
@@ -81,14 +89,19 @@ You already know everything below. Apply it immediately.
 - `test_mock_broken`: validateTrustedUrl adicionado em fetch. Remover.
 - `pr_dirty`: Conflito com main. git pull --rebase origin main.
 - `draft_pr_cant_merge`: PR esta em draft. Marcar como ready via GraphQL markPullRequestReadyForReview.
+- `multiple_confirmations`: Estava usando create_or_update_file (1 confirm por arquivo). Fix: usar push_files (1 confirm para N arquivos)
+- `asking_user_manual_action`: Estava pedindo 'clique em Ready for Review'. Fix: usar update_pull_request(draft: false) via API
 
 ### Recent Sessions
 - [2026-03-27] Criado sistema automatico de sync pos-deploy isolado do Claude. Corrigido drift de versao (3.6.6->3.6.8). Criado copilot-isolation-rules.md.
+- [2026-03-27] Mega prompt absorvido. Gravados em memoria: boot sequence, deploy flow completo (10 fases), 20 regras de ouro, tooling (push_files obrigatorio), erros conhecidos, isolamento, progresso com checkboxes.
 
 ### Key Decisions
-- [2026-03-27] Copilot e backup oficial do Claude Code
 - [2026-03-27] Deploy flow e identico para todos os agentes
 - [2026-03-27] Copilot tem workflow automatico separado do Claude — NUNCA modifica arquivos do Claude
+- [2026-03-27] push_files e a UNICA ferramenta para editar arquivos — create_or_update_file BANIDO
+- [2026-03-27] Mega prompt absorvido — contracts/copilot-mega-prompt.md e a referencia completa
+- [2026-03-27] Antes de perguntar ao usuario, tentar resolver sozinho lendo docs e memoria
 
 ### Full Memory File
 To see complete memory or update it: `contracts/copilot-session-memory.json`
@@ -606,4 +619,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-28T13:30:17Z | Run: 23686256562*
+*Last synced: 2026-03-28T13:31:00Z | Run: 23686268806*
