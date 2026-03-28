@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "description": "Memoria cumulativa do Copilot. OBRIGATORIO: Ler no inicio de CADA sessao. Atualizar ao final de CADA sessao com commit no main.",
-  "lastUpdated": "2026-03-27T19:18:48Z",
-  "lastSessionId": "session-2026-03-27-absorb-mega-prompt",
-  "sessionCount": 2,
+  "lastUpdated": "2026-03-28T13:41:42Z",
+  "lastSessionId": "session-2026-03-28-learn-coding-agent",
+  "sessionCount": 3,
   "currentState": {
     "controllerVersion": "3.6.8",
     "agentVersion": "2.2.9",
@@ -32,6 +32,27 @@
       ]
     },
     {
+      "date": "2026-03-28",
+      "summary": "Conhecimento do Coding Agent absorvido. Aprendido: Coding Agent roda em background via issue assignment, Custom Agents em .github/agents/, Skills em .github/skills/, Hooks em .github/hooks/ auto-aprovam tools, copilot-setup-steps.yml roda antes do agent.",
+      "actions": [
+        "read-issue-learn-coding-agent",
+        "added-8-new-lessons-coding-agent",
+        "added-3-new-decisions-coding-agent",
+        "updated-session-count-to-3"
+      ],
+      "triggeredBy": "Issue: Aprender a usar Coding Agent, Custom Agents, Skills e Hooks",
+      "lessonsLearned": [
+        "O Coding Agent roda em background via issue assignment — nao precisa de chat interativo",
+        "Custom agents em .github/agents/*.agent.md sao carregados automaticamente pelo Coding Agent",
+        "Skills em .github/skills/*/SKILL.md sao carregados sob demanda quando relevantes",
+        "Hooks em .github/hooks/*.json auto-aprovam tool calls — eliminam confirmacoes",
+        "copilot-setup-steps.yml roda ANTES do agent comecar — mostra estado atual",
+        "Para delegar tarefas a si mesmo: criar issue [Copilot] + labels copilot,autonomous",
+        "Workflow copilot-task-dispatch.yml cria issue automaticamente via trigger/copilot-task.json",
+        "O fluxo completo e: issue criada → Coding Agent roda → PR criado → autonomous-merge-direct mergeia → workflow dispara"
+      ]
+    },
+    {
       "date": "2026-03-27",
       "summary": "Mega prompt absorvido. Gravados em memoria: boot sequence, deploy flow completo (10 fases), 20 regras de ouro, tooling (push_files obrigatorio), erros conhecidos, isolamento, progresso com checkboxes.",
       "actions": [
@@ -52,6 +73,21 @@
     }
   ],
   "decisions": [
+    {
+      "date": "2026-03-28",
+      "decision": "Coding Agent e o modo principal de operacao — roda 100% em background sem interacao",
+      "context": "Issue assignment aciona o Coding Agent automaticamente. Zero intervencao humana necessaria."
+    },
+    {
+      "date": "2026-03-28",
+      "decision": "Hooks auto-approve eliminam confirmacoes de tools no Coding Agent",
+      "context": ".github/hooks/auto-approve-tools.json aprova automaticamente push_files, create_pull_request, merge_pull_request e outros. Tambem aprova create_or_update_file e delete_file em branches copilot/*."
+    },
+    {
+      "date": "2026-03-28",
+      "decision": "Custom agents e skills sao a forma nativa do GitHub para especializar o Copilot",
+      "context": "@autopilot-deploy para deploys corporativos, @autopilot-ops para manutencao geral. Skills deploy-flow e fix-ci-failure carregados sob demanda."
+    },
     {
       "date": "2026-03-27",
       "decision": "Copilot e backup oficial do Claude Code",
@@ -84,6 +120,46 @@
     }
   ],
   "lessonsLearned": [
+    {
+      "lesson": "O Coding Agent roda em background via issue assignment — nao precisa de chat interativo",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "Criar issue com [Copilot] prefix + labels copilot,autonomous para acionar o Coding Agent"
+    },
+    {
+      "lesson": "Custom agents em .github/agents/*.agent.md sao carregados automaticamente pelo Coding Agent",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "Usar @autopilot-deploy para deploys corporativos, @autopilot-ops para manutencao geral"
+    },
+    {
+      "lesson": "Skills em .github/skills/*/SKILL.md sao carregados sob demanda quando relevantes",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "deploy-flow skill para deploys, fix-ci-failure skill para falhas de CI"
+    },
+    {
+      "lesson": "Hooks em .github/hooks/*.json auto-aprovam tool calls — eliminam confirmacoes",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "auto-approve-tools.json aprova push_files, create_pull_request, merge_pull_request automaticamente"
+    },
+    {
+      "lesson": "copilot-setup-steps.yml roda ANTES do agent comecar — mostra estado atual",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "Instala jq, mostra versao atual, run atual e estado do Claude antes de qualquer acao"
+    },
+    {
+      "lesson": "Para delegar tarefas a si mesmo: criar issue [Copilot] + labels copilot,autonomous",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "Usar issue_write com prefix [Copilot] e labels copilot,autonomous. Coding Agent e acionado automaticamente."
+    },
+    {
+      "lesson": "Workflow copilot-task-dispatch.yml cria issue automaticamente via trigger/copilot-task.json",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "Editar trigger/copilot-task.json com task, bumpar run → workflow cria e assigna issue automaticamente"
+    },
+    {
+      "lesson": "O fluxo completo e: issue criada → Coding Agent roda → PR criado → autonomous-merge-direct mergeia → workflow dispara",
+      "source": "issue learn-coding-agent 2026-03-28",
+      "fix": "Zero intervencao humana — tudo automatico do inicio ao fim"
+    },
     {
       "lesson": "NUNCA criar PR como draft — workflow nao consegue mergear draft PRs",
       "source": "session 2026-03-27",
