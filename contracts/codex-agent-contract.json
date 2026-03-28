@@ -161,12 +161,22 @@
     "monitoringProtocol": "ALWAYS monitor both autopilot workflow AND corporate esteira. Deploy is NOT complete until Docker image is published. Poll every 30-60s.",
     "errorRecovery": "If deploy fails: read ci-logs-controller-*.txt from autopilot-state, diagnose, fix, re-deploy AUTOMATICALLY without asking user."
   },
+  "memoryProtocol": {
+    "description": "Codex tem memoria persistente. Ler no inicio, atualizar no final de cada sessao.",
+    "memoryFile": "contracts/codex-session-memory.json",
+    "embeddedIn": "AGENTS.md (auto-gerado por sync-codex-prompt.yml com memoria embutida)",
+    "onStart": ["Ler codex-session-memory.json", "Ler claude-live-status.json", "Ler claude-session-memory.json"],
+    "onEnd": ["Atualizar sessionsLog", "Atualizar currentState", "Incrementar sessionCount", "Commit via branch codex/*"]
+  },
   "contextFiles": [
     "AGENTS.md",
     "contracts/shared-agent-contract.json",
+    "contracts/codex-session-memory.json",
     "contracts/claude-session-memory.json",
+    "contracts/claude-live-status.json",
     "contracts/shared-agent-context.md",
     "contracts/codex-deploy-guide.md",
+    "ops/docs/deploy-process/README.md",
     "schemas/*.schema.json",
     "contracts/codex-agent-contract.json",
     "CLAUDE.md",
