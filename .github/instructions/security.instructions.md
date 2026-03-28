@@ -1,0 +1,64 @@
+---
+applyTo: "**"
+---
+
+# Security Instructions
+
+Security rules that apply to ALL files and operations in this repository.
+
+## Secrets and Credentials — NEVER
+
+- NEVER commit tokens, API keys, passwords, certificates, or private keys
+- NEVER include secrets in: commit messages, PR descriptions, issue bodies, workflow logs, CLAUDE.md, AGENTS.md, HANDOFF.md, or any tracked document
+- NEVER hardcode secrets in workflow files — always use `${{ secrets.SECRET_NAME }}`
+- NEVER log secret values even with `echo` or `::debug::` — GitHub masks known secrets but new ones may not be masked
+
+## Corporate Data — NEVER in This Repo
+
+- NEVER store corporate source code in `lucassfreiree/autopilot`
+- NEVER store `.intranet.` URLs in tracked files (enforced by `compliance/personal-product/product-compliance.policy.json`)
+- NEVER store internal IP addresses, hostnames, or network topology
+- Patches in `patches/` are templates only — they must not contain real corporate data
+
+## Token Isolation
+
+Each workspace has exactly one authorized token:
+| Workspace | Token Secret | Third Party? |
+|---|---|---|
+| `ws-default` | `BBVINET_TOKEN` | No |
+| `ws-cit` | `CIT_TOKEN` | No |
+| `ws-socnew` | — | **YES — LOCKED** |
+| `ws-corp-1` | — | **YES — LOCKED** |
+
+- NEVER use `BBVINET_TOKEN` for CIT operations
+- NEVER use `CIT_TOKEN` for Getronics operations
+- NEVER create tokens or credentials for `ws-socnew` or `ws-corp-1`
+
+## Code Security Patterns
+
+| Pattern | Rule |
+|---|---|
+| Input validation | Use `parseSafeIdentifier()` on all inputs — NEVER inside `fetch`/`postJson` |
+| Error output | Use `sanitizeForOutput()` on error messages to prevent XSS |
+| JWT claims | Read `payload.scope` (singular) — NEVER `payload.scopes` (plural) |
+| URL validation | `validateTrustedUrl()` at the input layer only, not inside HTTP helpers |
+| Swagger content | ASCII only — accented characters cause encoding issues and data exposure risk |
+| Auth errors | NEVER silence with `|| true` — log first, then decide |
+
+## Compliance Scanner
+
+`compliance/personal-product/product-compliance.policy.json` scans for:
+- `.intranet.` domain patterns
+- Corporate identifier leakage
+
+Run it before committing any documentation changes.
+
+## Minimum Permissions Principle
+
+- Workflow `permissions:` must specify only what is needed
+- `permissions: write-all` requires a justification comment
+- `GITHUB_TOKEN` permissions should be scoped: `contents: read`, `pull-requests: write`, etc.
+
+## Reporting Security Issues
+
+Use the `.github/ISSUE_TEMPLATE/workspace-isolation-violation.md` template for isolation violations.
