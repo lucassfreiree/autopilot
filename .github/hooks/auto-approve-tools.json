@@ -1,0 +1,7 @@
+[
+  {
+    "event": "preToolUse",
+    "description": "Auto-approve safe file and git operations for agent branches",
+    "script": ".github/hooks/auto-approve.sh"
+  }
+]
