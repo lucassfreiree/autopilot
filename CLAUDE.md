@@ -93,6 +93,8 @@ Visual automation and external integrations (100% self-hosted, open-source).
 This control plane manages **multiple companies** from a single point. Each company is a **completely isolated context**.
 Full separation guide: `ops/docs/workspace-separation.md`
 
+> ⚠️ **ATENÇÃO:** `ws-socnew` e `ws-corp-1` pertencem a **terceiros** (irmão do proprietário). **NUNCA operar sem autorização explícita e escrita do proprietário da conta.** Ver seção "Workspaces Bloqueados" abaixo.
+
 ### Company Contexts
 
 | | **Getronics** (ws-default) | **CIT** (ws-cit) |
@@ -105,6 +107,12 @@ Full separation guide: `ops/docs/workspace-separation.md`
 | **Data Classification** | Confidential | Internal |
 | **Quick Index** | `ops/config/workspaces/ws-default.json` | `ops/config/workspaces/ws-cit.json` |
 | **Trigger Label** | `_context: "GETRONICS \| ws-default \| BBVINET_TOKEN"` | `_context: "CIT \| ws-cit \| CIT_TOKEN"` |
+
+### Blocked Workspaces (Third-Party — DO NOT OPERATE)
+| Workspace | Owner | Policy |
+|-----------|-------|--------|
+| `ws-socnew` | Terceiro (irmão do proprietário) | 🔴 **BLOQUEADO** — NÃO OPERAR SEM AUTORIZAÇÃO EXPLÍCITA |
+| `ws-corp-1` | Terceiro | 🔴 **BLOQUEADO** — NÃO OPERAR SEM AUTORIZAÇÃO EXPLÍCITA |
 
 ### Workspace Navigation (for agents)
 | What you need | Where to find |
@@ -144,6 +152,20 @@ Full separation guide: `ops/docs/workspace-separation.md`
 5. Uma vez identificado, ler `state/workspaces/<ws_id>/workspace.json` para config
 6. Quick index: `ops/config/workspaces/<ws_id>.json`
 
+### Workspaces Bloqueados (POLÍTICA CRÍTICA)
+`ws-socnew` e `ws-corp-1` **pertencem a terceiros** (irmão do proprietário da conta `lucassfreiree`).
+
+**NUNCA:**
+- Executar operações nesses workspaces sem autorização **explícita e escrita** do proprietário
+- Ler, escrever ou modificar `state/workspaces/ws-socnew/` ou `state/workspaces/ws-corp-1/`
+- Usar repos corporativos de `ws-socnew` ou `ws-corp-1`
+- Executar workflows em nome desses workspaces
+- Disparar triggers com `workspace_id: ws-socnew` ou `workspace_id: ws-corp-1`
+
+**Em caso de dúvida: NÃO OPERAR. Perguntar primeiro.**
+
+Esta política deve ser aplicada por TODOS os agentes (Claude, Codex, Copilot, ChatGPT) e documentada em todos os artefatos agentic.
+
 ### Isolation Rules
 1. **NUNCA** assumir um workspace como padrao — sempre identificar pelo contexto
 2. **NUNCA** misturar dados, commits, credenciais ou estado entre empresas
@@ -153,6 +175,7 @@ Full separation guide: `ops/docs/workspace-separation.md`
 6. **Sucesso do apply-source-change NAO garante sucesso do CI corporativo** (vale para todas as empresas)
 7. **Em caso de duvida, o padrao e isolamento** — nunca assumir que contextos podem ser compartilhados
 8. Os SHAs sao DIFERENTES entre autopilot e cada repo corporativo
+9. **ws-socnew e ws-corp-1 SAO BLOQUEADOS** — pertencemm a terceiros, nao operar sem autorizacao explícita
 
 ### Getronics-Specific Rules
 1. Esteira de Build NPM (runner corporativo) — monitorar via `ci-diagnose.yml`
@@ -385,7 +408,8 @@ state/workspaces/ws-default/workspace.json
 |-------------|---------|--------|-------|-------------|
 | `ws-default` | Getronics | Active | Node/TypeScript | Primary workspace (bbvinet corporate repos) |
 | `ws-cit` | CIT | Active | DevOps | DevOps workspace (K8s, Docker, Terraform, CI/CD) |
-| `ws-corp-1` | — | Empty/Template | — | Reserved for additional corporate workspace |
+| `ws-socnew` | **TERCEIRO** | 🔴 **BLOQUEADO** | — | Pertence a terceiro (irmão do proprietário) — **NÃO TOCAR SEM AUTORIZAÇÃO EXPLÍCITA** |
+| `ws-corp-1` | **TERCEIRO** | 🔴 **BLOQUEADO** | — | Pertence a terceiro — **NÃO TOCAR SEM AUTORIZAÇÃO EXPLÍCITA** |
 
 ### State Location
 ```
