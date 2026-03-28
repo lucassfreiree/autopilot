@@ -154,6 +154,25 @@ jobs:
           done
 
           # Save to env files for next step
+          # ── Extract Codex session memory (EMBED in AGENTS.md) ──
+          echo "=== Extracting Codex memory ==="
+          CODEX_STATE=""
+          CODEX_LESSONS=""
+          CODEX_ERRORS=""
+          CODEX_SESSIONS=""
+          CLAUDE_STATUS="idle"
+          CLAUDE_TASK="none"
+          if [ -f contracts/codex-session-memory.json ]; then
+            CODEX_STATE=$(jq -r '.currentState | "- Controller: \(.controllerVersion // "?") | Agent: \(.agentVersion // "?")\n- Last run: \(.lastTriggerRun // "?") | Status: \(.pipelineStatus // "?")\n- Workspace: \(.workspace // "?") (\(.company // "?"))"' contracts/codex-session-memory.json 2>/dev/null || echo "- Unable to read")
+            CODEX_LESSONS=$(jq -r '.lessonsLearned[]? | "- **\(.lesson)** → Fix: \(.fix // "see source")"' contracts/codex-session-memory.json 2>/dev/null || echo "- No lessons yet")
+            CODEX_ERRORS=$(jq -r '.errorPatterns | to_entries[]? | "- `\(.key)`: \(.value)"' contracts/codex-session-memory.json 2>/dev/null || echo "- No errors yet")
+            CODEX_SESSIONS=$(jq -r '.sessionsLog[-3:][]? | "- [\(.date)] \(.summary)"' contracts/codex-session-memory.json 2>/dev/null || echo "- No sessions yet")
+          fi
+          if [ -f contracts/claude-live-status.json ]; then
+            CLAUDE_STATUS=$(jq -r '.currentSession.status // "idle"' contracts/claude-live-status.json 2>/dev/null || echo "idle")
+            CLAUDE_TASK=$(jq -r '.currentSession.task // "none"' contracts/claude-live-status.json 2>/dev/null || echo "none")
+          fi
+
           {
             echo "WF_TABLE<<EOF1"; echo -e "$WF_TABLE"; echo "EOF1"
             echo "DISPATCH_TABLE<<EOF2"; echo -e "$DISPATCH_TABLE"; echo "EOF2"
@@ -162,6 +181,12 @@ jobs:
             echo "AGENT_TABLE<<EOF5"; echo -e "$AGENT_TABLE"; echo "EOF5"
             echo "STATE_INFO<<EOF6"; echo -e "$STATE_INFO"; echo "EOF6"
             echo "WS_TABLE<<EOF7"; echo -e "$WS_TABLE"; echo "EOF7"
+            echo "CODEX_STATE<<EOFXS"; echo -e "$CODEX_STATE"; echo "EOFXS"
+            echo "CODEX_LESSONS<<EOFXL"; echo -e "$CODEX_LESSONS"; echo "EOFXL"
+            echo "CODEX_ERRORS<<EOFXE"; echo -e "$CODEX_ERRORS"; echo "EOFXE"
+            echo "CODEX_SESSIONS<<EOFXSS"; echo -e "$CODEX_SESSIONS"; echo "EOFXSS"
+            echo "CLAUDE_STATUS=$CLAUDE_STATUS"
+            echo "CLAUDE_TASK=$CLAUDE_TASK"
           } >> "$GITHUB_ENV"
 
       - name: "Generate prompt"
@@ -194,12 +219,49 @@ jobs:
           4. If user mentions CIT, DevOps, Terraform, K8s, cloud, monitoring → `ws-cit`
           5. **If ambiguous: ASK the user — NEVER assume a default**
 
-          Read your workspace contract: `contracts/codex-agent-contract.json`
+          Read your contract: `contracts/codex-agent-contract.json`
           Read shared rules: `contracts/shared-agent-contract.json`
+          Read deploy guide: `contracts/codex-deploy-guide.md`
+          Full deploy docs: `ops/docs/deploy-process/` (12 phases)
 
           STATIC_EOF
 
-          # Fix indentation from heredoc
+          sed -i 's/^          //' AGENTS.md
+
+          # ── Inject Codex memory ──
+          cat >> AGENTS.md << MEMEOF
+
+          ## YOUR MEMORY (auto-loaded — NO need to read files)
+
+          This is your persistent memory from ALL previous sessions, embedded automatically.
+
+          ### Current State
+          $CODEX_STATE
+
+          ### Claude Status
+          - Claude: **$CLAUDE_STATUS** | Task: $CLAUDE_TASK
+
+          ### Lessons Learned (NEVER repeat these errors)
+          $CODEX_LESSONS
+
+          ### Error Patterns
+          $CODEX_ERRORS
+
+          ### Recent Sessions
+          $CODEX_SESSIONS
+
+          ### Full Memory File
+          To update: \`contracts/codex-session-memory.json\`
+          At END of session: update this file via branch codex/* → PR → merge.
+
+          ---
+
+          MEMEOF
+
+          cat >> AGENTS.md << 'WS_SECTION'
+
+          WS_SECTION
+
           sed -i 's/^          //' AGENTS.md
 
           echo "" >> AGENTS.md
