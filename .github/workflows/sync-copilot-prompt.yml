@@ -146,6 +146,32 @@ jobs:
           CURR_VER_RULE=$(jq -r '.versioningRules.currentVersion // "unknown"' contracts/claude-session-memory.json 2>/dev/null || echo "unknown")
           VER_PATTERN=$(jq -r '.versioningRules.versionPattern // "unknown"' contracts/claude-session-memory.json 2>/dev/null || echo "unknown")
 
+          # ── Extract Copilot session memory (EMBED in instructions) ──
+          echo "=== Extracting Copilot memory ==="
+          COPILOT_STATE=""
+          COPILOT_LESSONS=""
+          COPILOT_ERRORS=""
+          COPILOT_SESSIONS=""
+          COPILOT_DECISIONS=""
+          if [ -f contracts/copilot-session-memory.json ]; then
+            COPILOT_STATE=$(jq -r '.currentState | "- Controller: \(.controllerVersion // "?") | Agent: \(.agentVersion // "?")\n- Last run: \(.lastTriggerRun // "?") | Status: \(.pipelineStatus // "?")\n- Workspace: \(.workspace // "?") (\(.company // "?"))"' contracts/copilot-session-memory.json 2>/dev/null || echo "- Unable to read")
+            COPILOT_LESSONS=$(jq -r '.lessonsLearned[]? | "- **\(.lesson)** → Fix: \(.fix // "see source")"' contracts/copilot-session-memory.json 2>/dev/null || echo "- No lessons yet")
+            COPILOT_ERRORS=$(jq -r '.errorPatterns | to_entries[]? | "- `\(.key)`: \(.value)"' contracts/copilot-session-memory.json 2>/dev/null || echo "- No errors yet")
+            COPILOT_SESSIONS=$(jq -r '.sessionsLog[-3:][]? | "- [\(.date)] \(.summary)"' contracts/copilot-session-memory.json 2>/dev/null || echo "- No sessions yet")
+            COPILOT_DECISIONS=$(jq -r '.decisions[-5:][]? | "- [\(.date)] \(.decision)"' contracts/copilot-session-memory.json 2>/dev/null || echo "- No decisions yet")
+          fi
+
+          # ── Extract Claude live status ──
+          echo "=== Extracting Claude live status ==="
+          CLAUDE_STATUS="idle"
+          CLAUDE_TASK="none"
+          CLAUDE_PHASE="none"
+          if [ -f contracts/claude-live-status.json ]; then
+            CLAUDE_STATUS=$(jq -r '.currentSession.status // "idle"' contracts/claude-live-status.json 2>/dev/null || echo "idle")
+            CLAUDE_TASK=$(jq -r '.currentSession.task // "none"' contracts/claude-live-status.json 2>/dev/null || echo "none")
+            CLAUDE_PHASE=$(jq -r '.currentSession.phase // "none"' contracts/claude-live-status.json 2>/dev/null || echo "none")
+          fi
+
           # ── Extract shared rules ──
           echo "=== Extracting shared rules ==="
           RULES_LIST=$(jq -r '.rules[]? | "- " + .' contracts/shared-agent-contract.json 2>/dev/null || echo "- See contracts/shared-agent-contract.json")
@@ -165,6 +191,14 @@ jobs:
             echo "LAST_OK=$LAST_OK"
             echo "CURR_VER_RULE=$CURR_VER_RULE"
             echo "VER_PATTERN=$VER_PATTERN"
+            echo "COPILOT_STATE<<EOFCS"; echo -e "$COPILOT_STATE"; echo "EOFCS"
+            echo "COPILOT_LESSONS<<EOFCL"; echo -e "$COPILOT_LESSONS"; echo "EOFCL"
+            echo "COPILOT_ERRORS<<EOFCE"; echo -e "$COPILOT_ERRORS"; echo "EOFCE"
+            echo "COPILOT_SESSIONS<<EOFCSS"; echo -e "$COPILOT_SESSIONS"; echo "EOFCSS"
+            echo "COPILOT_DECISIONS<<EOFCD"; echo -e "$COPILOT_DECISIONS"; echo "EOFCD"
+            echo "CLAUDE_STATUS=$CLAUDE_STATUS"
+            echo "CLAUDE_TASK=$CLAUDE_TASK"
+            echo "CLAUDE_PHASE=$CLAUDE_PHASE"
           } >> "$GITHUB_ENV"
 
       - name: "Generate copilot instructions"
@@ -222,6 +256,42 @@ jobs:
           ---
 
           STATEEOF
+
+          # ── Copilot Memory EMBEDDED (auto-loaded every session) ──
+          cat >> "$OUT" << MEMEOF
+
+          ## YOUR MEMORY (auto-loaded — NO need to read files)
+
+          This is your persistent memory from ALL previous sessions, embedded automatically.
+          You already know everything below. Apply it immediately.
+
+          ### Current State
+          $COPILOT_STATE
+
+          ### Claude Status
+          - Claude: **$CLAUDE_STATUS** | Task: $CLAUDE_TASK | Phase: $CLAUDE_PHASE
+
+          ### Lessons Learned (NEVER repeat these errors)
+          $COPILOT_LESSONS
+
+          ### Error Patterns (quick fix reference)
+          $COPILOT_ERRORS
+
+          ### Recent Sessions
+          $COPILOT_SESSIONS
+
+          ### Key Decisions
+          $COPILOT_DECISIONS
+
+          ### Full Memory File
+          To see complete memory or update it: \`contracts/copilot-session-memory.json\`
+          At END of session: update this file via push_files → PR → merge.
+
+          ---
+
+          MEMEOF
+
+          sed -i 's/^          //' "$OUT"
 
           cat >> "$OUT" << 'WS_SECTION'
           ## WORKSPACE IDENTIFICATION (DO THIS FIRST)
