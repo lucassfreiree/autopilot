@@ -5,13 +5,17 @@
   "lastSessionId": "session-2026-03-28-absorb-auto-monitor",
   "sessionCount": 5,
   "currentState": {
-    "controllerVersion": "3.6.8",
+    "controllerVersion": "3.6.6",
     "agentVersion": "2.2.9",
-    "lastTriggerRun": 66,
+    "lastTriggerRun": 69,
     "lastSuccessfulRun": 66,
     "workspace": "ws-default",
     "company": "Getronics",
-    "pipelineStatus": "success"
+    "pipelineStatus": "success",
+    "compliancePipeline": "active — 4 stages: compliance-gate → apply-source-change → post-deploy-validation → deploy-auto-learn",
+    "sparkDashboard": "v2-intelligence — 12 pages with drift detection",
+    "totalComplianceChecks": 14,
+    "driftDetection": "active — reads real versions from bbvinet/* every 5 min"
   },
   "sessionsLog": [
     {

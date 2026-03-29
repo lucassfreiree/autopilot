@@ -473,7 +473,35 @@ NUNCA modificar:
 20. Se Claude caiu: assumir como backup imediatamente
 
 # ═══════════════════════════════════════════════════════════════
-#  SECAO 11: DOCUMENTACAO COMPLETA
+#  SECAO 11: DEPLOY COMPLIANCE PIPELINE (4 STAGES — OBRIGATORIO)
+# ═══════════════════════════════════════════════════════════════
+
+Todo deploy passa por 4 stages de compliance automaticamente:
+PR → Compliance Gate (14 checks) → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn
+
+## Stage 1: compliance-gate.yml (PRE-DEPLOY)
+14 static checks + pull corporate + npm ci + tsc + eslint + jest + tag validation.
+Bloqueia merge se violar. Comenta no PR. Regras:
+- version-format, version-4-files, swagger-ascii, jwt-scope-singular
+- no-validate-in-fetch, no-nested-ternary, search-replace-newlines, run-not-incremented
+- blocked-workspace, security-xss, security-ssrf, security-dos-loop
+- hardcoded-secret, use-before-define
+
+## Stage 2: apply-source-change.yml (DURING)
+Setup → Session Guard → Apply & Push → CI Gate → Promote → State → Audit
+
+## Stage 3: post-deploy-validation.yml (POST-DEPLOY)
+Verifica: source version + CAP tag + state + corporate CI. Cria Issue se falhar.
+
+## Stage 4: deploy-auto-learn.yml (AFTER)
+Mapeia erros, gera learning report, registra melhorias.
+
+## Drift Detection (spark-sync-state.yml)
+Le versoes REAIS dos repos corporativos (bbvinet/*) via BBVINET_TOKEN a cada 5 min.
+Detecta quando alguem deploya fora do autopilot. Health score -25 por drift.
+
+# ═══════════════════════════════════════════════════════════════
+#  SECAO 11b: DOCUMENTACAO COMPLETA
 # ═══════════════════════════════════════════════════════════════
 
 | Documento | Caminho | Quando usar |
