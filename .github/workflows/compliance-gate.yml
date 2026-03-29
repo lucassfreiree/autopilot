@@ -527,21 +527,21 @@ jobs:
           VER="${{ needs.static-analysis.outputs.version }}"
 
           if [ "$PASSED" = "true" ]; then
-            BODY="## ✅ Compliance Gate: PASSED
-
-**$COMP v$VER** — All stages passed.
-
-| Stage | Result |
-|-------|--------|
-| Static Analysis (14 rules) | ✅ |
-| Pull & Test (npm ci + tsc + eslint + jest) | ✅ |
-| Release Tag Check (duplicate + CAP) | ✅ |"
+            BODY=$(cat <<EOFBODY
+          ## ✅ Compliance Gate: PASSED
+          **${COMP} v${VER}** — All stages passed.
+          - Static Analysis (14 rules): ✅
+          - Pull and Test (npm ci + tsc + eslint + jest): ✅
+          - Release Tag Check (duplicate + CAP): ✅
+          EOFBODY
+          )
           else
-            BODY="## ❌ Compliance Gate: FAILED
-
-**$COMP v$VER** — Violations found. Fix before merge.
-
-See workflow run for details."
+            BODY=$(cat <<EOFBODY
+          ## ❌ Compliance Gate: FAILED
+          **${COMP} v${VER}** — Violations found. Fix before merge.
+          See workflow run for details.
+          EOFBODY
+          )
           fi
 
           PR=${{ github.event.pull_request.number }}
