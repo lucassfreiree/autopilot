@@ -291,6 +291,7 @@
     <div class="panel" id="panel-tokens">
       <div class="page-header"><h2>Token Intelligence</h2><span class="badge b-cyan" id="tokenBadge">estimating...</span></div>
       <p style="color:var(--muted);font-size:12px;margin-bottom:12px">Estimated token consumption analytics based on real operation counts (deploys, sessions, workflows). Shows cost breakdown by model (Opus/Haiku), usage by operation type, daily trends, efficiency score, and smart recommendations for reducing costs. Auto-optimization runs daily.</p>
+      <div id="tokenUsageMeter"></div>
       <div id="tokenAlerts"></div>
       <div class="grid-4" id="tokenKPIs"></div>
       <div class="grid-2" style="margin-top:16px">
@@ -305,6 +306,7 @@
       <div class="section" style="margin-top:0"><h3>Daily Usage Trend (last 7 days)</h3><div id="tokenTrend"></div></div>
       <div class="section" style="margin-top:0"><h3>Token Efficiency Score</h3><div id="tokenEfficiency"></div></div>
       <div class="section" style="margin-top:0"><h3>Auto-Optimization Engine</h3><div id="tokenAutoOptimize"></div></div>
+      <div class="section" style="margin-top:0"><h3>How Token Usage is Calculated</h3><div id="tokenHowItWorks"></div></div>
     </div>
 
     <!-- OPERATIONS CENTER -->
@@ -1472,10 +1474,66 @@
         </div>
       </div>`;
 
+    // === USAGE METER (plan limit indicator) ===
+    // Claude Code plans: Pro=$20/mo (~5M tokens), Max5x=$100/mo (~25M tokens), Max20x=$200/mo (~100M tokens)
+    const PLANS=[
+      {name:'Pro ($20/mo)',limit:5000000,color:'yellow'},
+      {name:'Max 5x ($100/mo)',limit:25000000,color:'blue'},
+      {name:'Max 20x ($200/mo)',limit:100000000,color:'green'}
+    ];
+    // Estimate monthly usage from daily average
+    const monthlyEst=t.dailyAvg*30;
+    const bestPlan=PLANS.find(p=>monthlyEst<=p.limit)||PLANS[PLANS.length-1];
+    const usagePct=Math.min(100,Math.round(monthlyEst/bestPlan.limit*100));
+    const daysLeft=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate()-new Date().getDate();
+    const projectedEnd=t.dailyAvg*(new Date().getDate()+daysLeft);
+    const projectedPct=Math.min(100,Math.round(projectedEnd/bestPlan.limit*100));
+    const meterColor=usagePct<60?'green':usagePct<85?'yellow':'red';
+
+    document.getElementById('tokenUsageMeter').innerHTML=`
+      <div class="section" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 style="margin:0">Monthly Usage Meter</h3>
+          <span style="font-size:12px;color:var(--muted)">Estimated plan: <strong style="color:var(--${bestPlan.color})">${bestPlan.name}</strong></span>
+        </div>
+
+        <div style="background:var(--surface2);border-radius:8px;height:32px;position:relative;overflow:hidden;margin-bottom:8px">
+          <div style="height:100%;width:${usagePct}%;background:var(--${meterColor});border-radius:8px;transition:width .5s;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)">${usagePct}%</span>
+          </div>
+          ${projectedPct>usagePct?`<div style="position:absolute;top:0;left:${projectedPct}%;height:100%;width:2px;background:var(--yellow);opacity:.7" title="Projected end of month"></div>`:''}
+        </div>
+
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:12px">
+          <span>Used: <strong style="color:var(--text)">${fmtTokens(monthlyEst)}</strong> of ${fmtTokens(bestPlan.limit)}</span>
+          <span>${daysLeft} days left · Projected: <strong style="color:var(--${projectedPct>90?'red':projectedPct>70?'yellow':'green'})">${fmtTokens(projectedEnd)}</strong> (${projectedPct}%)</span>
+        </div>
+
+        <div class="grid-3" style="gap:8px">
+          ${PLANS.map(p=>{
+            const pPct=Math.min(100,Math.round(monthlyEst/p.limit*100));
+            const fits=monthlyEst<=p.limit;
+            return`<div style="background:var(--surface2);border-radius:6px;padding:10px;text-align:center;border:${p.name===bestPlan.name?'2px solid var(--'+p.color+')':'1px solid var(--border)'}">
+              <div style="font-size:11px;font-weight:600;color:var(--${p.color})">${p.name}</div>
+              <div style="font-size:10px;color:var(--muted)">${fmtTokens(p.limit)} tokens/mo</div>
+              <div style="margin:6px 0;background:var(--border);height:4px;border-radius:2px;overflow:hidden"><div style="height:100%;width:${pPct}%;background:var(--${pPct<60?'green':pPct<85?'yellow':'red'});border-radius:2px"></div></div>
+              <div style="font-size:12px;font-weight:700;color:var(--${fits?'green':'red'})">${pPct}% ${fits?'✓':'⚠️'}</div>
+            </div>`;
+          }).join('')}
+        </div>
+
+        <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+          ${usagePct<60?'✅ <strong style="color:var(--green)">Comfortable</strong> — well within plan limits.':
+            usagePct<85?'⚠️ <strong style="color:var(--yellow)">Watch usage</strong> — approaching plan limit. Consider reducing operations or upgrading.':
+            '🔴 <strong style="color:var(--red)">Near limit</strong> — reduce operations immediately or upgrade plan to avoid hitting the cap.'}
+        </div>
+      </div>`;
+
     // Alerts
     const tokenAlerts=[];
+    if(projectedPct>90)tokenAlerts.push({type:'error',msg:`Projected to use ${projectedPct}% of ${bestPlan.name} limit by end of month. Consider reducing operations or upgrading plan.`});
+    else if(projectedPct>70)tokenAlerts.push({type:'warn',msg:`Projected ${projectedPct}% usage of ${bestPlan.name} by month end. ${daysLeft} days remaining.`});
     if(t.totalCost>50)tokenAlerts.push({type:'warn',msg:`Estimated total cost $${t.totalCost.toFixed(2)} — review recommendations to optimize`});
-    if(t.modelDist['opus-4-6']>t.totalTokens*0.85)tokenAlerts.push({type:'info',msg:`${Math.round(t.modelDist['opus-4-6']/t.totalTokens*100)}% of tokens use Opus — consider Sonnet/Haiku for routine tasks`});
     document.getElementById('tokenAlerts').innerHTML=tokenAlerts.map(a=>`<div class="alert-bar alert-${a.type}">${alertIcon(a.type)} ${esc(a.msg)}</div>`).join('');
 
     // Auto-optimization engine status
@@ -1502,11 +1560,55 @@
       <div style="margin-top:12px;background:var(--surface2);border-radius:6px;padding:12px;font-size:12px">
         <strong>How it works:</strong> The <code>token-auto-optimize.yml</code> workflow runs daily at 06:00 UTC. It reads <code>token-optimization-rules.json</code>, applies all compaction rules to session memory, archives old data, and commits the optimized files. The SessionStart hook injects only essential memory sections (~50% reduction). Subagent model routing is enforced via <code>.claude/rules/</code>.
       </div>`;
+
+    // === HOW TOKEN USAGE IS CALCULATED ===
+    document.getElementById('tokenHowItWorks').innerHTML=`
+      <div style="font-size:13px;line-height:1.8">
+        <div style="background:var(--surface2);border-radius:8px;padding:16px;margin-bottom:12px">
+          <strong style="font-size:14px">What are tokens?</strong><br>
+          Tokens are the unit of text that AI models process. ~1 token = ~4 characters in English.
+          Every message you send, every file read, and every response generated consumes tokens.
+          <strong>You pay for input tokens (what Claude reads) and output tokens (what Claude writes).</strong>
+        </div>
+
+        <div style="background:var(--surface2);border-radius:8px;padding:16px;margin-bottom:12px">
+          <strong style="font-size:14px">How is usage calculated here?</strong><br>
+          This dashboard <strong>estimates</strong> token usage based on operation counts — it is NOT a direct reading from the Anthropic billing API.
+          The formula: each operation type (deploy, CI diagnosis, PR creation, etc.) has an estimated token cost based on typical input/output sizes.
+          These estimates are multiplied by the number of operations recorded in the system state.
+        </div>
+
+        <div style="background:var(--surface2);border-radius:8px;padding:16px;margin-bottom:12px">
+          <strong style="font-size:14px">When does usage reset?</strong><br>
+          <strong>Monthly.</strong> Anthropic plans reset on your billing cycle date (usually the 1st of each month).
+          The "Monthly Usage Meter" above shows estimated usage for the current billing period and projects whether you'll hit your plan limit.
+        </div>
+
+        <table style="margin:12px 0">
+          <thead><tr><th>Plan</th><th>Price</th><th>Approx. Token Limit</th><th>Good for</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Pro</strong></td><td>$20/mo</td><td>~5M tokens</td><td>Light usage (1-2 deploys/week)</td></tr>
+            <tr><td><strong>Max 5x</strong></td><td>$100/mo</td><td>~25M tokens</td><td>Regular usage (daily sessions)</td></tr>
+            <tr><td><strong>Max 20x</strong></td><td>$200/mo</td><td>~100M tokens</td><td>Heavy usage (multiple deploys/day)</td></tr>
+          </tbody>
+        </table>
+
+        <div style="background:var(--surface2);border-radius:8px;padding:16px">
+          <strong style="font-size:14px">Tips to stay within limits</strong><br>
+          <ul style="padding-left:20px;margin-top:6px">
+            <li>The auto-optimizer compacts session memory daily (saves ~40% at startup)</li>
+            <li>Subagents use cheaper models (Haiku) for exploration and simple tasks</li>
+            <li>Batch multiple changes in single commits instead of separate PRs</li>
+            <li>The "Monthly Usage Meter" turns yellow at 70% and red at 90% — pay attention to these thresholds</li>
+            <li>If approaching the limit: reduce exploration tasks, combine operations, and let auto-workflows handle routine monitoring</li>
+          </ul>
+        </div>
+      </div>`;
   }
 
   // ===== OPERATIONS CENTER =====
   const OPS_ACTIONS=[
-    {id:'check-health',label:'Check Saude do Sistema',desc:'Runs full check: state, locks, drift, CI, versions',category:'monitor',icon:'💚',safe:true},
+    {id:'check-health',label:'Check System Health',desc:'Runs full check: state, locks, drift, CI, versions',category:'monitor',icon:'💚',safe:true},
     {id:'force-dashboard-sync',label:'Force Dashboard Sync',desc:'Atualiza o dashboard AGORA com os dados mais recentes',category:'monitor',icon:'🔄',safe:true},
     {id:'diagnose-controller-ci',label:'Diagnose CI do Controller',desc:'Downloads corporate CI logs and analyzes Controller errors',category:'diagnose',icon:'🔍',safe:true},
     {id:'diagnose-agent-ci',label:'Diagnose CI do Agent',desc:'Downloads corporate CI logs and analyzes Agent errors',category:'diagnose',icon:'🔍',safe:true},
