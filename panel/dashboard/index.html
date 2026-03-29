@@ -1361,98 +1361,114 @@
 
   function renderTokens(){
     const t=computeTokenUsage();
-    const PLANS=[
-      {name:'Pro',price:'$20/mo',limit:5000000,desc:'Light use (1-2 deploys/week)'},
-      {name:'Max 5x',price:'$100/mo',limit:25000000,desc:'Regular use (daily sessions)'},
-      {name:'Max 20x',price:'$200/mo',limit:100000000,desc:'Heavy use (many deploys/day)'}
-    ];
-    const monthlyEst=t.dailyAvg*30;
-    const bestPlan=PLANS.find(p=>monthlyEst<=p.limit)||PLANS[2];
-    const usagePct=Math.min(100,Math.round(monthlyEst/bestPlan.limit*100));
-    const daysLeft=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate()-new Date().getDate();
-    const projEnd=t.dailyAvg*(new Date().getDate()+daysLeft);
-    const projPct=Math.min(100,Math.round(projEnd/bestPlan.limit*100));
-    const mc=usagePct<60?'green':usagePct<85?'yellow':'red';
 
-    document.getElementById('tokenBadge').textContent=`~${fmtTokens(monthlyEst)}/mo`;
-    document.getElementById('tokenBadge').className='badge b-'+mc;
-    document.getElementById('navTokens').textContent=usagePct+'%';
-    document.getElementById('navTokens').style.color='var(--'+mc+')';
+    // PLAN CONFIG — Max 5x, billing cycle starts day 21
+    const PLAN={name:'Max 5x',price:'$100/mo',limit:25000000};
+    const BILLING_DAY=21; // renews on the 21st each month
 
-    // Day/Week/Month calculations
-    const dailyLimit=Math.round(bestPlan.limit/30);
+    // Calculate billing cycle dates
+    const now=new Date();
+    let cycleStart,cycleEnd;
+    if(now.getDate()>=BILLING_DAY){
+      cycleStart=new Date(now.getFullYear(),now.getMonth(),BILLING_DAY);
+      cycleEnd=new Date(now.getFullYear(),now.getMonth()+1,BILLING_DAY);
+    }else{
+      cycleStart=new Date(now.getFullYear(),now.getMonth()-1,BILLING_DAY);
+      cycleEnd=new Date(now.getFullYear(),now.getMonth(),BILLING_DAY);
+    }
+    const cycleDays=Math.round((cycleEnd-cycleStart)/(1000*60*60*24));
+    const dayInCycle=Math.round((now-cycleStart)/(1000*60*60*24));
+    const daysLeft=Math.max(0,cycleDays-dayInCycle);
+    const cycleEndStr=cycleEnd.toLocaleDateString('en',{month:'short',day:'numeric'});
+
+    // Usage estimates based on cycle position
+    const dailyAvg=t.dailyAvg;
+    const cycleUsed=dailyAvg*dayInCycle;
+    const dailyLimit=Math.round(PLAN.limit/cycleDays);
     const weeklyLimit=dailyLimit*7;
-    const dayOfWeek=new Date().getDay()||7;
-    const todayUsed=t.dailyAvg;
-    const weekUsed=t.dailyAvg*dayOfWeek;
+    const projectedTotal=dailyAvg*cycleDays;
+
+    // Today
+    const todayUsed=dailyAvg;
     const dayPct=Math.min(100,Math.round(todayUsed/dailyLimit*100));
-    const weekPct=Math.min(100,Math.round(weekUsed/weeklyLimit*100));
     const dayRemain=Math.max(0,dailyLimit-todayUsed);
-    const weekRemain=Math.max(0,weeklyLimit-weekUsed);
-    const monthRemain=Math.max(0,bestPlan.limit-monthlyEst);
     const dc=dayPct<60?'green':dayPct<85?'yellow':'red';
+
+    // This week (Mon=1 to Sun=7)
+    const dow=now.getDay()||7;
+    const weekUsed=dailyAvg*dow;
+    const weekPct=Math.min(100,Math.round(weekUsed/weeklyLimit*100));
+    const weekRemain=Math.max(0,weeklyLimit-weekUsed);
     const wc=weekPct<60?'green':weekPct<85?'yellow':'red';
 
+    // Billing cycle
+    const cyclePct=Math.min(100,Math.round(cycleUsed/PLAN.limit*100));
+    const cycleRemain=Math.max(0,PLAN.limit-cycleUsed);
+    const mc=cyclePct<60?'green':cyclePct<85?'yellow':'red';
+    const projPct=Math.min(100,Math.round(projectedTotal/PLAN.limit*100));
+
+    document.getElementById('tokenBadge').textContent=cyclePct+'%';
+    document.getElementById('tokenBadge').className='badge b-'+mc;
+    document.getElementById('navTokens').textContent=cyclePct+'%';
+    document.getElementById('navTokens').style.color='var(--'+mc+')';
+
     document.getElementById('tokenMain').innerHTML=`
-      <!-- USAGE METER -->
+      <!-- BILLING CYCLE METER -->
       <div class="section" style="margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div><span style="font-size:28px;font-weight:700;color:var(--${mc})">${usagePct}%</span> <span style="font-size:14px;color:var(--muted)">of ${bestPlan.name} (${bestPlan.price})</span></div>
-          <div style="text-align:right;font-size:12px;color:var(--muted)">${daysLeft} days left this month<br>Projected: <strong style="color:var(--${projPct>90?'red':projPct>70?'yellow':'green'})">${fmtTokens(projEnd)}</strong></div>
+          <div>
+            <span style="font-size:32px;font-weight:700;color:var(--${mc})">${cyclePct}%</span>
+            <span style="font-size:14px;color:var(--muted);margin-left:8px">${PLAN.name} (${PLAN.price})</span>
+          </div>
+          <div style="text-align:right;font-size:12px;color:var(--muted)">
+            Renews: <strong>${cycleEndStr}</strong> (${daysLeft} days)<br>
+            Cycle day: <strong>${dayInCycle}</strong> of ${cycleDays}
+          </div>
         </div>
         <div style="background:var(--surface2);border-radius:8px;height:28px;overflow:hidden;position:relative">
-          <div style="height:100%;width:${usagePct}%;background:var(--${mc});border-radius:8px;transition:width .5s"></div>
+          <div style="height:100%;width:${cyclePct}%;background:var(--${mc});border-radius:8px;transition:width .5s"></div>
+          ${projPct>cyclePct?`<div style="position:absolute;top:0;left:${Math.min(98,projPct)}%;height:100%;width:2px;background:var(--yellow);opacity:.8" title="Projected end of cycle"></div>`:''}
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px">
-          <span>${fmtTokens(monthlyEst)} used</span>
-          <span>${fmtTokens(bestPlan.limit)} limit</span>
+          <span>Used: <strong>${fmtTokens(cycleUsed)}</strong></span>
+          <span>Remaining: <strong style="color:var(--${mc})">${fmtTokens(cycleRemain)}</strong></span>
+          <span>Limit: <strong>${fmtTokens(PLAN.limit)}</strong></span>
         </div>
-        <div style="margin-top:12px;font-size:13px">
-          ${usagePct<60?'<span style="color:var(--green)">✅ Comfortable</span> — well within plan limits.':
-            usagePct<85?'<span style="color:var(--yellow)">⚠️ Watch usage</span> — approaching limit. Reduce operations or upgrade.':
-            '<span style="color:var(--red)">🔴 Near limit</span> — reduce operations or upgrade plan.'}
+        <div style="margin-top:10px;font-size:13px">
+          ${cyclePct<60?`<span style="color:var(--green)">✅ Comfortable</span> — ${fmtTokens(cycleRemain)} remaining for ${daysLeft} days.`:
+            cyclePct<85?`<span style="color:var(--yellow)">⚠️ Watch usage</span> — ${fmtTokens(cycleRemain)} left for ${daysLeft} days. Budget ~${fmtTokens(Math.round(cycleRemain/Math.max(daysLeft,1)))}/day.`:
+            `<span style="color:var(--red)">🔴 Near limit</span> — only ${fmtTokens(cycleRemain)} left for ${daysLeft} days. Reduce usage.`}
         </div>
       </div>
 
-      <!-- DAY / WEEK / MONTH -->
+      <!-- TODAY / WEEK / CYCLE -->
       <div class="grid-3" style="margin-bottom:16px">
         <div class="card" style="padding:14px">
           <div class="card-title">Today</div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-size:22px;font-weight:700;color:var(--${dc})">${fmtTokens(todayUsed)}</div><span style="font-size:12px;color:var(--muted)">/ ${fmtTokens(dailyLimit)}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div style="font-size:22px;font-weight:700;color:var(--${dc})">${fmtTokens(todayUsed)}</div>
+            <span style="font-size:12px;color:var(--muted)">/ ${fmtTokens(dailyLimit)}</span>
+          </div>
           <div style="background:var(--surface2);height:6px;border-radius:3px;margin:8px 0;overflow:hidden"><div style="height:100%;width:${dayPct}%;background:var(--${dc});border-radius:3px"></div></div>
-          <div style="font-size:11px;color:var(--muted)">Remaining: <strong style="color:var(--${dc})">${fmtTokens(dayRemain)}</strong></div>
+          <div style="font-size:11px;color:var(--muted)">Left today: <strong style="color:var(--${dc})">${fmtTokens(dayRemain)}</strong></div>
         </div>
         <div class="card" style="padding:14px">
-          <div class="card-title">This Week (day ${dayOfWeek}/7)</div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-size:22px;font-weight:700;color:var(--${wc})">${fmtTokens(weekUsed)}</div><span style="font-size:12px;color:var(--muted)">/ ${fmtTokens(weeklyLimit)}</span></div>
+          <div class="card-title">This Week (day ${dow}/7)</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div style="font-size:22px;font-weight:700;color:var(--${wc})">${fmtTokens(weekUsed)}</div>
+            <span style="font-size:12px;color:var(--muted)">/ ${fmtTokens(weeklyLimit)}</span>
+          </div>
           <div style="background:var(--surface2);height:6px;border-radius:3px;margin:8px 0;overflow:hidden"><div style="height:100%;width:${weekPct}%;background:var(--${wc});border-radius:3px"></div></div>
-          <div style="font-size:11px;color:var(--muted)">Remaining: <strong style="color:var(--${wc})">${fmtTokens(weekRemain)}</strong></div>
+          <div style="font-size:11px;color:var(--muted)">Left this week: <strong style="color:var(--${wc})">${fmtTokens(weekRemain)}</strong></div>
         </div>
         <div class="card" style="padding:14px">
-          <div class="card-title">This Month (day ${new Date().getDate()}/30)</div>
-          <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-size:22px;font-weight:700;color:var(--${mc})">${fmtTokens(monthlyEst)}</div><span style="font-size:12px;color:var(--muted)">/ ${fmtTokens(bestPlan.limit)}</span></div>
-          <div style="background:var(--surface2);height:6px;border-radius:3px;margin:8px 0;overflow:hidden"><div style="height:100%;width:${usagePct}%;background:var(--${mc});border-radius:3px"></div></div>
-          <div style="font-size:11px;color:var(--muted)">Remaining: <strong style="color:var(--${mc})">${fmtTokens(monthRemain)}</strong> · Cost: <strong>$${t.totalCost.toFixed(0)}</strong></div>
-        </div>
-      </div>
-
-      <!-- PLAN COMPARISON -->
-      <div class="section" style="margin-bottom:16px">
-        <h3>Which plan fits?</h3>
-        <div class="grid-3" style="gap:10px">
-          ${PLANS.map(p=>{
-            const pPct=Math.min(100,Math.round(monthlyEst/p.limit*100));
-            const fits=monthlyEst<=p.limit;
-            const isCurrent=p.name===bestPlan.name;
-            return`<div style="background:var(--surface2);border-radius:8px;padding:14px;text-align:center;border:${isCurrent?'2px solid var(--blue)':'1px solid var(--border)'}">
-              <div style="font-size:16px;font-weight:700">${p.name}</div>
-              <div style="font-size:12px;color:var(--muted)">${p.price} · ${fmtTokens(p.limit)}</div>
-              <div style="margin:8px 0;background:var(--border);height:6px;border-radius:3px;overflow:hidden"><div style="height:100%;width:${pPct}%;background:var(--${pPct<60?'green':pPct<85?'yellow':'red'});border-radius:3px"></div></div>
-              <div style="font-size:18px;font-weight:700;color:var(--${fits?'green':'red'})">${pPct}%</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:4px">${p.desc}</div>
-              ${isCurrent?'<div style="margin-top:6px"><span class="badge b-blue">Best fit</span></div>':''}
-            </div>`;
-          }).join('')}
+          <div class="card-title">Billing Cycle (day ${dayInCycle}/${cycleDays})</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div style="font-size:22px;font-weight:700;color:var(--${mc})">${fmtTokens(cycleUsed)}</div>
+            <span style="font-size:12px;color:var(--muted)">/ ${fmtTokens(PLAN.limit)}</span>
+          </div>
+          <div style="background:var(--surface2);height:6px;border-radius:3px;margin:8px 0;overflow:hidden"><div style="height:100%;width:${cyclePct}%;background:var(--${mc});border-radius:3px"></div></div>
+          <div style="font-size:11px;color:var(--muted)">Left: <strong style="color:var(--${mc})">${fmtTokens(cycleRemain)}</strong> · Projected: ${fmtTokens(projectedTotal)} (${projPct}%)</div>
         </div>
       </div>
 
