@@ -224,6 +224,7 @@ jobs:
             --argjson agent_prs "$AGENT_PRS" \
             --argjson ctrl_ext "$CTRL_EXTERNAL_COMMITS" \
             --argjson agent_ext "$AGENT_EXTERNAL_COMMITS" \
+            --argjson improvements "$(cat contracts/improvement-history.json 2>/dev/null | jq -c '{summary:.summary,count:(.improvements|length),latest:(.improvements[:3]|map({id,date,type,title,"impact":.impact}))}' 2>/dev/null || echo 'null')" \
             '{
               lastSync: now | strftime("%Y-%m-%dT%H:%M:%SZ"),
               syncSource: "autopilot/spark-sync-state.yml",
@@ -437,13 +438,15 @@ jobs:
                 }
               },
 
+              improvements: ($improvements // {}),
+
               metadata: {
                 autopilotRepo: "lucassfreiree/autopilot",
                 sparkRepo: "lucassfreiree/spark-dashboard",
-                totalAgents: 3,
+                totalAgents: 1,
                 totalWorkspaces: 4,
                 syncInterval: "1min business hours (8-17 BRT Mon-Fri) / 5min off-hours",
-                stateVersion: 4
+                stateVersion: 5
               }
             }' > /tmp/state.json
 
