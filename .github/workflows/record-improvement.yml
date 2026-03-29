@@ -40,20 +40,26 @@ jobs:
       - name: Record improvement
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          INPUT_WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
+          INPUT_CATEGORY: ${{ github.event.inputs.category }}
+          INPUT_DESCRIPTION: ${{ github.event.inputs.description }}
+          INPUT_SOURCE: ${{ github.event.inputs.source }}
+          INPUT_RECORDED_BY: ${{ github.event.inputs.recorded_by }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
-          WS_ID="${{ github.event.inputs.workspace_id }}"
+          WS_ID="${INPUT_WORKSPACE_ID}"
           WS_PATH="state/workspaces/${WS_ID}/improvements"
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           SAFE_NOW=$(echo "$NOW" | tr ':' '-')
-          IMP_ID="imp-${SAFE_NOW}-${{ github.run_number }}"
+          IMP_ID="imp-${SAFE_NOW}-${RUN_NUMBER}"
           IMP=$(jq -n \
             --arg id "$IMP_ID" \
             --arg ws "$WS_ID" \
             --arg now "$NOW" \
-            --arg cat "${{ github.event.inputs.category }}" \
-            --arg desc "${{ github.event.inputs.description }}" \
-            --arg src "${{ github.event.inputs.source }}" \
-            --arg by "${{ github.event.inputs.recorded_by }}" \
+            --arg cat "$INPUT_CATEGORY" \
+            --arg desc "$INPUT_DESCRIPTION" \
+            --arg src "$INPUT_SOURCE" \
+            --arg by "$INPUT_RECORDED_BY" \
             '{
               improvementId: $id, workspaceId: $ws, createdAt: $now,
               category: $cat, description: $desc,
@@ -67,5 +73,5 @@ jobs:
             -f "content=$ENCODED"
           echo "## Improvement Recorded" >> "$GITHUB_STEP_SUMMARY"
           echo "- **ID:** $IMP_ID" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Category:** ${{ github.event.inputs.category }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Description:** ${{ github.event.inputs.description }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Category:** $INPUT_CATEGORY" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Description:** $INPUT_DESCRIPTION" >> "$GITHUB_STEP_SUMMARY"

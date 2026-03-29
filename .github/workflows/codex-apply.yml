@@ -62,9 +62,17 @@ jobs:
 
       - name: Load config
         id: cfg
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TASK: ${{ github.event.inputs.task }}
+          INPUT_MODEL: ${{ github.event.inputs.model || 'o3' }}
+          INPUT_TARGET_FILES: ${{ github.event.inputs.target_files }}
+          INPUT_AUTO_MERGE: ${{ github.event.inputs.auto_merge || 'false' }}
+          INPUT_RUN: ${{ github.event.inputs.run || 'manual' }}
+          INPUT_WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "push" ] && [ -f trigger/codex-commit.json ]; then
+          if [ "$EVENT_NAME" = "push" ] && [ -f trigger/codex-commit.json ]; then
             TASK=$(jq -r '.task // ""' trigger/codex-commit.json)
             MODEL=$(jq -r '.model // "o3"' trigger/codex-commit.json)
             TARGET_FILES=$(jq -r '.target_files // ""' trigger/codex-commit.json)
@@ -73,13 +81,13 @@ jobs:
             BRANCH_SUFFIX=$(jq -r '.branch_suffix // ""' trigger/codex-commit.json)
             WORKSPACE_ID=$(jq -r '.workspace_id // ""' trigger/codex-commit.json)
           else
-            TASK="${{ github.event.inputs.task }}"
-            MODEL="${{ github.event.inputs.model || 'o3' }}"
-            TARGET_FILES="${{ github.event.inputs.target_files }}"
-            AUTO_MERGE="${{ github.event.inputs.auto_merge || 'false' }}"
-            RUN="${{ github.event.inputs.run || 'manual' }}"
+            TASK="$INPUT_TASK"
+            MODEL="$INPUT_MODEL"
+            TARGET_FILES="$INPUT_TARGET_FILES"
+            AUTO_MERGE="$INPUT_AUTO_MERGE"
+            RUN="$INPUT_RUN"
             BRANCH_SUFFIX=""
-            WORKSPACE_ID="${{ github.event.inputs.workspace_id }}"
+            WORKSPACE_ID="$INPUT_WORKSPACE_ID"
           fi
 
           if [ -z "$TASK" ]; then
@@ -158,9 +166,10 @@ jobs:
 
       - name: Read target files content
         id: context
+        env:
+          TARGET_FILES: ${{ steps.cfg.outputs.target_files }}
         run: |
           set -euo pipefail
-          TARGET_FILES="${{ steps.cfg.outputs.target_files }}"
           FILE_CONTEXT=""
 
           if [ -n "$TARGET_FILES" ]; then
@@ -303,11 +312,12 @@ jobs:
       - name: Apply changes and create branch
         if: steps.codex.outputs.status == 'success'
         id: apply
+        env:
+          BRANCH: ${{ steps.codex.outputs.branch }}
+          COMMIT_MSG: ${{ steps.codex.outputs.commit_msg }}
+          CFG_RUN: ${{ steps.cfg.outputs.run }}
         run: |
           set -euo pipefail
-
-          BRANCH="${{ steps.codex.outputs.branch }}"
-          COMMIT_MSG="${{ steps.codex.outputs.commit_msg }}"
 
           # Create branch
           git checkout -B "$BRANCH"
@@ -362,7 +372,7 @@ jobs:
           ${COMMIT_MSG}
 
           Co-authored-by: codex-agent <codex-agent@github.com>
-          Triggered-by: codex-apply workflow run ${{ steps.cfg.outputs.run }}
+          Triggered-by: codex-apply workflow run ${CFG_RUN}
           EOF
           )
           git commit -m "$COMMIT_BODY"
@@ -464,25 +474,31 @@ jobs:
 
       - name: Save result to autopilot-state
         if: always()
+        env:
+          STATUS: ${{ steps.codex.outputs.status || 'failed' }}
+          PR_URL: ${{ steps.pr.outputs.pr_url || 'none' }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number || '0' }}
+          APPLIED: ${{ steps.apply.outputs.applied || '0' }}
+          MODEL_SELECTED: ${{ steps.model.outputs.selected }}
+          CFG_RUN: ${{ steps.cfg.outputs.run }}
+          CFG_WORKSPACE_ID: ${{ steps.cfg.outputs.workspace_id }}
+          CFG_TASK: ${{ steps.cfg.outputs.task }}
+          CODEX_BRANCH: ${{ steps.codex.outputs.branch || 'none' }}
+          CFG_AUTO_MERGE: ${{ steps.cfg.outputs.auto_merge }}
         run: |
           set -euo pipefail
 
-          STATUS="${{ steps.codex.outputs.status || 'failed' }}"
-          PR_URL="${{ steps.pr.outputs.pr_url || 'none' }}"
-          PR_NUMBER="${{ steps.pr.outputs.pr_number || '0' }}"
-          APPLIED="${{ steps.apply.outputs.applied || '0' }}"
-
           RESULT=$(jq -n \
             --arg status "$STATUS" \
-            --arg model "${{ steps.model.outputs.selected }}" \
-            --arg run "${{ steps.cfg.outputs.run }}" \
-            --arg workspace_id "${{ steps.cfg.outputs.workspace_id }}" \
-            --arg task "${{ steps.cfg.outputs.task }}" \
-            --arg branch "${{ steps.codex.outputs.branch || 'none' }}" \
+            --arg model "$MODEL_SELECTED" \
+            --arg run "$CFG_RUN" \
+            --arg workspace_id "$CFG_WORKSPACE_ID" \
+            --arg task "$CFG_TASK" \
+            --arg branch "$CODEX_BRANCH" \
             --arg pr_url "$PR_URL" \
             --arg pr_number "$PR_NUMBER" \
             --arg changes_applied "$APPLIED" \
-            --arg auto_merge "${{ steps.cfg.outputs.auto_merge }}" \
+            --arg auto_merge "$CFG_AUTO_MERGE" \
             '{
               status: $status,
               model: $model,
@@ -509,6 +525,8 @@ jobs:
 
       - name: Save to autopilot-state
         if: always()
+        env:
+          CFG_RUN: ${{ steps.cfg.outputs.run }}
         run: |
           mkdir -p state_branch/state/bridges
           cp /tmp/codex-apply-result.json state_branch/state/bridges/codex-apply-latest.json 2>/dev/null || true
@@ -522,27 +540,37 @@ jobs:
           if git diff --cached --quiet; then
             echo "No state changes"
           else
-            git commit -m "chore: update codex-apply result (run ${{ steps.cfg.outputs.run }})"
+            git commit -m "chore: update codex-apply result (run ${CFG_RUN})"
             git push origin autopilot-state
           fi
 
       - name: Summary
         if: always()
+        env:
+          CFG_RUN: ${{ steps.cfg.outputs.run }}
+          CFG_WORKSPACE_ID: ${{ steps.cfg.outputs.workspace_id }}
+          MODEL_SELECTED: ${{ steps.model.outputs.selected }}
+          CODEX_STATUS: ${{ steps.codex.outputs.status || 'failed' }}
+          CODEX_BRANCH: ${{ steps.codex.outputs.branch || 'n/a' }}
+          APPLIED: ${{ steps.apply.outputs.applied || '0' }}
+          PR_URL: ${{ steps.pr.outputs.pr_url || 'none' }}
+          CFG_AUTO_MERGE: ${{ steps.cfg.outputs.auto_merge }}
+          CFG_TASK: ${{ steps.cfg.outputs.task }}
         run: |
           {
             echo "## Codex Apply Results"
             echo ""
             echo "| Field | Value |"
             echo "|-------|-------|"
-            echo "| Run | \`${{ steps.cfg.outputs.run }}\` |"
-            echo "| Workspace | \`${{ steps.cfg.outputs.workspace_id }}\` |"
-            echo "| Model | \`${{ steps.model.outputs.selected }}\` |"
-            echo "| Status | \`${{ steps.codex.outputs.status || 'failed' }}\` |"
-            echo "| Branch | \`${{ steps.codex.outputs.branch || 'n/a' }}\` |"
-            echo "| Changes Applied | \`${{ steps.apply.outputs.applied || '0' }}\` |"
-            echo "| PR | ${{ steps.pr.outputs.pr_url || 'none' }} |"
-            echo "| Auto-merge | \`${{ steps.cfg.outputs.auto_merge }}\` |"
+            echo "| Run | \`${CFG_RUN}\` |"
+            echo "| Workspace | \`${CFG_WORKSPACE_ID}\` |"
+            echo "| Model | \`${MODEL_SELECTED}\` |"
+            echo "| Status | \`${CODEX_STATUS}\` |"
+            echo "| Branch | \`${CODEX_BRANCH}\` |"
+            echo "| Changes Applied | \`${APPLIED}\` |"
+            echo "| PR | ${PR_URL} |"
+            echo "| Auto-merge | \`${CFG_AUTO_MERGE}\` |"
             echo ""
             echo "### Task"
-            echo "${{ steps.cfg.outputs.task }}"
+            echo "$CFG_TASK"
           } >> "$GITHUB_STEP_SUMMARY"
