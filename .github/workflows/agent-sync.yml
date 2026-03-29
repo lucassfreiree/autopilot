@@ -51,15 +51,20 @@ jobs:
 
       - name: "Resolve inputs"
         id: inputs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
+          INPUT_TASK: ${{ github.event.inputs.task }}
+          INPUT_CONTEXT: ${{ github.event.inputs.context }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ] && [ -f trigger/agent-sync.json ]; then
+          if [ "$EVENT_NAME" = "push" ] && [ -f trigger/agent-sync.json ]; then
             echo "ws_id=$(jq -r '.workspace_id // "ws-default"' trigger/agent-sync.json)" >> "$GITHUB_OUTPUT"
             echo "task=$(jq -r '.task // "ci-fix"' trigger/agent-sync.json)" >> "$GITHUB_OUTPUT"
             echo "context=$(jq -r '.context // ""' trigger/agent-sync.json)" >> "$GITHUB_OUTPUT"
           else
-            echo "ws_id=${{ github.event.inputs.workspace_id || 'ws-default' }}" >> "$GITHUB_OUTPUT"
-            echo "task=${{ github.event.inputs.task || 'ci-fix' }}" >> "$GITHUB_OUTPUT"
-            echo "context=${{ github.event.inputs.context }}" >> "$GITHUB_OUTPUT"
+            echo "ws_id=${INPUT_WORKSPACE_ID:-ws-default}" >> "$GITHUB_OUTPUT"
+            echo "task=${INPUT_TASK:-ci-fix}" >> "$GITHUB_OUTPUT"
+            echo "context=${INPUT_CONTEXT}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: "Read workspace config"

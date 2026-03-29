@@ -36,9 +36,11 @@ jobs:
     steps:
       - name: Resolve intent → route
         id: resolve
+        env:
+          INPUT_INTENT: ${{ github.event.inputs.intent }}
         run: |
           set -euo pipefail
-          INTENT=$(echo "${{ github.event.inputs.intent }}" | tr '[:upper:]' '[:lower:]' | xargs)
+          INTENT=$(echo "$INPUT_INTENT" | tr '[:upper:]' '[:lower:]' | xargs)
           ROUTE="unknown"
           DESCRIPTION=""
           WORKFLOW=""
@@ -123,10 +125,11 @@ jobs:
       - name: Dispatch target workflow
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          INPUT_PAYLOAD: ${{ github.event.inputs.payload }}
         run: |
           set -euo pipefail
           WORKFLOW="${{ needs.route.outputs.workflow }}"
-          PAYLOAD='${{ github.event.inputs.payload }}'
+          PAYLOAD="$INPUT_PAYLOAD"
 
           # Validate payload is valid JSON; fallback to empty object
           if ! echo "$PAYLOAD" | jq . > /dev/null 2>&1; then
@@ -155,9 +158,10 @@ jobs:
       - name: Write triage handoff
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          INPUT_INTENT: ${{ github.event.inputs.intent }}
         run: |
           set -euo pipefail
-          INTENT="${{ github.event.inputs.intent }}"
+          INTENT="$INPUT_INTENT"
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           SAFE_NOW=$(date -u +%Y%m%d-%H%M%S)
 
@@ -190,11 +194,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Write summary
+        env:
+          INPUT_INTENT: ${{ github.event.inputs.intent }}
         run: |
           ROUTE="${{ needs.route.outputs.route }}"
           DESCRIPTION="${{ needs.route.outputs.description }}"
           WORKFLOW="${{ needs.route.outputs.workflow }}"
-          INTENT="${{ github.event.inputs.intent }}"
+          INTENT="$INPUT_INTENT"
           {
             echo "## 🚀 Autopilot Dispatcher"
             echo ""

@@ -40,17 +40,23 @@ jobs:
 
       - name: Read task from trigger or inputs
         id: task
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TASK: ${{ github.event.inputs.task }}
+          INPUT_TASK_TYPE: ${{ github.event.inputs.task_type }}
+          INPUT_COMPONENT: ${{ github.event.inputs.component }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "$EVENT_NAME" = "push" ]; then
             TASK=$(jq -r '.task // "No task specified"' trigger/copilot-task.json)
             TASK_TYPE=$(jq -r '.task_type // "general"' trigger/copilot-task.json)
             COMPONENT=$(jq -r '.component // ""' trigger/copilot-task.json)
             VERSION=$(jq -r '.version // ""' trigger/copilot-task.json)
           else
-            TASK="${{ github.event.inputs.task }}"
-            TASK_TYPE="${{ github.event.inputs.task_type }}"
-            COMPONENT="${{ github.event.inputs.component }}"
-            VERSION="${{ github.event.inputs.version }}"
+            TASK="${INPUT_TASK}"
+            TASK_TYPE="${INPUT_TASK_TYPE}"
+            COMPONENT="${INPUT_COMPONENT}"
+            VERSION="${INPUT_VERSION}"
           fi
 
           echo "task=$TASK" >> "$GITHUB_OUTPUT"

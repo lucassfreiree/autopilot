@@ -22,7 +22,7 @@
           "bbvinet/psc-sre-automacao-controller": {
             "role": "Controller — orquestra automacoes, despacha para agents, gerencia logs de execucao",
             "type": "source-code",
-            "currentVersion": "3.6.9",
+            "currentVersion": "3.7.0",
             "stack": "Node 22, TypeScript, Express, Jest, SQLite, S3",
             "ci": "Esteira de Build NPM (corporate runner)",
             "actionsUrl": "https://github.com/bbvinet/psc-sre-automacao-controller/actions",
@@ -1056,8 +1056,8 @@
     ]
   },
   "versioningRules": {
-    "currentVersion": "3.6.9",
-    "previousVersion": "3.6.4",
+    "currentVersion": "3.7.0",
+    "previousVersion": "3.6.9",
     "rule": "Se a esteira ja gerou imagem para uma versao, a proxima DEVE incrementar o patch. CI rejeita tags duplicadas no registry.",
     "versioningPattern": "CRITICO: Apos X.Y.9, a proxima versao e X.(Y+1).0 — NUNCA X.Y.10. Exemplos: 3.5.9 → 3.6.0, 3.6.9 → 3.7.0, 3.9.9 → 3.10.0. O terceiro digito (patch) vai de 0 a 9 apenas.",
     "versionFiles": [
@@ -1126,10 +1126,10 @@
       "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "lastTriggerRun": 70,
-    "lastSuccessfulRun": 69,
+    "lastTriggerRun": 71,
+    "lastSuccessfulRun": 70,
     "lastDeployPR": 197,
-    "pipelineStatus": "IN_PROGRESS — deploy controller 3.7.0 (run #70). Swagger version bump + e2e validation.",
+    "pipelineStatus": "COMPLETED — controller 3.7.0 (run #70) SUCCESS. agent 2.3.2 (run #71) IN_PROGRESS — CI Gate.",
     "multiFilePayload": {
       "change_type": "multi-file",
       "changesFormat": [
@@ -2087,12 +2087,12 @@
     "validatedBy": "usuario — elogiou o fluxo como 'excelente'"
   },
   "currentState": {
-    "controllerVersion": "3.6.9",
+    "controllerVersion": "3.7.0",
     "agentVersion": "2.3.1",
-    "lastTriggerRun": 70,
-    "lastSuccessfulRun": 69,
+    "lastTriggerRun": 71,
+    "lastSuccessfulRun": 70,
     "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)",
-    "pendingDeploy": "controller 3.7.0 (run #70) — swagger version bump + e2e validation. CI Gate in progress."
+    "pendingDeploy": "agent 2.3.2 (run #71) — swagger version bump + e2e validation. CI Gate in progress."
   },
   "deployCompliancePipeline": {
     "description": "Pipeline de compliance end-to-end criado em 2026-03-29. 4 stages cobrindo pre, durante, pos-deploy e auto-learning.",

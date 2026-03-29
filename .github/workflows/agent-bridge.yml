@@ -36,18 +36,24 @@ jobs:
           echo '{"status":"initialized"}' > /tmp/codex-response.txt
       - name: Load trigger/config
         id: cfg
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TASK: ${{ github.event.inputs.task }}
+          INPUT_MODEL: ${{ github.event.inputs.model }}
+          INPUT_MEMORY: ${{ github.event.inputs.include_session_memory }}
+          INPUT_PATCHES: ${{ github.event.inputs.include_patches }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ] && [ -f trigger/agent-bridge.json ]; then
+          if [ "$EVENT_NAME" = "push" ] && [ -f trigger/agent-bridge.json ]; then
             TASK=$(jq -r '.task // ""' trigger/agent-bridge.json)
             REQ_MODEL=$(jq -r '.model // "o3"' trigger/agent-bridge.json)
             MEM=$(jq -r '.include_session_memory // true' trigger/agent-bridge.json)
             PATCH=$(jq -r '.include_patches // true' trigger/agent-bridge.json)
             RUN=$(jq -r '.run // 0' trigger/agent-bridge.json)
           else
-            TASK="${{ github.event.inputs.task }}"
-            REQ_MODEL="${{ github.event.inputs.model || 'o3' }}"
-            MEM="${{ github.event.inputs.include_session_memory || 'true' }}"
-            PATCH="${{ github.event.inputs.include_patches || 'true' }}"
+            TASK="${INPUT_TASK}"
+            REQ_MODEL="${INPUT_MODEL:-o3}"
+            MEM="${INPUT_MEMORY:-true}"
+            PATCH="${INPUT_PATCHES:-true}"
             RUN="manual"
           fi
           echo "task<<EOF" >> $GITHUB_OUTPUT
