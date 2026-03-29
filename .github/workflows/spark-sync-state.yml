@@ -3,7 +3,7 @@ run-name: "${{ github.workflow }} • sync state to Spark dashboard"
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes for near real-time
+    - cron: '*/5 * * * *'
   workflow_run:
     workflows:
       - "[Corp] Deploy: Apply Source Change"
@@ -16,6 +16,7 @@ on:
       - 'contracts/copilot-session-memory.json'
       - 'contracts/codex-session-memory.json'
       - 'trigger/source-change.json'
+      - 'references/spark-dashboard/**'
   workflow_dispatch: {}
 
 permissions:
@@ -56,23 +57,32 @@ jobs:
           CTRL_STATE=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/controller-release-state.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
           AGENT_STATE=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/agent-release-state.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
 
-          # ── Local files ──
+          # ── Local files (full content for deep intelligence) ──
           TRIGGER=$(cat trigger/source-change.json 2>/dev/null || echo '{}')
           COPILOT_MEM=$(cat contracts/copilot-session-memory.json 2>/dev/null || echo '{"sessionCount":0,"lessonsLearned":[],"sessionsLog":[]}')
           CODEX_MEM=$(cat contracts/codex-session-memory.json 2>/dev/null || echo '{"sessionCount":0,"lessonsLearned":[],"sessionsLog":[]}')
           CLAUDE_STATUS=$(cat contracts/claude-live-status.json 2>/dev/null || echo '{"currentSession":{"status":"idle","task":null},"operationalState":{},"lastUpdatedBy":"unknown"}')
           CLAUDE_MEM=$(cat contracts/claude-session-memory.json 2>/dev/null || echo '{}')
 
-          # ── Recent workflow runs ──
-          RECENT_RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?per_page=10" --jq '[.workflow_runs[:10] | .[] | {name: .name, status: .status, conclusion: .conclusion, created: .created_at, url: .html_url}]' 2>/dev/null || echo '[]')
+          # ── Recent workflow runs (last 20 for better history) ──
+          RECENT_RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?per_page=20" --jq '[.workflow_runs[:20] | .[] | {name: .name, status: .status, conclusion: .conclusion, created: .created_at, url: .html_url, run_number: .run_number, head_branch: .head_branch, event: .event}]' 2>/dev/null || echo '[]')
 
           # ── Open PRs ──
-          OPEN_PRS=$(gh api "repos/${{ github.repository }}/pulls?state=open&per_page=10" --jq '[.[] | {number: .number, title: .title, author: .user.login, branch: .head.ref, draft: .draft, created: .created_at}]' 2>/dev/null || echo '[]')
+          OPEN_PRS=$(gh api "repos/${{ github.repository }}/pulls?state=open&per_page=10" --jq '[.[] | {number: .number, title: .title, author: .user.login, branch: .head.ref, draft: .draft, created: .created_at, labels: [.labels[].name]}]' 2>/dev/null || echo '[]')
 
           # ── Recent deploys from audit ──
-          DEPLOY_HISTORY=$(gh api "repos/${{ github.repository }}/git/trees/autopilot-state?recursive=1" --jq '[.tree[] | select(.path | test("audit/source-change")) | .path] | sort | reverse | .[:10]' 2>/dev/null || echo '[]')
+          DEPLOY_HISTORY=$(gh api "repos/${{ github.repository }}/git/trees/autopilot-state?recursive=1" --jq '[.tree[] | select(.path | test("audit/source-change")) | .path] | sort | reverse | .[:20]' 2>/dev/null || echo '[]')
 
-          # ── Build comprehensive state.json ──
+          # ── Session lock status ──
+          SESSION_LOCK=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/locks/session-lock.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{"agentId":"none"}')
+
+          # ── Health state ──
+          HEALTH=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/health.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
+
+          # ── CI Monitor state ──
+          CI_MONITOR=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/ci-monitor-controller.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
+
+          # ── Build comprehensive state.json with FULL intelligence ──
           jq -n \
             --argjson ctrl "$CTRL_STATE" \
             --argjson agent "$AGENT_STATE" \
@@ -84,6 +94,9 @@ jobs:
             --argjson runs "$RECENT_RUNS" \
             --argjson prs "$OPEN_PRS" \
             --argjson deploys "$DEPLOY_HISTORY" \
+            --argjson lock "$SESSION_LOCK" \
+            --argjson health "$HEALTH" \
+            --argjson ci_monitor "$CI_MONITOR" \
             '{
               lastSync: now | strftime("%Y-%m-%dT%H:%M:%SZ"),
               syncSource: "autopilot/spark-sync-state.yml",
@@ -94,7 +107,10 @@ jobs:
                 ciResult: ($ctrl.ciResult // "unknown"),
                 promoted: ($ctrl.promoted // false),
                 lastSha: ($ctrl.lastReleasedSha // "?"),
-                updatedAt: ($ctrl.updatedAt // null)
+                updatedAt: ($ctrl.updatedAt // null),
+                repo: "bbvinet/psc-sre-automacao-controller",
+                capRepo: "bbvinet/psc_releases_cap_sre-aut-controller",
+                stack: "Node 22, TypeScript, Express, Jest, SQLite, S3"
               },
 
               agent: {
@@ -103,7 +119,10 @@ jobs:
                 ciResult: ($agent.ciResult // "unknown"),
                 promoted: ($agent.promoted // false),
                 lastSha: ($agent.lastReleasedSha // "?"),
-                updatedAt: ($agent.updatedAt // null)
+                updatedAt: ($agent.updatedAt // null),
+                repo: "bbvinet/psc-sre-automacao-agent",
+                capRepo: "bbvinet/psc_releases_cap_sre-aut-agent",
+                stack: "Node 22, TypeScript, Express, Jest, K8s client"
               },
 
               pipeline: {
@@ -112,7 +131,10 @@ jobs:
                 component: ($trigger.component // "?"),
                 version: ($trigger.version // "?"),
                 promote: ($trigger.promote // false),
-                workspace: ($trigger._context // "?")
+                workspace: ($trigger._context // "?"),
+                changeType: ($trigger.change_type // "?"),
+                commitMessage: ($trigger.commit_message // "?"),
+                changesCount: ($trigger.changes | length // 0)
               },
 
               agents: {
@@ -127,40 +149,72 @@ jobs:
                   sessionCount: ($copilot.sessionCount // 0),
                   lastSession: ($copilot.sessionsLog[-1].summary // "none"),
                   lessonsCount: ($copilot.lessonsLearned | length),
-                  lastUpdated: ($copilot.lastUpdated // null)
+                  lastUpdated: ($copilot.lastUpdated // null),
+                  sessions: [($copilot.sessionsLog // [])[] | {date, summary, actions: (.actions | length)}] | .[-5:]
                 },
                 codex: {
                   sessionCount: ($codex.sessionCount // 0),
                   lastSession: ($codex.sessionsLog[-1].summary // "none"),
                   lessonsCount: ($codex.lessonsLearned | length),
-                  lastUpdated: ($codex.lastUpdated // null)
+                  lastUpdated: ($codex.lastUpdated // null),
+                  sessions: [($codex.sessionsLog // [])[] | {date, summary, actions: (.actions | length)}] | .[-5:]
                 }
               },
+
+              sessionLock: {
+                agentId: ($lock.agentId // "none"),
+                expiresAt: ($lock.expiresAt // null),
+                acquiredAt: ($lock.acquiredAt // null),
+                operation: ($lock.operation // null)
+              },
+
+              health: $health,
+              ciMonitor: $ci_monitor,
 
               workspaces: [
                 {
                   id: "ws-default",
                   company: "Getronics",
                   status: "active",
+                  stack: "Node/TypeScript (NestJS, Jest, ESLint)",
+                  token: "BBVINET_TOKEN",
                   controllerVersion: ($ctrl.lastTag // $trigger.version // "?"),
                   agentVersion: ($agent.lastTag // "?"),
-                  pipelineStatus: ($copilot.currentState.pipelineStatus // "idle")
+                  pipelineStatus: ($copilot.currentState.pipelineStatus // "idle"),
+                  repos: ["psc-sre-automacao-controller", "psc-sre-automacao-agent", "psc_releases_cap_sre-aut-controller", "psc_releases_cap_sre-aut-agent"]
                 },
                 {
                   id: "ws-cit",
                   company: "CIT",
                   status: "setup",
+                  stack: "DevOps (K8s, Docker, Terraform, Helm, ArgoCD)",
+                  token: "CIT_TOKEN",
                   controllerVersion: null,
                   agentVersion: null,
-                  pipelineStatus: "not-configured"
+                  pipelineStatus: "not-configured",
+                  repos: []
+                },
+                {
+                  id: "ws-socnew",
+                  company: "SocNew (terceiro)",
+                  status: "locked",
+                  stack: null,
+                  token: null,
+                  controllerVersion: null,
+                  agentVersion: null,
+                  pipelineStatus: "locked",
+                  repos: []
                 },
                 {
                   id: "ws-corp-1",
-                  company: "Empresa 3",
-                  status: "empty",
+                  company: "Corp-1 (terceiro)",
+                  status: "locked",
+                  stack: null,
+                  token: null,
                   controllerVersion: null,
                   agentVersion: null,
-                  pipelineStatus: "not-configured"
+                  pipelineStatus: "locked",
+                  repos: []
                 }
               ],
 
@@ -171,15 +225,53 @@ jobs:
               lessonsLearned: {
                 total: (($copilot.lessonsLearned | length) + ($codex.lessonsLearned | length)),
                 copilot: ($copilot.lessonsLearned | length),
-                codex: ($codex.lessonsLearned | length)
+                codex: ($codex.lessonsLearned | length),
+                copilotLessons: [($copilot.lessonsLearned // [])[] | {lesson, fix, source}] | .[-30:],
+                codexLessons: [($codex.lessonsLearned // [])[] | {lesson, fix, source}] | .[-30:]
               },
+
+              versionRules: {
+                currentController: ($claude_mem.versioningRules.currentVersion // $ctrl.lastTag // "?"),
+                currentAgent: ($claude_mem.currentState.agentVersion // $agent.lastTag // "?"),
+                pattern: "After X.Y.9 next is X.(Y+1).0 — NEVER X.Y.10",
+                lastTriggerRun: ($claude_mem.deployFlow.lastTriggerRun // $trigger.run // 0),
+                lastSuccessfulRun: ($claude_mem.deployFlow.lastSuccessfulRun // 0)
+              },
+
+              executionHistory: ($claude_mem.executionHistory.sessions // []) | [.[] | {id, date, summary}] | .[-10:],
+
+              knownErrors: [
+                {code: "403_push", desc: "Branch nao comeca com claude/copilot/codex/", fix: "Renomear branch"},
+                {code: "trigger_not_firing", desc: "Campo run nao incrementado", fix: "Incrementar run +1"},
+                {code: "duplicate_tag", desc: "Versao ja existe no registry", fix: "Incrementar patch"},
+                {code: "eslint_no_use_before_define", desc: "Funcao usada antes de definir", fix: "Mover funcao para cima"},
+                {code: "eslint_no_nested_ternary", desc: "Ternario aninhado", fix: "Usar if/else"},
+                {code: "ts2769_jwt_sign", desc: "expiresIn tipo errado", fix: "parseExpiresIn() com cast"},
+                {code: "swagger_garbled", desc: "Acentos no swagger", fix: "ASCII puro"},
+                {code: "jwt_scope_plural", desc: "scopes (plural) no JWT", fix: "Usar scope (singular)"},
+                {code: "search_replace_newlines", desc: "sed nao interpreta newlines", fix: "Usar replace-file"},
+                {code: "ci_gate_broken", desc: "CI Gate pre-existing detection falso", fix: "Ler ci-logs-*.txt"},
+                {code: "mock_tests_broken", desc: "validateTrustedUrl em fetch/postJson", fix: "Remover do fetch"},
+                {code: "pr_dirty", desc: "Conflito com main", fix: "git pull --rebase origin main"}
+              ],
+
+              pipelineStages: [
+                {name: "Setup", desc: "Read workspace config, resolve inputs"},
+                {name: "Session Guard", desc: "Acquire multi-agent lock"},
+                {name: "Apply & Push", desc: "Clone repo, apply patches, push"},
+                {name: "CI Gate", desc: "Wait corporate CI (Esteira Build NPM)"},
+                {name: "Promote", desc: "Update CAP values.yaml image tag"},
+                {name: "Save State", desc: "Record on autopilot-state"},
+                {name: "Audit", desc: "Audit trail + release lock"}
+              ],
 
               metadata: {
                 autopilotRepo: "lucassfreiree/autopilot",
                 sparkRepo: "lucassfreiree/spark-dashboard",
                 totalAgents: 3,
-                totalWorkspaces: 3,
-                syncInterval: "5 minutes"
+                totalWorkspaces: 4,
+                syncInterval: "5 minutes",
+                stateVersion: 2
               }
             }' > /tmp/state.json
 
