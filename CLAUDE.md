@@ -352,8 +352,8 @@ All 4 repos below are on GitHub under `bbvinet` org. Access via `BBVINET_TOKEN`.
 
 | Repo | Role | Current Version | Stack | CI |
 |------|------|-----------------|-------|----|
-| [`bbvinet/psc-sre-automacao-controller`](https://github.com/bbvinet/psc-sre-automacao-controller) | Controller — orchestrates automations, dispatches to agents, manages execution logs | 3.6.6 | Node 22, TypeScript, Express, Jest | Esteira de Build NPM (corporate runner) |
-| [`bbvinet/psc-sre-automacao-agent`](https://github.com/bbvinet/psc-sre-automacao-agent) | Agent — executes automations on clusters, receives cronjob callbacks, pushes logs to controller | 2.2.9 | Node 22, TypeScript, Express, Jest, K8s client | Esteira de Build NPM (corporate runner) |
+| [`bbvinet/psc-sre-automacao-controller`](https://github.com/bbvinet/psc-sre-automacao-controller) | Controller — orchestrates automations, dispatches to agents, manages execution logs | 3.6.9 | Node 22, TypeScript, Express, Jest | Esteira de Build NPM (corporate runner) |
+| [`bbvinet/psc-sre-automacao-agent`](https://github.com/bbvinet/psc-sre-automacao-agent) | Agent — executes automations on clusters, receives cronjob callbacks, pushes logs to controller | 2.3.1 | Node 22, TypeScript, Express, Jest, K8s client | Esteira de Build NPM (corporate runner) |
 
 **How to work with source repos:**
 - **Read files**: `fetch-files.yml` workflow (trigger via `trigger/fetch-files.json`)
@@ -396,7 +396,7 @@ state/workspaces/ws-default/workspace.json
 - **CAP values path**: `releases/openshift/hml/deploy/values.yaml`
 - **Reference file**: `references/controller-cap/values.yaml`
 - **Image**: `docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller`
-- **Current deployed tag**: `3.6.6`
+- **Current deployed tag**: `3.6.9`
 - **Image line**: `image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:<TAG>`
 - **K8s Secret**: `psc-sre-automacao-controller-runtime` (11 keys: JWT_SECRET, AUTH_API_KEYS_SCOPES, SCOPE_*, AWS_REGION, OSS_*)
 - **K8s Secret**: `sre-controller-auth` (4 keys: OAS_TRUSTED_NAMESPACE, OAS_TRUSTED_SERVICE_ACCOUNT, OAS_ORIGIN_NAMESPACE_HEADERS, OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS)
@@ -562,6 +562,20 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | auto-pr-codex.yml | Auto-create PRs for Codex branches |
 | autonomous-merge-direct.yml | Direct autonomous merge for agent PRs (bypasses branch protection auto-merge requirement) |
 | ops-workflow-observability.yml | Workflow run observability and metrics |
+| ci-self-heal.yml | Auto-heal CI failures with pattern matching |
+| ci-status-check.yml | Check corporate CI status for a commit (trigger via `trigger/ci-status.json`) |
+| ci-monitor-loop.yml | Continuous CI monitoring loop |
+| clone-corporate-repos.yml | Clone corporate repos locally (trigger via `trigger/clone-repos.json`) |
+| auto-merge-sweeper.yml | Sweep and auto-merge eligible agent PRs |
+| autopilot-dispatcher.yml | Central dispatcher for autopilot operations |
+| copilot-post-deploy-sync.yml | Sync Copilot memory after deploy |
+| copilot-setup-steps.yml | Copilot coding agent setup steps |
+| copilot-task-dispatch.yml | Dispatch tasks to Copilot via issue creation |
+| repo-cleanup.yml | Clean up unused files and branches |
+| promote-cap.yml | Manual CAP promotion (trigger via `trigger/promote-cap.json`) |
+| spark-sync-state.yml | Sync state.json to Spark dashboard repo (every 15 min) |
+| post-merge-monitor.yml | Monitor workflows after PR merge |
+| sync-copilot-prompt.yml | Auto-regenerates Copilot prompt when project changes |
 
 ### Codex Automation
 | Workflow | Purpose |
@@ -586,11 +600,15 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | `trigger/codex-commit.json` | codex-apply.yml |
 | `trigger/codex-deploy.json` | codex-deploy.yml |
 | `trigger/agent-bridge.json` | agent-bridge.yml |
+| `trigger/promote-cap.json` | promote-cap.yml |
+| `trigger/clone-repos.json` | clone-corporate-repos.yml |
+| `trigger/ci-status.json` | ci-status-check.yml |
+| `trigger/copilot-task.json` | copilot-task-dispatch.yml |
 
 ## Deploy Flow — Complete Guide (for Claude, Codex, and Copilot)
 
 This is the **official, tested, end-to-end deploy flow** for pushing code changes to corporate repos.
-All agents MUST follow this flow exactly. Last successful run: **#34 (version 3.5.5)**.
+All agents MUST follow this flow exactly. Last successful run: **#69 (agent 2.3.1)**. Run #70 (controller 3.7.0) in progress.
 
 ### Phase 1: Prepare
 ```
@@ -792,7 +810,7 @@ Edit `trigger/copilot-task.json` with task description, bump `run` → workflow 
 
 **Via script:**
 ```bash
-./scripts/copilot/launch-task.sh "Deploy controller 3.6.9"
+./scripts/copilot/launch-task.sh "Deploy controller 3.7.0"
 ```
 
 **When to delegate:** Simple tasks (doc updates, memory sync, version bump), when Claude is overloaded, or when Claude session is ending and work needs continuation.
