@@ -141,7 +141,7 @@
       <div class="nav-item" onclick="go('alerts')">Alerts <span class="nav-badge" id="navAlerts">0</span></div>
       <div class="nav-item" onclick="go('pipeline')">Pipeline</div>
       <div class="nav-item" onclick="go('corporate')">Corporate Real <span class="nav-badge" id="navDrift" style="color:var(--cyan)">—</span></div>
-      <div class="nav-item" onclick="go('agents')">Agents <span class="nav-badge" id="navAgents">3</span></div>
+      <div class="nav-item" onclick="go('agents')">Claude Agent <span class="nav-badge" id="navAgents"></span></div>
       <div class="nav-item" onclick="go('compliance')">Compliance</div>
       <div class="nav-item" onclick="go('workspaces')">Workspaces</div>
       <div class="nav-item" onclick="go('workflows')">Workflows</div>
@@ -205,9 +205,9 @@
 
     <!-- AGENTS -->
     <div class="panel" id="panel-agents">
-      <div class="page-header"><h2>Agent Activity</h2><span class="badge b-blue" id="agentsBadge">3 agents</span></div>
-      <div class="agent-grid" id="agentsGrid"></div>
-      <div class="section" style="margin-top:16px"><h3>Recent Sessions</h3><div id="sessionTimeline"></div></div>
+      <div class="page-header"><h2>Claude Agent</h2><span class="badge b-blue" id="agentsBadge">primary</span></div>
+      <div id="agentsGrid"></div>
+      <div class="section" style="margin-top:16px"><h3>Session History</h3><div id="sessionTimeline"></div></div>
     </div>
 
     <!-- COMPLIANCE -->
@@ -223,7 +223,8 @@
     <!-- WORKSPACES -->
     <div class="panel" id="panel-workspaces">
       <div class="page-header"><h2>Workspaces</h2><span class="badge b-blue" id="wsCount">0</span></div>
-      <div class="ws-grid" id="wsGrid"></div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px">Each workspace is a completely isolated company context. All links, repos, infra details, and versions are contained within each card.</p>
+      <div id="wsGrid"></div>
     </div>
 
     <!-- WORKFLOWS -->
@@ -248,7 +249,7 @@
     <div class="panel" id="panel-lessons">
       <div class="page-header"><h2>Lessons Learned</h2><span class="badge b-purple" id="lessonsTotal">0</span></div>
       <div class="grid-3" id="lessonsStats"></div>
-      <div class="grid-2" style="margin-top:16px"><div class="section"><h3>Copilot Lessons</h3><div id="copilotLessons"></div></div><div class="section"><h3>Codex Lessons</h3><div id="codexLessons"></div></div></div>
+      <div class="section" style="margin-top:16px"><h3>All Lessons</h3><div id="allLessons"></div></div>
     </div>
 
     <!-- ERROR PATTERNS -->
@@ -274,6 +275,7 @@
       <div class="section" style="margin-top:0"><h3>Smart Recommendations</h3><div id="tokenRecommendations"></div></div>
       <div class="section" style="margin-top:0"><h3>Daily Usage Trend (last 7 days)</h3><div id="tokenTrend"></div></div>
       <div class="section" style="margin-top:0"><h3>Token Efficiency Score</h3><div id="tokenEfficiency"></div></div>
+      <div class="section" style="margin-top:0"><h3>Auto-Optimization Engine</h3><div id="tokenAutoOptimize"></div></div>
     </div>
 
     <!-- ARCHITECTURE -->
@@ -576,53 +578,37 @@
   }
 
   function renderAgents(){
-    const agents=state.agents||{};const claude=agents.claude||{};const copilot=agents.copilot||{};const codex=agents.codex||{};
+    const agents=state.agents||{};const claude=agents.claude||{};
+    const sessions=state.executionHistory||[];
+    document.getElementById('navAgents').textContent=isActive(claude)?'active':'idle';
+    document.getElementById('navAgents').style.color=isActive(claude)?'var(--green)':'var(--muted)';
+    document.getElementById('agentsBadge').textContent=isActive(claude)?'active':'idle';
+    document.getElementById('agentsBadge').className=`badge b-${isActive(claude)?'green':'gray'}`;
+
     document.getElementById('agentsGrid').innerHTML=`
-      <div class="agent-card">
-        ${isActive(claude)?`<div class="agent-active-ind">${dot('green',true)} active</div>`:''}
-        <div style="font-size:24px;margin-bottom:6px">🧠</div>
-        <div class="flex" style="margin-bottom:6px"><strong>Claude Code</strong> ${badge(claude.status||'idle')}</div>
-        <div style="font-size:12px;color:var(--muted)">Primary agent — Architecture, releases, complex implementations</div>
-        ${claude.task?`<div style="background:var(--surface2);border-radius:6px;padding:8px;margin-top:10px;font-size:12px;border-left:3px solid var(--blue)">Task: ${esc(claude.task)}<br>Phase: ${esc(claude.phase||'?')}</div>`:''}
-        <div style="font-size:11px;color:var(--muted);margin-top:8px">Updated: ${fmtDate(claude.lastUpdated)}</div>
-      </div>
-      <div class="agent-card">
-        ${isActive(copilot)?`<div class="agent-active-ind">${dot('green',true)} active</div>`:''}
-        <div style="font-size:24px;margin-bottom:6px">🧑‍✈️</div>
-        <div class="flex" style="margin-bottom:6px"><strong>Copilot</strong> ${badge(isActive(copilot)?'active':'standby')}</div>
-        <div style="font-size:12px;color:var(--muted)">Backup agent — Dispatch, PR review, coordination</div>
-        <div class="flex" style="gap:16px;margin-top:10px">
-          <div style="text-align:center"><div style="font-size:20px;font-weight:700">${copilot.sessionCount||0}</div><div style="font-size:10px;color:var(--muted)">Sessions</div></div>
-          <div style="text-align:center"><div style="font-size:20px;font-weight:700">${copilot.lessonsCount||0}</div><div style="font-size:10px;color:var(--muted)">Lessons</div></div>
+      <div class="section">
+        <div class="flex" style="gap:16px;margin-bottom:16px">
+          ${isActive(claude)?`${dot('green',true)}<strong style="font-size:16px">Claude Code — Active</strong>`:`${dot('gray')}<strong style="font-size:16px">Claude Code — Idle</strong>`}
+          ${badge(claude.status||'idle')}
         </div>
-        ${copilot.lastSession&&copilot.lastSession!=='none'?`<div style="background:var(--surface2);border-radius:6px;padding:8px;margin-top:10px;font-size:11px;border-left:3px solid var(--purple)">${esc(copilot.lastSession)}</div>`:''}
-        <div style="font-size:11px;color:var(--muted);margin-top:8px">Updated: ${fmtDate(copilot.lastUpdated)}</div>
-      </div>
-      <div class="agent-card">
-        ${isActive(codex)?`<div class="agent-active-ind">${dot('green',true)} active</div>`:''}
-        <div style="font-size:24px;margin-bottom:6px">⚡</div>
-        <div class="flex" style="margin-bottom:6px"><strong>Codex</strong> ${badge(isActive(codex)?'active':'standby')}</div>
-        <div style="font-size:12px;color:var(--muted)">Code specialist — Implementation, refactoring, CI monitoring</div>
-        <div class="flex" style="gap:16px;margin-top:10px">
-          <div style="text-align:center"><div style="font-size:20px;font-weight:700">${codex.sessionCount||0}</div><div style="font-size:10px;color:var(--muted)">Sessions</div></div>
-          <div style="text-align:center"><div style="font-size:20px;font-weight:700">${codex.lessonsCount||0}</div><div style="font-size:10px;color:var(--muted)">Lessons</div></div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Primary autonomous engineering agent. Handles architecture, deployments, CI diagnosis, code reviews, and all pipeline operations.</div>
+        ${claude.task?`<div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:16px;font-size:13px;border-left:3px solid var(--blue)"><strong>Current task:</strong> ${esc(claude.task)}<br><span style="color:var(--muted)">Phase: ${esc(claude.phase||'?')} | Last action: ${esc(claude.lastAction||'?')}</span></div>`:''}
+        <div class="grid-4" style="margin-bottom:16px">
+          <div class="card" style="text-align:center"><div class="card-title">Sessions</div><div class="card-value">${sessions.length||0}</div></div>
+          <div class="card" style="text-align:center"><div class="card-title">Deploys</div><div class="card-value">${(state.deployHistory||[]).length}</div></div>
+          <div class="card" style="text-align:center"><div class="card-title">Lessons</div><div class="card-value">${(state.lessonsLearned||{}).total||0}</div></div>
+          <div class="card" style="text-align:center"><div class="card-title">Error Fixes</div><div class="card-value">${(state.knownErrors||[]).length}</div></div>
         </div>
-        ${codex.lastSession&&codex.lastSession!=='none'?`<div style="background:var(--surface2);border-radius:6px;padding:8px;margin-top:10px;font-size:11px;border-left:3px solid var(--orange)">${esc(codex.lastSession)}</div>`:''}
-        <div style="font-size:11px;color:var(--muted);margin-top:8px">Updated: ${fmtDate(codex.lastUpdated)}</div>
+        <div style="font-size:11px;color:var(--muted)">Model: <strong>Opus 4.6</strong> (1M context) | Branch: <code>claude/*</code> | Memory: <code>claude-session-memory.json</code> | Updated: ${fmtDate(claude.lastUpdated)}</div>
       </div>`;
 
-    // Session timeline (combine copilot + codex sessions)
-    const sessions=[];
-    (state.agents?.copilot?.sessions||[]).forEach(s=>sessions.push({...s,agent:'Copilot',color:'purple'}));
-    (state.agents?.codex?.sessions||[]).forEach(s=>sessions.push({...s,agent:'Codex',color:'orange'}));
-    sessions.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-
-    document.getElementById('sessionTimeline').innerHTML=sessions.length?sessions.slice(0,10).map(s=>`
+    // Session history from executionHistory
+    document.getElementById('sessionTimeline').innerHTML=sessions.length?sessions.slice(0,10).map((s,i)=>`
       <div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="min-width:80px"><span class="badge b-${s.color}">${esc(s.agent)}</span></div>
+        <div style="min-width:24px;font-size:12px;color:var(--muted)">${i+1}</div>
+        <div style="min-width:80px"><span class="badge b-blue">${esc(s.date||'?')}</span></div>
         <div style="flex:1;font-size:12px">${esc(s.summary||'No summary')}</div>
-        <div style="font-size:11px;color:var(--muted);white-space:nowrap">${esc(s.date||'?')} · ${s.actions||0} actions</div>
-      </div>`).join(''):'<div class="empty">No session data available</div>';
+      </div>`).join(''):'<div class="empty">No session history available</div>';
   }
 </script>
 <script>
@@ -771,24 +757,102 @@
       </div>`;
   }
 
+  // Workspace context — ALL company info self-contained per workspace
+  const WS_CTX={
+    'ws-default':{
+      repos:[
+        {name:'psc-sre-automacao-controller',url:'https://github.com/bbvinet/psc-sre-automacao-controller',type:'source',desc:'Controller — orchestrates automations'},
+        {name:'psc-sre-automacao-agent',url:'https://github.com/bbvinet/psc-sre-automacao-agent',type:'source',desc:'Agent — executes on clusters'},
+        {name:'psc_releases_cap_sre-aut-controller',url:'https://github.com/bbvinet/psc_releases_cap_sre-aut-controller',type:'deploy',desc:'Controller K8s deploy (CAP)'},
+        {name:'psc_releases_cap_sre-aut-agent',url:'https://github.com/bbvinet/psc_releases_cap_sre-aut-agent',type:'deploy',desc:'Agent K8s deploy (CAP)'}
+      ],
+      links:[
+        {label:'Autopilot Workflows',url:'https://github.com/lucassfreiree/autopilot/actions'},
+        {label:'Controller CI',url:'https://github.com/bbvinet/psc-sre-automacao-controller/actions'},
+        {label:'Agent CI',url:'https://github.com/bbvinet/psc-sre-automacao-agent/actions'},
+        {label:'Dashboard',url:'https://lucassfreiree.github.io/autopilot/dashboard/'}
+      ],
+      infra:{'Cluster HML':'k8shmlbb111b','Controller NS':'psc-sre-aut-controller','Registry':'docker.binarios.intranet.bb.com.br/bb/psc','CI':'Esteira de Build NPM (corp runner)','Auth':'OAS internal-origin + JWT','Deploy':'apply-source-change (7 stages)','CAP Promote':'Auto after CI green'}
+    },
+    'ws-cit':{
+      repos:[],links:[],
+      infra:{'Stack':'DevOps (K8s, Docker, Terraform, Helm, ArgoCD)','CI Ready':'GitHub Actions, GitLab CI, Jenkins','Cloud Ready':'AWS, Azure, GCP (awaiting creds)','Monitoring':'Datadog, Grafana, Prometheus','Ops Center':'ops/ (scripts, runbooks, templates)','Status':'Setup — awaiting repos & credentials'}
+    }
+  };
+
   function renderWorkspaces(){
     const ws=state.workspaces||[];
     document.getElementById('wsCount').textContent=ws.length+' workspaces';
+    const c=state.controller||{};const a=state.agent||{};
+    const corp=state.corporateReal||{};const cc=corp.controller||{};const ca=corp.agent||{};
+    const p=state.pipeline||{};
+
     document.getElementById('wsGrid').innerHTML=ws.map(w=>{
       const sc=w.status==='active'?'active':w.status==='setup'?'setup':w.status==='locked'?'locked':'empty';
-      return`<div class="ws-card ws-${sc}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div><div style="font-size:16px;font-weight:600">${esc(w.company)}</div><div style="font-size:11px;color:var(--muted);font-family:monospace">${esc(w.id)}</div></div>
-          ${badge(w.status)}
+      const ctx=WS_CTX[w.id];
+      const isDefault=w.id==='ws-default';
+      const hasDrift=isDefault&&(cc.drift||ca.drift);
+
+      // Locked workspaces — compact
+      if(w.status==='locked'){
+        return`<div class="section" style="margin-bottom:12px;border-top:3px solid var(--red)">
+          <div class="flex" style="justify-content:space-between"><div><strong style="font-size:16px">${esc(w.company)}</strong> <code style="color:var(--muted);font-size:11px">${esc(w.id)}</code></div>${badge('locked','red')}</div>
+          <div style="font-size:12px;color:var(--red);margin-top:6px">🔒 Third-party — requires explicit authorization from account owner</div>
+        </div>`;
+      }
+
+      // Active/Setup — full context card
+      const ctrlVer=isDefault?(c.version||w.controllerVersion||'—'):(w.controllerVersion||'—');
+      const agentVer=isDefault?(a.version||w.agentVersion||'—'):(w.agentVersion||'—');
+
+      return`<div class="section" style="margin-bottom:16px;border-top:3px solid var(--${sc==='active'?'green':'yellow'})">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div><div style="font-size:18px;font-weight:700">${esc(w.company)}</div>
+          <div style="font-size:12px;color:var(--muted)"><code>${esc(w.id)}</code> · ${esc(w.stack||'—')} · ${badge(w.status)} ${w.token?`<span class="tag" style="background:var(--surface2);color:var(--muted)">${esc(w.token)}</span>`:''}</div></div>
+          ${hasDrift?badge('DRIFT','red'):''}
         </div>
-        ${w.stack?`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">${esc(w.stack)}</div>`:''}
-        ${w.status==='locked'?'<div style="font-size:12px;color:var(--red);margin-top:8px">🔒 Third-party workspace — DO NOT OPERATE without explicit authorization</div>':`
-        <div style="display:flex;gap:10px;margin-bottom:8px">
-          <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--muted)">Controller</div><div style="font-size:14px;font-weight:600">${esc(w.controllerVersion||'—')}</div></div>
-          <div style="flex:1;background:var(--surface2);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--muted)">Agent</div><div style="font-size:14px;font-weight:600">${esc(w.agentVersion||'—')}</div></div>
+
+        ${ctrlVer!=='—'||agentVer!=='—'?`
+        <div class="grid-4" style="margin-bottom:14px">
+          <div class="card" style="padding:10px"><div class="card-title">Controller</div><div style="font-size:22px;font-weight:700;color:var(--${statusColor(isDefault?c.ciResult:'idle')})">${esc(ctrlVer)}</div><div class="card-sub">${isDefault?badge(c.ciResult||'?'):''} ${isDefault&&c.promoted?badge('promoted','green'):''}</div></div>
+          <div class="card" style="padding:10px"><div class="card-title">Agent</div><div style="font-size:22px;font-weight:700;color:var(--${statusColor(isDefault?a.ciResult:'idle')})">${esc(agentVer)}</div><div class="card-sub">${isDefault?badge(a.ciResult||'?'):''} ${isDefault&&a.promoted?badge('promoted','green'):''}</div></div>
+          <div class="card" style="padding:10px"><div class="card-title">Last Run</div><div style="font-size:22px;font-weight:700">#${isDefault?p.lastRun||0:0}</div><div class="card-sub">${badge(isDefault?p.status||'idle':'idle')}</div></div>
+          <div class="card" style="padding:10px"><div class="card-title">Pipeline</div><div style="font-size:22px;font-weight:700;color:var(--${statusColor(w.pipelineStatus||'idle')})">${esc(w.pipelineStatus||'idle')}</div></div>
+        </div>`:''}
+
+        ${isDefault&&(cc.sourceVersion||ca.sourceVersion)?`
+        <div style="background:var(--surface2);border-radius:6px;padding:10px;margin-bottom:14px;font-size:12px">
+          <strong>Corporate Reality</strong> <span style="color:var(--muted)">(real versions from bbvinet repos — checked ${fmtDate(corp.lastChecked)})</span>
+          <div style="display:flex;gap:20px;margin-top:6px;flex-wrap:wrap">
+            <span>Controller: <strong style="color:var(--${cc.drift?'red':'green'})">${esc(cc.sourceVersion||'?')}</strong> | CAP: ${esc(cc.capTag||'?')} ${cc.drift?badge('DRIFT','red'):badge('synced','green')}</span>
+            <span>Agent: <strong style="color:var(--${ca.drift?'red':'green'})">${esc(ca.sourceVersion||'?')}</strong> | CAP: ${esc(ca.capTag||'?')} ${ca.drift?badge('DRIFT','red'):badge('synced','green')}</span>
+          </div>
+        </div>`:''}
+
+        ${ctx?`
+        ${ctx.links.length?`<div style="margin-bottom:14px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Quick Links</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${ctx.links.map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener" style="font-size:11px;background:var(--blue-dim);color:var(--blue);padding:3px 10px;border-radius:4px;text-decoration:none">${esc(l.label)}</a>`).join('')}</div>
+        </div>`:''}
+
+        ${ctx.repos.length?`<div style="margin-bottom:14px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Repositories (${ctx.repos.length})</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px">
+            ${ctx.repos.map(r=>`<div style="background:var(--surface2);border-radius:6px;padding:8px 10px;font-size:11px">
+              <a href="${esc(r.url)}" target="_blank" rel="noopener" style="font-family:monospace;font-weight:600">${esc(r.name)}</a>
+              <span class="tag" style="margin-left:4px;background:${r.type==='source'?'var(--green-dim)':'var(--cyan-dim)'};color:${r.type==='source'?'var(--green)':'var(--cyan)'}">${esc(r.type)}</span>
+              <div style="color:var(--muted);margin-top:2px">${esc(r.desc)}</div>
+            </div>`).join('')}
+          </div>
+        </div>`:''}
+
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Infrastructure</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2px">
+            ${Object.entries(ctx.infra).map(([k,v])=>`<div style="font-size:11px;padding:3px 0"><span style="color:var(--muted)">${esc(k)}:</span> <strong>${esc(v)}</strong></div>`).join('')}
+          </div>
         </div>
-        <div class="flex" style="gap:6px">${badge(w.pipelineStatus||'idle')} ${w.token?`<span class="tag" style="background:var(--surface2);color:var(--muted)">${esc(w.token)}</span>`:''}</div>
-        ${w.repos&&w.repos.length?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">${w.repos.length} repos: ${w.repos.map(r=>esc(r)).join(', ')}</div>`:''}`}
+        `:''}
       </div>`;
     }).join('');
   }
@@ -856,18 +920,15 @@
 
   function renderLessons(){
     const ll=state.lessonsLearned||{};
-    const total=ll.total||0;const cp=ll.copilot||0;const cx=ll.codex||0;
+    const total=ll.total||0;
+    const allLessons=[...(ll.copilotLessons||[]),...(ll.codexLessons||[])];
     document.getElementById('lessonsTotal').textContent=total+' lessons';
     document.getElementById('lessonsStats').innerHTML=`
-      <div class="card" style="text-align:center"><div class="card-title">Total</div><div class="card-value">${total}</div></div>
-      <div class="card" style="text-align:center;border-top:3px solid var(--purple)"><div class="card-title">Copilot</div><div class="card-value" style="color:var(--purple)">${cp}</div></div>
-      <div class="card" style="text-align:center;border-top:3px solid var(--orange)"><div class="card-title">Codex</div><div class="card-value" style="color:var(--orange)">${cx}</div></div>`;
+      <div class="card" style="text-align:center"><div class="card-title">Total Lessons</div><div class="card-value">${total}</div></div>
+      <div class="card" style="text-align:center"><div class="card-title">Error Patterns</div><div class="card-value">${(state.knownErrors||[]).length}</div></div>
+      <div class="card" style="text-align:center"><div class="card-title">Deploy History</div><div class="card-value">${(state.deployHistory||[]).length}</div></div>`;
 
-    const cpl=ll.copilotLessons||[];
-    document.getElementById('copilotLessons').innerHTML=cpl.length?cpl.map(l=>`<div class="lesson-item"><strong>${esc(l.lesson)}</strong>${l.fix?`<div class="lesson-fix">Fix: ${esc(l.fix)}</div>`:''}</div>`).join(''):'<div class="empty">No lessons yet</div>';
-
-    const cxl=ll.codexLessons||[];
-    document.getElementById('codexLessons').innerHTML=cxl.length?cxl.map(l=>`<div class="lesson-item" style="border-left-color:var(--orange)"><strong>${esc(l.lesson)}</strong>${l.fix?`<div class="lesson-fix">Fix: ${esc(l.fix)}</div>`:''}</div>`).join(''):'<div class="empty">No lessons yet</div>';
+    document.getElementById('allLessons').innerHTML=allLessons.length?allLessons.map(l=>`<div class="lesson-item"><strong>${esc(l.lesson)}</strong>${l.fix?`<div class="lesson-fix">Fix: ${esc(l.fix)}</div>`:''}</div>`).join(''):'<div class="empty">No lessons yet</div>';
   }
 
   function renderErrors(){
@@ -932,17 +993,16 @@
     document.getElementById('archAgents').innerHTML=`
       <div style="font-size:13px">
         <table>
-          <thead><tr><th>Agent</th><th>Role</th><th>Branch</th><th>Memory</th><th>Tools</th></tr></thead>
+          <thead><tr><th>Agent</th><th>Role</th><th>Branch</th><th>Memory</th><th>Model</th></tr></thead>
           <tbody>
-            <tr><td><strong>Claude Code</strong></td><td>Primary — architecture, releases</td><td class="mono">claude/*</td><td class="mono" style="font-size:10px">claude-session-memory.json</td><td>Local filesystem + MCP</td></tr>
-            <tr><td><strong>Copilot</strong></td><td>Backup + task dispatch</td><td class="mono">copilot/*</td><td class="mono" style="font-size:10px">copilot-session-memory.json</td><td>GitHub API (push_files)</td></tr>
-            <tr><td><strong>Codex</strong></td><td>Code implementation</td><td class="mono">codex/*</td><td class="mono" style="font-size:10px">codex-session-memory.json</td><td>Sandbox + GitHub</td></tr>
+            <tr><td><strong>Claude Code</strong></td><td>Primary — architecture, releases, CI, deploys</td><td class="mono">claude/*</td><td class="mono" style="font-size:10px">claude-session-memory.json</td><td>Opus 4.6 (1M ctx)</td></tr>
           </tbody>
         </table>
         <div style="margin-top:12px;font-size:12px;color:var(--muted)">
-          <strong>Isolation:</strong> Each agent has exclusive memory files. Copilot NEVER modifies Claude's files and vice versa.<br>
-          <strong>Lock protocol:</strong> Check session-lock.json before state-changing operations. If locked by another agent, create handoff.<br>
-          <strong>Merge:</strong> autonomous-merge-direct.yml handles all agent PRs. auto-merge-sweeper.yml is backup (2min cron).
+          <strong>Capabilities:</strong> Full filesystem access + MCP GitHub tools + WebFetch + subagent delegation<br>
+          <strong>Lock protocol:</strong> session-guard.yml acquires lock before state-changing operations<br>
+          <strong>Merge:</strong> autonomous-merge-direct.yml auto-merges claude/* PRs via squash<br>
+          <strong>Token optimization:</strong> token-auto-optimize.yml runs daily to compact memory and reduce costs
         </div>
       </div>`;
   }
@@ -1224,6 +1284,31 @@
     if(t.totalCost>50)tokenAlerts.push({type:'warn',msg:`Estimated total cost $${t.totalCost.toFixed(2)} — review recommendations to optimize`});
     if(t.modelDist['opus-4-6']>t.totalTokens*0.85)tokenAlerts.push({type:'info',msg:`${Math.round(t.modelDist['opus-4-6']/t.totalTokens*100)}% of tokens use Opus — consider Sonnet/Haiku for routine tasks`});
     document.getElementById('tokenAlerts').innerHTML=tokenAlerts.map(a=>`<div class="alert-bar alert-${a.type}">${alertIcon(a.type)} ${esc(a.msg)}</div>`).join('');
+
+    // Auto-optimization engine status
+    const optRules=[
+      {id:'memory-compaction',name:'Session Memory Compaction',desc:'Archive old sessions, trim steps, externalize static docs',schedule:'Daily 06:00 UTC',status:'active',impact:'Reduce startup tokens by 30-50%'},
+      {id:'deduplicate-failures',name:'Failure Deduplication',desc:'Remove duplicate known failure entries, keep most recent fix',schedule:'Daily 06:00 UTC',status:'active',impact:'Keep memory lean and relevant'},
+      {id:'static-externalization',name:'Static Doc Externalization',desc:'Move deploy guides and protocols to archive files (15% of memory)',schedule:'Daily 06:00 UTC',status:'active',impact:'Save ~15K chars per session start'},
+      {id:'onboarding-externalization',name:'CIT Onboarding Externalization',desc:'Move CIT onboarding guide (8KB) to separate file',schedule:'Daily 06:00 UTC',status:'active',impact:'Save ~8K chars per session start'},
+      {id:'compact-hook-injection',name:'Compact SessionStart Hook',desc:'Inject only essential sections at session start, load rest on-demand',schedule:'Every session',status:'active',impact:'40-50% fewer input tokens at startup'},
+      {id:'sync-skip-unchanged',name:'Skip Unchanged Syncs',desc:'Dashboard sync skips push when state.json content unchanged',schedule:'Every sync cycle',status:'planned',impact:'50-70% fewer sync API calls'},
+      {id:'subagent-model-routing',name:'Subagent Model Routing',desc:'Use Haiku for exploration, Sonnet for simple tasks, Opus for complex',schedule:'Every session (rules)',status:'active',impact:'Lower cost for delegated tasks'}
+    ];
+    document.getElementById('tokenAutoOptimize').innerHTML=`
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Automatic optimizations applied by <code>token-auto-optimize.yml</code> (daily) and <code>.claude/rules/</code> (per session).</div>
+      ${optRules.map(r=>`
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div>${dot(r.status==='active'?'green':'yellow')} </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${esc(r.name)} ${badge(r.status,r.status==='active'?'green':'yellow')}</div>
+            <div style="font-size:12px;color:var(--muted)">${esc(r.desc)}</div>
+            <div style="font-size:11px;margin-top:2px"><span style="color:var(--cyan)">${esc(r.schedule)}</span> · <span style="color:var(--green)">${esc(r.impact)}</span></div>
+          </div>
+        </div>`).join('')}
+      <div style="margin-top:12px;background:var(--surface2);border-radius:6px;padding:12px;font-size:12px">
+        <strong>How it works:</strong> The <code>token-auto-optimize.yml</code> workflow runs daily at 06:00 UTC. It reads <code>token-optimization-rules.json</code>, applies all compaction rules to session memory, archives old data, and commits the optimized files. The SessionStart hook injects only essential memory sections (~50% reduction). Subagent model routing is enforced via <code>.claude/rules/</code>.
+      </div>`;
   }
 
   // Init
