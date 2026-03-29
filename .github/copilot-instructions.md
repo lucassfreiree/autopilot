@@ -405,6 +405,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | codex-apply.yml | [Agent] Codex Apply: Task → Code → PR | trigger file, manual |
 | codex-autonomous-pr.yml | Codex autonomous PR | manual |
 | codex-deploy.yml | [Agent] Codex Deploy: Full Pipeline | trigger file, manual |
+| compliance-gate.yml | [Core] Compliance Gate | manual, reusable, PR |
 | continuous-improvement.yml | [Infra] Continuous Improvement | scheduled, trigger file, manual |
 | copilot-post-deploy-sync.yml | [Copilot] Post-Deploy Sync | manual |
 | copilot-setup-steps.yml | Copilot Setup Steps | workflow_call |
@@ -675,4 +676,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-29T01:41:27Z | Run: 23698809751*
+*Last synced: 2026-03-29T02:12:17Z | Run: 23699289285*
