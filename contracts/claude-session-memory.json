@@ -1126,10 +1126,10 @@
       "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "lastTriggerRun": 69,
+    "lastTriggerRun": 70,
     "lastSuccessfulRun": 69,
     "lastDeployPR": 197,
-    "pipelineStatus": "IN_PROGRESS — deploy controller 3.6.5 (run #54). Historia #930217 cronjob callback.",
+    "pipelineStatus": "IN_PROGRESS — deploy controller 3.7.0 (run #70). Swagger version bump + e2e validation.",
     "multiFilePayload": {
       "change_type": "multi-file",
       "changesFormat": [
@@ -2089,9 +2089,10 @@
   "currentState": {
     "controllerVersion": "3.6.9",
     "agentVersion": "2.3.1",
-    "lastTriggerRun": 69,
+    "lastTriggerRun": 70,
     "lastSuccessfulRun": 69,
-    "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)"
+    "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)",
+    "pendingDeploy": "controller 3.7.0 (run #70) — swagger version bump + e2e validation. CI Gate in progress."
   },
   "deployCompliancePipeline": {
     "description": "Pipeline de compliance end-to-end criado em 2026-03-29. 4 stages cobrindo pre, durante, pos-deploy e auto-learning.",
