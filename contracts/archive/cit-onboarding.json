@@ -1,0 +1,297 @@
+{
+  "description": "GUIA COMPLETO para o agente saber EXATAMENTE o que fazer quando o usuario fornecer qualquer credencial, endpoint, repo, token ou acesso. Cada item mapeia: o que o usuario vai enviar → onde guardar → o que ativar → como testar.",
+  "instructions": "Quando o usuario enviar QUALQUER informacao listada abaixo, o agente DEVE: 1) Identificar qual item e, 2) Seguir os passos de ativacao, 3) Testar, 4) Atualizar readiness.json, 5) Confirmar ao usuario.",
+  "items": {
+    "aws_credentials": {
+      "whatUserSends": "AWS Access Key ID + Secret Access Key (ou Role ARN para OIDC)",
+      "alsoNeeded": [
+        "AWS_DEFAULT_REGION (ex: us-east-1, sa-east-1)",
+        "Account ID (opcional mas util)"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "AWS_ACCESS_KEY_ID",
+          "AWS_SECRET_ACCESS_KEY",
+          "AWS_ROLE_ARN (se OIDC)"
+        ],
+        "github_variables": [
+          "AWS_DEFAULT_REGION"
+        ],
+        "config_file": "ops/config/cloud/aws/aws-config.json → mudar status de pending para active"
+      },
+      "whatActivates": [
+        "ops-cloud-diagnose.yml (provider=aws funciona)",
+        "ops-tf-plan.yml (com backend S3)",
+        "ops-k8s-health.yml (provider=aws para EKS)",
+        "ops/scripts/cloud/cloud-check.sh aws",
+        "Terraform com provider AWS"
+      ],
+      "howToTest": "Executar workflow ops-cloud-diagnose.yml com provider=aws, action=auth",
+      "readinessUpdate": "aws: pending → ready"
+    },
+    "azure_credentials": {
+      "whatUserSends": "Azure Client ID + Client Secret + Tenant ID + Subscription ID (ou OIDC config)",
+      "alsoNeeded": [
+        "Resource Group names (se AKS existe)"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "AZURE_CLIENT_ID",
+          "AZURE_CLIENT_SECRET",
+          "AZURE_TENANT_ID",
+          "AZURE_SUBSCRIPTION_ID",
+          "AZURE_CREDENTIALS (JSON legacy)"
+        ],
+        "github_variables": [
+          "AKS_RESOURCE_GROUP (se AKS existe)"
+        ],
+        "config_file": "ops/config/cloud/azure/azure-config.json → mudar status para active"
+      },
+      "whatActivates": [
+        "ops-cloud-diagnose.yml (provider=azure funciona)",
+        "ops-k8s-health.yml (provider=azure para AKS)",
+        "ops/scripts/cloud/cloud-check.sh azure",
+        "Terraform com provider azurerm"
+      ],
+      "howToTest": "Executar workflow ops-cloud-diagnose.yml com provider=azure, action=auth",
+      "readinessUpdate": "azure: pending → ready"
+    },
+    "gcp_credentials": {
+      "whatUserSends": "Service Account Key JSON (ou Workload Identity Provider para OIDC)",
+      "alsoNeeded": [
+        "GCP Project ID",
+        "Default region/zone"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "GCP_SA_KEY (base64 do JSON)",
+          "GCP_WORKLOAD_IDENTITY_PROVIDER (se OIDC)"
+        ],
+        "github_variables": [
+          "GCP_PROJECT_ID",
+          "GKE_ZONE"
+        ],
+        "config_file": "ops/config/cloud/gcp/gcp-config.json → mudar status para active"
+      },
+      "whatActivates": [
+        "ops-cloud-diagnose.yml (provider=gcp funciona)",
+        "ops-k8s-health.yml (provider=gcp para GKE)",
+        "ops/scripts/cloud/cloud-check.sh gcp",
+        "Terraform com provider google"
+      ],
+      "howToTest": "Executar workflow ops-cloud-diagnose.yml com provider=gcp, action=auth",
+      "readinessUpdate": "gcp: pending → ready"
+    },
+    "kubernetes_cluster": {
+      "whatUserSends": "Cluster name + provider (aws/azure/gcp) OU kubeconfig direto",
+      "alsoNeeded": [
+        "Namespace list",
+        "Qual ambiente (dev/staging/prod)"
+      ],
+      "whereToStore": {
+        "config_file": "ops/config/k8s/k8s-config.json → adicionar em clusters.registered[]",
+        "note": "kubeconfig gerado dinamicamente via cloud CLI nos workflows"
+      },
+      "whatActivates": [
+        "ops-k8s-health.yml funciona end-to-end",
+        "ops/scripts/k8s/cluster-health.sh",
+        "ops/scripts/troubleshooting/diagnose.sh pod|service",
+        "Helm deployments",
+        "kubectl operations"
+      ],
+      "howToTest": "Executar workflow ops-k8s-health.yml com cluster name e provider",
+      "readinessUpdate": "kubernetes: partial → ready",
+      "prerequisite": "Credenciais do cloud provider correspondente ja devem estar configuradas"
+    },
+    "terraform_backend": {
+      "whatUserSends": "Bucket name (S3/Blob/GCS) + region + lock table (DynamoDB para AWS)",
+      "alsoNeeded": [
+        "Cloud provider credentials (ja configurado)"
+      ],
+      "whereToStore": {
+        "config_file": "ops/config/terraform/terraform-config.json → atualizar backend section",
+        "terraform_files": "Descomentar e preencher backend block em ops/terraform/environments/*/main.tf",
+        "github_secrets": [
+          "TF_STATE_BUCKET",
+          "TF_STATE_LOCK_TABLE"
+        ]
+      },
+      "whatActivates": [
+        "ops-tf-plan.yml funciona end-to-end",
+        "ops/scripts/terraform/tf-ops.sh plan|apply|drift",
+        "Terraform init com remote state",
+        "State locking para multi-agent safety"
+      ],
+      "howToTest": "Executar workflow ops-tf-plan.yml com action=validate em qualquer environment",
+      "readinessUpdate": "terraform: partial → ready",
+      "prerequisite": "Cloud credentials configuradas para o provider do backend"
+    },
+    "gitlab_access": {
+      "whatUserSends": "GitLab URL (se nao gitlab.com) + Personal Access Token ou Project Token",
+      "alsoNeeded": [
+        "Project IDs dos repos a monitorar"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "GITLAB_TOKEN"
+        ],
+        "github_variables": [
+          "GITLAB_URL"
+        ],
+        "config_file": "ops/config/ci/gitlab/gitlab-config.json → mudar status para active"
+      },
+      "whatActivates": [
+        "ops-pipeline-diagnose.yml (platform=gitlab funciona)",
+        "ops/scripts/ci/analyze-pipeline.sh gitlab"
+      ],
+      "howToTest": "Executar workflow ops-pipeline-diagnose.yml com platform=gitlab e project ID",
+      "readinessUpdate": "gitlab_ci: pending → ready"
+    },
+    "jenkins_access": {
+      "whatUserSends": "Jenkins URL + Username + API Token",
+      "alsoNeeded": [
+        "Job URLs dos pipelines a monitorar"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "JENKINS_USER",
+          "JENKINS_TOKEN"
+        ],
+        "github_variables": [
+          "JENKINS_URL"
+        ],
+        "config_file": "ops/config/ci/jenkins/jenkins-config.json → mudar status para active"
+      },
+      "whatActivates": [
+        "ops-pipeline-diagnose.yml (platform=jenkins funciona)",
+        "ops/scripts/ci/analyze-pipeline.sh jenkins"
+      ],
+      "howToTest": "Executar workflow ops-pipeline-diagnose.yml com platform=jenkins",
+      "readinessUpdate": "jenkins: pending → ready"
+    },
+    "datadog_keys": {
+      "whatUserSends": "DD_API_KEY + DD_APP_KEY",
+      "alsoNeeded": [
+        "DD_SITE (default: datadoghq.com)"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "DD_API_KEY",
+          "DD_APP_KEY"
+        ],
+        "github_variables": [
+          "DD_SITE"
+        ],
+        "config_file": "ops/config/monitoring/datadog/datadog-config.json → mudar status para active"
+      },
+      "whatActivates": [
+        "ops-monitor-alerts.yml (platform=datadog funciona)",
+        "ops/scripts/monitoring/alert-check.sh datadog",
+        "Datadog API para criar monitors e dashboards"
+      ],
+      "howToTest": "Executar workflow ops-monitor-alerts.yml com platform=datadog",
+      "readinessUpdate": "datadog: pending → ready"
+    },
+    "grafana_access": {
+      "whatUserSends": "Grafana URL + Service Account Token (com role Editor)",
+      "alsoNeeded": [
+        "Datasource endpoints (Prometheus URL, Loki URL se tiver)"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "GRAFANA_TOKEN"
+        ],
+        "github_variables": [
+          "GRAFANA_URL"
+        ],
+        "config_file": "ops/config/monitoring/grafana/grafana-config.json → mudar status para active"
+      },
+      "whatActivates": [
+        "ops-monitor-alerts.yml (platform=grafana funciona)",
+        "ops/scripts/monitoring/alert-check.sh grafana",
+        "Grafana API para criar dashboards e alert rules"
+      ],
+      "howToTest": "Executar workflow ops-monitor-alerts.yml com platform=grafana",
+      "readinessUpdate": "grafana: partial → ready"
+    },
+    "prometheus_access": {
+      "whatUserSends": "Prometheus URL + Alertmanager URL (se separado)",
+      "alsoNeeded": [],
+      "whereToStore": {
+        "github_variables": [
+          "PROMETHEUS_URL",
+          "ALERTMANAGER_URL"
+        ],
+        "config_file": "ops/config/monitoring/prometheus/prometheus-config.json → mudar status para active"
+      },
+      "whatActivates": [
+        "ops-monitor-alerts.yml (platform=prometheus|alertmanager funciona)",
+        "ops/scripts/monitoring/alert-check.sh prometheus|alertmanager"
+      ],
+      "howToTest": "Executar workflow ops-monitor-alerts.yml com platform=prometheus",
+      "readinessUpdate": "prometheus: partial → ready"
+    },
+    "slack_webhook": {
+      "whatUserSends": "Slack Incoming Webhook URL",
+      "alsoNeeded": [
+        "Channel name (default: #ops-alerts)"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "SLACK_WEBHOOK_URL"
+        ],
+        "github_variables": [
+          "SLACK_CHANNEL"
+        ],
+        "config_file": "ops/integrations/registry.json → slack.status: active"
+      },
+      "whatActivates": [
+        "Notificacoes de alerta via Slack",
+        "Deploy notifications",
+        "Pipeline failure alerts"
+      ],
+      "howToTest": "curl -X POST $SLACK_WEBHOOK_URL -d '{\"text\":\"Autopilot test\"}'",
+      "readinessUpdate": "integrations.slack: pending → active"
+    },
+    "cit_repos": {
+      "whatUserSends": "Lista de repos CIT (owner/repo) + CIT_TOKEN",
+      "alsoNeeded": [
+        "Branch principal de cada repo",
+        "Stack/linguagem de cada repo"
+      ],
+      "whereToStore": {
+        "github_secrets": [
+          "CIT_TOKEN"
+        ],
+        "workspace_config": "state/workspaces/ws-cit/workspace.json → adicionar em repos[]",
+        "config_file": "ops/config/ci/github/github-config.json → adicionar repos"
+      },
+      "whatActivates": [
+        "Pipeline operations para repos CIT",
+        "Source code operations (apply-source-change adaptado)",
+        "CI monitoring para repos CIT"
+      ],
+      "howToTest": "Validar acesso: git ls-remote com CIT_TOKEN para cada repo",
+      "readinessUpdate": "cit company status: setup → active"
+    }
+  },
+  "activationProtocol": [
+    "1. Usuario envia informacao (token, URL, credential, repo, etc.)",
+    "2. Agente identifica QUAL item do onboardingGuide corresponde",
+    "3. Agente segue whereToStore para guardar nos locais corretos",
+    "4. Agente executa howToTest para validar que funciona",
+    "5. Agente atualiza config_file com status active",
+    "6. Agente atualiza ops/inventory/readiness.json com novo status",
+    "7. Agente atualiza session memory (este arquivo)",
+    "8. Agente confirma ao usuario: o que foi ativado + o que ja funciona",
+    "9. Se falhar: agente diagnostica, reporta e sugere correcao"
+  ],
+  "importantNotes": [
+    "NUNCA pedir TODAS as credenciais de uma vez — aceitar qualquer uma que o usuario enviar",
+    "NUNCA expor secrets em logs, commits ou outputs",
+    "SEMPRE testar imediatamente apos configurar",
+    "SEMPRE atualizar readiness.json apos cada ativacao",
+    "O usuario pode enviar informacoes em QUALQUER ordem — nao ha sequencia obrigatoria",
+    "Algumas ferramentas tem prerequisitos (ex: K8s precisa de cloud auth) — avisar se faltar"
+  ]
+}

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "session_security_fixes_363",
+    "date": "2026-03-25",
+    "summary": "Checkmarx security fixes: 1 HIGH (XSS) + 4 MEDIUM (3 SSRF + 1 DoS). Deploy 3.6.3 com esteira corporativa PASSED. Criado workflow validate-patches.yml para validacao pre-deploy.",
+    "stepsExecuted": [
+      {
+        "step": 1,
+        "action": "Analisou 5 findings do Checkmarx",
+        "result": "HIGH Reflected_XSS em oas-sre-controller, MEDIUM SSRF em 3 controllers, MEDIUM DoS em agents-execute-logs"
+      },
+      {
+        "step": 2,
+        "action": "Criou sanitizeForOutput() para XSS",
+        "result": "Strip <>'\"& + limit 256 chars. Aplicado em error messages e detail fields"
+      },
+      {
+        "step": 3,
+        "action": "Deploy 3.5.13 (run 47) — so oas-sre-controller",
+        "result": "Workflow apply-source-change SUCCESS mas esteira falhou — versao errada (repo ja era 3.6.0, nao 3.5.12)"
+      },
+      {
+        "step": 4,
+        "action": "Descobriu que repo corporativo mudou para 3.6.0",
+        "result": "Alguem fez deploy separado. Versao base era 3.6.0, nao 3.5.12. search-replace de versao falhava silenciosamente"
+      },
+      {
+        "step": 5,
+        "action": "Deploy 3.6.1 com versao correta",
+        "result": "Esteira falhou — tag 3.6.0 ja existia (build PASSOU mas publish falhou)"
+      },
+      {
+        "step": 6,
+        "action": "Deploy 3.6.1-3.6.2 com todos os controllers",
+        "result": "Esteira falhou — testes quebraram por validateTrustedUrl bloqueando URLs mock de teste"
+      },
+      {
+        "step": 7,
+        "action": "Buscou testes do repo corporativo via fetch-files",
+        "result": "Analisou 3 test files + trusted-agent.ts. Identificou que validateTrustedUrl dentro de postJson/callAgent bloqueava fetch mock"
+      },
+      {
+        "step": 8,
+        "action": "Reconstruiu patches a partir da base corporativa 3.6.0",
+        "result": "Patches minimos: sanitizeForOutput, MAX_RESULTS, remove validateTrustedUrl do fetch, dispatches summary"
+      },
+      {
+        "step": 9,
+        "action": "Deploy 3.6.3 (run 52) com patches validados",
+        "result": "Esteira corporativa PASSOU (ci-passed, ciResult=success). Imagem Docker 3.6.3 publicada"
+      },
+      {
+        "step": 10,
+        "action": "Criou workflow validate-patches.yml",
+        "result": "Valida patches contra repo corporativo ANTES de deploy: clone + npm ci + tsc + eslint + jest"
+      }
+    ],
+    "mistakesMade": [
+      {
+        "mistake": "Usou base 3.5.x para patches quando repo ja era 3.6.0",
+        "fix": "Sempre buscar arquivos corporativos atuais via fetch-files antes de criar patches",
+        "prevention": "SEMPRE verificar versao atual do repo corporativo"
+      },
+      {
+        "mistake": "Adicionou validateTrustedUrl dentro de fetch/postJson",
+        "fix": "Removeu — testes usam URLs mock (http://agent.local) que nao passam na regex bb.com.br",
+        "prevention": "NUNCA bloquear URLs dentro de fetch(). SSRF mitigation via parseSafeIdentifier no input"
+      },
+      {
+        "mistake": "Deployou sem rodar testes primeiro",
+        "fix": "Criou workflow validate-patches.yml",
+        "prevention": "SEMPRE rodar validate-patches antes de mergear PR de deploy"
+      },
+      {
+        "mistake": "Fez 8+ deploys falhados antes de acertar",
+        "fix": "Processo de validacao pre-deploy",
+        "prevention": "Usar validate-patches.yml que clona repo, aplica patches, roda build+test+lint"
+      }
+    ],
+    "keyDecisions": [
+      "Security fixes devem ser MINIMOS — so sanitizeForOutput e MAX_RESULTS, sem mudar logica de roteamento",
+      "SSRF mitigation via parseSafeIdentifier (regex no input) NAO via URL validation no fetch",
+      "SEMPRE partir da base corporativa ATUAL, nunca de patches antigos",
+      "Workflow validate-patches.yml OBRIGATORIO antes de qualquer deploy futuro"
+    ]
+  },
+  {
+    "id": "session_oaas_integration_test",
+    "date": "2026-03-25",
+    "summary": "Integracao OaaS → Controller → Agent COMPLETA e FUNCIONAL. Diagnosticados e resolvidos: DNS transiente, 401 auth, payload 400, campos obrigatorios do broker, mapeamento de inputs do manifesto. Fluxo ponta-a-ponta validado com compliance_status=success.",
+    "stepsExecuted": [
+      {
+        "step": 1,
+        "action": "Analisou log de falha da oferta migra-microsservicos-openshift (operation c2345ccf)",
+        "how": "Usuario compartilhou logs do broker OaaS. Primeira execucao falhou com DNS Name or service not known para sre-aut-controller.psc.k8shmlbb111b.bb.com.br",
+        "lesson": "Cluster HML correto e k8shmlbb111b (com BB duplo). k8shmlb111b (b simples) NAO resolve DNS."
+      },
+      {
+        "step": 2,
+        "action": "Validou que controller esta operacional",
+        "how": "curl -vkI https://sre-aut-controller.psc.k8shmlbb111b.bb.com.br retornou HTTP 200, Express, TLS 1.3, certificado BB valido",
+        "result": "Controller v3.5.12 UP e acessivel no cluster k8shmlbb111b"
+      },
+      {
+        "step": 3,
+        "action": "Analisou segunda execucao (operation b5e4de21) — erro 401 Unauthorized",
+        "how": "Log mostrou {\"error\":\"Unauthorized\"} na chamada POST /oas/sre-controller?mode=sync. Playbook nao envia headers x-techbb-*",
+        "lesson": "Playbook execute-psc-ns-migration-preflight.yml da oferta migra-microsservicos-openshift NAO envia headers de autenticacao internal-origin"
+      },
+      {
+        "step": 4,
+        "action": "Verificou env vars do controller pod",
+        "how": "k9s shell no pod psc-sre-aut-controller-bd8c66bd9-j88qn. Todos os OAS_* corretos: OAS_TRUSTED_NAMESPACE=sgh-oaas-playbook-jobs, OAS_TRUSTED_SERVICE_ACCOUNT=default, headers corretos",
+        "result": "Config do controller 100% correta"
+      },
+      {
+        "step": 5,
+        "action": "Testou curl manual com headers do pod APB",
+        "how": "curl com -H x-techbb-namespace: sgh-oaas-playbook-jobs -H x-techbb-service-account: default",
+        "result": "Controller respondeu mode=internal-origin trusted=true. Auth passou. Retornou 400 (payload incompleto no teste, esperado)",
+        "lesson": "Auth internal-origin funciona perfeitamente quando headers sao enviados. O problema e exclusivamente no playbook da oferta que nao envia os headers."
+      },
+      {
+        "step": 6,
+        "action": "Gerou status report para gestao",
+        "how": "Documento com situacao atual, validacoes realizadas, causa raiz e proximos passos"
+      },
+      {
+        "step": 7,
+        "action": "Resolveu payload 400 — CLUSTERS_NAMES required",
+        "how": "Controller valida CLUSTERS_NAMES no raiz do body. Playbook enviava dentro de envs. Identificou que playbook usa inputs do manifesto (cluster_hml_origin) pra montar CLUSTERS_NAMES internamente.",
+        "lesson": "Controller espera CLUSTERS_NAMES no raiz. Playbook monta isso a partir de cluster_hml_origin. NAO passar CLUSTERS_NAMES manualmente."
+      },
+      {
+        "step": 8,
+        "action": "Descobriu campos obrigatorios do broker OaaS por tentativa",
+        "how": "Broker valida inputs do manifesto um por um: namespaces_list (string comma-sep, NAO array), solution_service_origin, solution_service_destination, cluster_hml_origin",
+        "lesson": "Broker OaaS valida contra o manifesto da oferta. Consultar manifesto ANTES de testar para evitar descobrir campos um por um."
+      },
+      {
+        "step": 9,
+        "action": "Identificou mapeamento correto de inputs do manifesto",
+        "how": "Leu manifesto da oferta migra-microsservicos-openshift-v1. Inputs declarados: namespaces_list, solution_service_origin, cluster_hml_origin (select: k8shmlbb111/k8shmlbb111b). CLUSTERS_NAMES e image NAO sao inputs — playbook monta internamente.",
+        "lesson": "CRITICO: Cenario de teste deve passar SOMENTE os inputs do manifesto. Playbook monta o JSON body pro controller a partir desses inputs."
+      },
+      {
+        "step": 10,
+        "action": "Integracao OaaS → Controller → Agent SUCESSO TOTAL",
+        "how": "Payload correto com inputs do manifesto. Controller autenticou (internal-origin), mintou JWT, despachou para agent. Agent executou psc-sre-ns-migration-preflight, retornou compliance_status=success em 9.2s (sync mode).",
+        "result": "POST /oas/sre-controller?mode=sync → 200 OK em 9284ms. namespace=aai-consulta-iban-api, cluster_type=origem, compliance_status=success.",
+        "lesson": "Fluxo ponta-a-ponta OaaS → Controller → Agent validado e funcional. Nenhuma alteracao necessaria no controller."
+      }
+    ],
+    "mistakesMade": [],
+    "keyDecisions": [
+      "Causa raiz identificada: playbook da oferta migra-microsservicos-openshift nao envia headers x-techbb-*",
+      "Controller esta correto — nenhuma alteracao necessaria no controller",
+      "Fix necessario no playbook da oferta (repo da plataforma OaaS, nao no autopilot)",
+      "Cenario de teste OaaS deve usar inputs do manifesto (cluster_hml_origin, namespaces_list, solution_service_*), NAO campos internos (CLUSTERS_NAMES, image, envs)"
+    ]
+  }
+]
