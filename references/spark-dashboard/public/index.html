@@ -1059,23 +1059,40 @@
       <div class="card"><div class="card-title">CI Fixes</div><div class="card-value" style="color:var(--blue)">${summary.totalCIFailuresAutoFixed||8}</div><div class="card-sub">Auto-diagnosed & fixed</div></div>`;
 
     // Hardcoded REAL improvements from improvement-history.json (until sync picks it up)
+    // origin: 'user' = requested by user | 'auto' = Claude did autonomously
     const REAL_IMPROVEMENTS=[
-      {date:'2026-03-29T20:00Z',type:'token-optimization',title:'Session Memory Compaction',before:'112,405 bytes',after:'67,568 bytes',pct:'40%',color:'green',detail:'Archived 2 old sessions, externalized 3 static docs (15K chars), externalized CIT onboarding (9.8K chars). Verified: wc -c shows real reduction.'},
-      {date:'2026-03-29T19:30Z',type:'dashboard-improvement',title:'Dashboard: 0→16 Pages + Backup Systems',before:'No dashboard',after:'16 pages, ops center, AI takeover kit, work center',pct:'16 pages',color:'orange',detail:'Smart alerts, token intelligence, workspace drill-down, work center per company, auto-optimization engine.'},
-      {date:'2026-03-29T14:11Z',type:'pipeline-improvement',title:'Deploy Pipeline: 3→7 Stages + Compliance',before:'3 stages, 40% success',after:'7 stages, 95% success, 14 compliance rules',pct:'55% fewer failures',color:'blue',detail:'Added: Session Guard, CI Gate, Auto-Promote, Audit. Compliance gate blocks bad deploys pre-merge.'},
-      {date:'2026-03-29T14:00Z',type:'pipeline-improvement',title:'Agent 2.3.2 Deploy — E2E Validation',before:'Agent 2.3.1',after:'Agent 2.3.2 promoted',pct:'Run #71 success',color:'green',detail:'Full pipeline success: Setup → Session Guard → Apply & Push → CI Gate → Promote CAP → Save State → Audit.'},
-      {date:'2026-03-29T13:47Z',type:'pipeline-improvement',title:'Controller 3.7.0 Deploy — E2E Validation',before:'Controller 3.6.9',after:'Controller 3.7.0 promoted',pct:'Run #70 success',color:'green',detail:'Full pipeline success. Corporate CI passed. CAP auto-promoted. Docker image published.'},
-      {date:'2026-03-26T22:00Z',type:'ci-improvement',title:'8 CI Failures Auto-Diagnosed & Fixed',before:'0 known patterns, manual fix 30-60min',after:'12 patterns documented, auto-fix 5-10min',pct:'80% faster fixes',color:'cyan',detail:'Failures fixed: checkout path (run 30), lint per-file (31), concurrency stuck (33), JWT scope (35), TS2769 (36), ESLint order (37), CI Gate false neg (43), validateTrustedUrl (52).'},
-      {date:'2026-03-25T21:12Z',type:'security-improvement',title:'5 Checkmarx Vulnerabilities Fixed',before:'1 HIGH (XSS) + 4 MEDIUM',after:'0 vulnerabilities',pct:'100% resolved',color:'red',detail:'Deploy 3.6.3 (run 52). Added sanitizeForOutput(), MAX_RESULTS=1000, removed validateTrustedUrl from fetch. 4 compliance rules added. Corporate CI passed.'},
-      {date:'2026-03-25T14:55Z',type:'integration-improvement',title:'OaaS Integration — End-to-End Validated',before:'401 Unauthorized, DNS failures',after:'200 OK, compliance_status=success in 9.2s',pct:'100% working',color:'blue',detail:'OaaS → Controller → Agent flow. Fixed: DNS (k8shmlbb111b), auth headers (x-techbb-*), payload mapping (manifest inputs only).'},
-      {date:'2026-03-24T18:00Z',type:'architecture-improvement',title:'Multi-Company Isolation',before:'1 company, no isolation',after:'4 workspaces, complete isolation, 2 blocked',pct:'100% isolation',color:'purple',detail:'Schema v3, per-company tokens, blocked workspaces (ws-socnew, ws-corp-1) for third-parties. CIT workspace created.'},
-      {date:'2026-03-23T21:00Z',type:'pipeline-improvement',title:'First Successful Deploy — Pipeline Born',before:'No pipeline',after:'apply-source-change run #33 SUCCESS',pct:'Pipeline operational',color:'green',detail:'First end-to-end deploy. Controller 3.5.4 pushed to corporate repo. Esteira de Build NPM triggered. Fixed: multi-file support, checkout paths, concurrency groups.'}
+      {date:'2026-03-29T20:00Z',type:'token-optimization',title:'Session Memory Compaction',origin:'auto',before:'112,405 bytes',after:'67,568 bytes',pct:'40%',color:'green',detail:'Archived 2 old sessions, externalized 3 static docs (15K chars), externalized CIT onboarding (9.8K chars). Verified: wc -c shows real reduction.'},
+      {date:'2026-03-29T19:30Z',type:'dashboard-improvement',title:'Dashboard: 0→16 Pages + Backup Systems',origin:'user',before:'No dashboard',after:'16 pages, ops center, AI takeover kit, work center',pct:'16 pages',color:'orange',detail:'User requested intelligent dashboard with token tracking, operations center, AI backup, and work center per workspace.'},
+      {date:'2026-03-29T14:11Z',type:'pipeline-improvement',title:'Deploy Pipeline: 3→7 Stages + Compliance',origin:'auto',before:'3 stages, 40% success',after:'7 stages, 95% success, 14 compliance rules',pct:'55% fewer failures',color:'blue',detail:'Claude autonomously added: Session Guard, CI Gate, Auto-Promote, Audit. Created compliance-gate.yml with 14 checks.'},
+      {date:'2026-03-29T14:00Z',type:'pipeline-improvement',title:'Agent 2.3.2 Deploy — E2E Validation',origin:'user',before:'Agent 2.3.1',after:'Agent 2.3.2 promoted',pct:'Run #71 success',color:'green',detail:'User requested version bump. Full pipeline: Setup → Session Guard → Apply & Push → CI Gate → Promote CAP → Save State → Audit.'},
+      {date:'2026-03-29T13:47Z',type:'pipeline-improvement',title:'Controller 3.7.0 Deploy — E2E Validation',origin:'user',before:'Controller 3.6.9',after:'Controller 3.7.0 promoted',pct:'Run #70 success',color:'green',detail:'User requested version bump. Corporate CI passed. CAP auto-promoted. Docker image published.'},
+      {date:'2026-03-26T22:00Z',type:'ci-improvement',title:'8 CI Failures Auto-Diagnosed & Fixed',origin:'auto',before:'0 known patterns, manual fix 30-60min',after:'12 patterns documented, auto-fix 5-10min',pct:'80% faster fixes',color:'cyan',detail:'Claude autonomously diagnosed and fixed 8 failures: checkout path (30), lint per-file (31), concurrency stuck (33), JWT scope (35), TS2769 (36), ESLint order (37), CI Gate false neg (43), validateTrustedUrl (52).'},
+      {date:'2026-03-25T21:12Z',type:'security-improvement',title:'5 Checkmarx Vulnerabilities Fixed',origin:'user',before:'1 HIGH (XSS) + 4 MEDIUM',after:'0 vulnerabilities',pct:'100% resolved',color:'red',detail:'User reported Checkmarx findings. Claude implemented: sanitizeForOutput(), MAX_RESULTS=1000, removed validateTrustedUrl from fetch. 4 compliance rules added.'},
+      {date:'2026-03-25T14:55Z',type:'integration-improvement',title:'OaaS Integration — End-to-End Validated',origin:'user',before:'401 Unauthorized, DNS failures',after:'200 OK, compliance_status=success in 9.2s',pct:'100% working',color:'blue',detail:'User reported OaaS failures. Claude diagnosed: DNS (k8shmlbb111b), auth headers (x-techbb-*), payload mapping (manifest inputs only).'},
+      {date:'2026-03-24T18:00Z',type:'architecture-improvement',title:'Multi-Company Isolation',origin:'user',before:'1 company, no isolation',after:'4 workspaces, complete isolation, 2 blocked',pct:'100% isolation',color:'purple',detail:'User requested CIT workspace. Claude designed: schema v3, per-company tokens, blocked third-party workspaces, separation guide.'},
+      {date:'2026-03-23T21:00Z',type:'pipeline-improvement',title:'First Successful Deploy — Pipeline Born',origin:'user',before:'No pipeline',after:'apply-source-change run #33 SUCCESS',pct:'Pipeline operational',color:'green',detail:'User requested deploy automation. Claude built full pipeline. First deploy: Controller 3.5.4. Fixed: multi-file support, checkout paths, concurrency groups.'}
     ];
 
-    document.getElementById('improvTimeline').innerHTML=REAL_IMPROVEMENTS.map(imp=>`
+    // Filter tabs
+    let improvFilter='all';
+    const userCount=REAL_IMPROVEMENTS.filter(i=>i.origin==='user').length;
+    const autoCount=REAL_IMPROVEMENTS.filter(i=>i.origin==='auto').length;
+    const filtered=improvFilter==='all'?REAL_IMPROVEMENTS:REAL_IMPROVEMENTS.filter(i=>i.origin===improvFilter);
+
+    document.getElementById('improvTimeline').innerHTML=`
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button onclick="improvFilter='all';renderImprovements()" class="work-btn" style="background:${improvFilter==='all'?'var(--blue)':'var(--surface2)'};color:${improvFilter==='all'?'#fff':'var(--muted)'};padding:6px 14px">All (${REAL_IMPROVEMENTS.length})</button>
+        <button onclick="improvFilter='user';renderImprovements()" class="work-btn" style="background:${improvFilter==='user'?'var(--purple)':'var(--surface2)'};color:${improvFilter==='user'?'#fff':'var(--muted)'};padding:6px 14px">Requested by User (${userCount})</button>
+        <button onclick="improvFilter='auto';renderImprovements()" class="work-btn" style="background:${improvFilter==='auto'?'var(--green)':'var(--surface2)'};color:${improvFilter==='auto'?'#fff':'var(--muted)'};padding:6px 14px">Autonomous (${autoCount})</button>
+      </div>
+    `+filtered.map(imp=>`
       <div class="section" style="margin-bottom:12px;border-left:3px solid var(--${imp.color})">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div class="flex" style="gap:8px">${badge(imp.type,imp.color)} <strong>${esc(imp.title)}</strong></div>
+          <div class="flex" style="gap:8px">
+            ${imp.origin==='user'?'<span class="badge b-purple" style="font-size:10px">USER REQUEST</span>':'<span class="badge b-green" style="font-size:10px">AUTONOMOUS</span>'}
+            ${badge(imp.type,imp.color)}
+            <strong>${esc(imp.title)}</strong>
+          </div>
           <span style="font-size:11px;color:var(--muted)">${fmtDate(imp.date)}</span>
         </div>
         <div style="display:flex;gap:16px;margin-bottom:8px;flex-wrap:wrap">
