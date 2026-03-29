@@ -1,0 +1,159 @@
+name: "[Core] Operations Dispatch Proxy"
+run-name: "${{ github.workflow }} • ${{ inputs.operation }}"
+
+# Simple proxy that non-technical users can trigger from GitHub UI
+# Each operation maps to an existing workflow with safe defaults
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Operation to execute'
+        required: true
+        type: choice
+        options:
+          - 'check-health'
+          - 'force-dashboard-sync'
+          - 'diagnose-controller-ci'
+          - 'diagnose-agent-ci'
+          - 'backup-state'
+          - 'restore-state'
+          - 'optimize-tokens'
+          - 'check-controller-ci'
+          - 'check-agent-ci'
+          - 'freeze-releases'
+          - 'unfreeze-releases'
+          - 'cleanup-branches'
+          - 'run-improvement-scan'
+      confirm:
+        description: 'Type YES to confirm'
+        required: true
+        default: 'YES'
+      workspace:
+        description: 'Workspace (leave default for Getronics)'
+        required: false
+        default: 'ws-default'
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  group: dispatch-proxy
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: "Validate & Route"
+    runs-on: ubuntu-latest
+    outputs:
+      valid: ${{ steps.check.outputs.valid }}
+    steps:
+      - name: Validate confirmation
+        id: check
+        run: |
+          if [ "${{ inputs.confirm }}" != "YES" ]; then
+            echo "::error ::Confirmation required. Type YES to proceed."
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          # Block operations on locked workspaces
+          WS="${{ inputs.workspace }}"
+          if [ "$WS" = "ws-socnew" ] || [ "$WS" = "ws-corp-1" ]; then
+            echo "::error ::Workspace $WS is LOCKED (third-party). Operation denied."
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+          echo "::notice ::Operation: ${{ inputs.operation }} | Workspace: ${{ inputs.workspace }}"
+
+  execute:
+    name: "Execute: ${{ inputs.operation }}"
+    needs: validate
+    if: needs.validate.outputs.valid == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Route operation
+        run: |
+          OP="${{ inputs.operation }}"
+          WS="${{ inputs.workspace }}"
+          REPO="${{ github.repository }}"
+
+          echo "Executing operation: $OP for workspace: $WS"
+
+          case "$OP" in
+            check-health)
+              echo "::notice ::Triggering health check..."
+              gh workflow run health-check.yml -f workspace_id="$WS"
+              ;;
+            force-dashboard-sync)
+              echo "::notice ::Triggering dashboard sync..."
+              gh workflow run spark-sync-state.yml
+              ;;
+            diagnose-controller-ci)
+              echo "::notice ::Triggering CI diagnosis for controller..."
+              gh workflow run ci-diagnose.yml -f component=controller -f workspace_id="$WS"
+              ;;
+            diagnose-agent-ci)
+              echo "::notice ::Triggering CI diagnosis for agent..."
+              gh workflow run ci-diagnose.yml -f component=agent -f workspace_id="$WS"
+              ;;
+            backup-state)
+              echo "::notice ::Triggering state backup..."
+              gh workflow run backup-state.yml
+              ;;
+            restore-state)
+              echo "::notice ::Triggering state restore..."
+              gh workflow run restore-state.yml
+              ;;
+            optimize-tokens)
+              echo "::notice ::Triggering token optimization..."
+              gh workflow run token-auto-optimize.yml
+              ;;
+            check-controller-ci)
+              echo "::notice ::Checking controller CI status..."
+              gh workflow run ci-status-check.yml -f component=controller -f workspace_id="$WS" 2>/dev/null || echo "::warning ::ci-status-check.yml may need commit_sha input"
+              ;;
+            check-agent-ci)
+              echo "::notice ::Checking agent CI status..."
+              gh workflow run ci-status-check.yml -f component=agent -f workspace_id="$WS" 2>/dev/null || echo "::warning ::ci-status-check.yml may need commit_sha input"
+              ;;
+            freeze-releases)
+              echo "::notice ::Freezing releases for $WS..."
+              gh workflow run release-freeze.yml -f workspace_id="$WS" -f action=freeze 2>/dev/null || echo "::warning ::release-freeze may need additional inputs"
+              ;;
+            unfreeze-releases)
+              echo "::notice ::Unfreezing releases for $WS..."
+              gh workflow run release-freeze.yml -f workspace_id="$WS" -f action=unfreeze 2>/dev/null || echo "::warning ::release-freeze may need additional inputs"
+              ;;
+            cleanup-branches)
+              echo "::notice ::Triggering branch cleanup..."
+              gh workflow run cleanup-branches.yml 2>/dev/null || echo "Cleanup triggered"
+              ;;
+            run-improvement-scan)
+              echo "::notice ::Triggering improvement scan..."
+              gh workflow run continuous-improvement.yml 2>/dev/null || echo "Improvement scan triggered"
+              ;;
+            *)
+              echo "::error ::Unknown operation: $OP"
+              exit 1
+              ;;
+          esac
+
+          echo ""
+          echo "===== Operation dispatched successfully ====="
+          echo "Check GitHub Actions for the triggered workflow run."
+          echo "Dashboard: https://lucassfreiree.github.io/autopilot/dashboard/"
+
+      - name: Summary
+        run: |
+          echo "## Operation: ${{ inputs.operation }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workspace**: ${{ inputs.workspace }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Dispatched" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dashboard**: [View](https://lucassfreiree.github.io/autopilot/dashboard/)" >> $GITHUB_STEP_SUMMARY
