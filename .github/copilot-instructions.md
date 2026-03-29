@@ -405,11 +405,12 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | codex-apply.yml | [Agent] Codex Apply: Task → Code → PR | trigger file, manual |
 | codex-autonomous-pr.yml | Codex autonomous PR | manual |
 | codex-deploy.yml | [Agent] Codex Deploy: Full Pipeline | trigger file, manual |
-| compliance-gate.yml | [Core] Compliance Gate | manual, reusable, PR |
+| compliance-gate.yml | compliance-gate.yml | unknown |
 | continuous-improvement.yml | [Infra] Continuous Improvement | scheduled, trigger file, manual |
 | copilot-post-deploy-sync.yml | [Copilot] Post-Deploy Sync | manual |
 | copilot-setup-steps.yml | Copilot Setup Steps | workflow_call |
 | copilot-task-dispatch.yml | [Agent] Copilot Task Dispatch | trigger file, manual |
+| deploy-auto-learn.yml | [Core] Deploy Auto-Learn | manual |
 | deploy-panel.yml | [Infra] Deploy Panel (GitHub Pages) | push, manual |
 | drift-correction.yml | [Corp] Drift Correction | scheduled, manual |
 | enqueue-agent-handoff.yml | [Agent] Enqueue Handoff | manual |
@@ -424,6 +425,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | ops-pipeline-diagnose.yml | Ops: Pipeline Diagnostics | manual |
 | ops-tf-plan.yml | Ops: Terraform Plan | manual |
 | ops-workflow-observability.yml | Ops: Workflow Observability Report | scheduled, manual |
+| post-deploy-validation.yml | post-deploy-validation.yml | unknown |
 | post-merge-monitor.yml | [Core] Post-Merge Monitor | unknown |
 | promote-cap.yml | [Release] Promote CAP Tag | trigger file, manual |
 | record-improvement.yml | [Agent] Record Improvement | manual |
@@ -464,6 +466,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | continuous-improvement.yml | workspace_id, auto_fix, scope |
 | copilot-post-deploy-sync.yml | version, run_number |
 | copilot-task-dispatch.yml | task, task_type, component, version |
+| deploy-auto-learn.yml | source |
 | drift-correction.yml | workspace_id, dry_run |
 | enqueue-agent-handoff.yml | workspace_id, from_agent, to_agent, component, summary, next_steps, priority |
 | fetch-files.yml | workspace_id, component, files |
@@ -676,4 +679,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-29T02:12:17Z | Run: 23699289285*
+*Last synced: 2026-03-29T02:39:33Z | Run: 23699706254*
