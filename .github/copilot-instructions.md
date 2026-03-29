@@ -410,6 +410,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | copilot-post-deploy-sync.yml | [Copilot] Post-Deploy Sync | manual |
 | copilot-setup-steps.yml | Copilot Setup Steps | workflow_call |
 | copilot-task-dispatch.yml | [Agent] Copilot Task Dispatch | trigger file, manual |
+| dashboard-auto-improve.yml | [Core] Dashboard Auto-Improve | scheduled, manual |
 | deploy-auto-learn.yml | [Core] Deploy Auto-Learn | manual |
 | deploy-panel.yml | [Infra] Deploy Panel (GitHub Pages) | push, manual |
 | drift-correction.yml | [Corp] Drift Correction | scheduled, manual |
@@ -682,4 +683,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-29T14:00:27Z | Run: 23710709736*
+*Last synced: 2026-03-29T14:11:59Z | Run: 23710936659*
