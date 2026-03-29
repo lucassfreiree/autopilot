@@ -596,6 +596,46 @@ The sweeper (cron 2 min) is only a BACKUP — you are the primary merger.
 
 ---
 
+## DEPLOY COMPLIANCE PIPELINE (4 stages — MANDATORY)
+
+Every deploy goes through 4 compliance stages automatically:
+
+```
+PR → Compliance Gate (14 checks) → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn
+```
+
+### Stage 1: compliance-gate.yml (PRE-DEPLOY)
+14 static checks + pull corporate + npm ci + tsc + eslint + jest + tag validation.
+Blocks merge if violations found. Comments on PR.
+
+| Rule | What |
+|------|------|
+| version-format | No X.Y.10+ |
+| version-4-files | pkg + lock + swagger + cap |
+| swagger-ascii | No accented characters |
+| jwt-scope-singular | scope not scopes |
+| security-xss | sanitizeForOutput required |
+| security-ssrf | parseSafeIdentifier at input |
+| security-dos-loop | MAX_RESULTS limit |
+| + 7 more | ESLint, secrets, workspace isolation |
+
+### Stage 2: apply-source-change.yml (DURING)
+Setup → Session Guard → Apply & Push → CI Gate → Promote → State → Audit
+
+### Stage 3: post-deploy-validation.yml (POST-DEPLOY)
+Verifies: source version match + CAP tag promoted + state updated + corporate CI.
+Creates GitHub Issue on failure.
+
+### Stage 4: deploy-auto-learn.yml (AUTO-LEARN)
+Maps errors to patterns, generates learning report, records improvements.
+
+### Corporate Drift Detection (spark-sync-state.yml)
+Reads REAL versions from bbvinet/* repos every 5 min via BBVINET_TOKEN.
+Compares autopilot state vs reality. Detects when someone deploys independently.
+Health score -25 per component with drift.
+
+---
+
 ## COMMON TASKS
 
 | Task | How |
