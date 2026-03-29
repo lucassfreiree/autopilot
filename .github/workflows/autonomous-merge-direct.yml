@@ -36,10 +36,9 @@ jobs:
               return;
             }
 
-            // Only act on designated agent branches
-            const isAgentBranch = branch.startsWith('copilot/') ||
-                                   branch.startsWith('claude/')  ||
-                                   branch.startsWith('codex/');
+            // Only act on designated agent branches (universal — any registered agent)
+            const knownPrefixes = ['claude/', 'copilot/', 'codex/', 'agent/'];
+            const isAgentBranch = knownPrefixes.some(p => branch.startsWith(p));
             if (!isAgentBranch) {
               core.notice(`PR #${pr.number} branch "${branch}" is not an agent branch; skipping.`);
               core.setOutput('eligible', 'false');
