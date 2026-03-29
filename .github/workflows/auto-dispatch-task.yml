@@ -1,0 +1,177 @@
+name: "[Core] Auto-Dispatch Task"
+run-name: "${{ github.workflow }} • Issue #${{ github.event.issue.number }}"
+
+# Automatically dispatches work when Issues are created from the Dashboard Work Center.
+# Flow: User creates Issue via Dashboard → This workflow assigns Copilot Coding Agent →
+# Copilot reads context, creates branch, implements, PR → auto-merge.
+#
+# For complex tasks that need Claude Code: adds label 'needs-claude' and posts instructions.
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: task-dispatch-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  classify-and-dispatch:
+    name: "Classify & Dispatch"
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.issue.labels.*.name, 'automated') ||
+      contains(github.event.issue.labels.*.name, 'task') ||
+      contains(github.event.issue.labels.*.name, 'story') ||
+      contains(github.event.issue.labels.*.name, 'incident') ||
+      contains(github.event.issue.labels.*.name, 'change')
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+    outputs:
+      complexity: ${{ steps.classify.outputs.complexity }}
+      workspace: ${{ steps.classify.outputs.workspace }}
+      component: ${{ steps.classify.outputs.component }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Classify task complexity
+        id: classify
+        run: |
+          TITLE="${{ github.event.issue.title }}"
+          BODY=$(gh issue view ${{ github.event.issue.number }} --json body --jq '.body' 2>/dev/null || echo "")
+          LABELS=$(gh issue view ${{ github.event.issue.number }} --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+
+          echo "Title: $TITLE"
+          echo "Labels: $LABELS"
+
+          # Extract workspace from labels or title
+          WS="ws-default"
+          if echo "$LABELS" | grep -q "ws-cit"; then WS="ws-cit"; fi
+          if echo "$TITLE" | grep -qi "ws-cit\|cit"; then WS="ws-cit"; fi
+          echo "workspace=$WS" >> "$GITHUB_OUTPUT"
+
+          # Extract component
+          COMP="unknown"
+          if echo "$BODY" | grep -qi "controller"; then COMP="controller"; fi
+          if echo "$BODY" | grep -qi "agent"; then COMP="agent"; fi
+          if echo "$BODY" | grep -qi "both\|ambos"; then COMP="both"; fi
+          if echo "$BODY" | grep -qi "infra\|terraform\|k8s"; then COMP="infra"; fi
+          if echo "$BODY" | grep -qi "dashboard"; then COMP="dashboard"; fi
+          echo "component=$COMP" >> "$GITHUB_OUTPUT"
+
+          # Classify complexity
+          # Complex = deploy, multi-file code changes, CI diagnosis, security fixes
+          # Simple = docs, config, version bump, dashboard update, memory update
+          COMPLEXITY="simple"
+          if echo "$TITLE$BODY" | grep -qi "deploy\|pipeline\|ci.*fail\|security\|vulnerability\|multi.*file\|refactor\|migration"; then
+            COMPLEXITY="complex"
+          fi
+          if echo "$LABELS" | grep -q "incident"; then
+            COMPLEXITY="complex"
+          fi
+          echo "complexity=$COMPLEXITY" >> "$GITHUB_OUTPUT"
+          echo "::notice ::Task classified: complexity=$COMPLEXITY, workspace=$WS, component=$COMP"
+
+      - name: Add processing label
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --add-label "processing" 2>/dev/null || true
+
+  dispatch-simple:
+    name: "Dispatch to Copilot (simple)"
+    needs: classify-and-dispatch
+    if: needs.classify-and-dispatch.outputs.complexity == 'simple'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Assign Copilot to Issue
+        run: |
+          ISSUE=${{ github.event.issue.number }}
+          WS="${{ needs.classify-and-dispatch.outputs.workspace }}"
+          COMP="${{ needs.classify-and-dispatch.outputs.component }}"
+
+          # Post instructions for Copilot
+          gh issue comment "$ISSUE" --body "## Auto-Dispatch: Assigned to Copilot Coding Agent
+
+**Workspace**: \`$WS\`
+**Component**: \`$COMP\`
+**Complexity**: Simple — Copilot can handle this.
+
+### Instructions
+1. Read \`contracts/ai-takeover-kit.md\` for system context
+2. Read \`contracts/claude-session-memory.json\` for current state
+3. Implement the requested changes
+4. Create PR with branch \`copilot/task-${ISSUE}\`
+5. PR will be auto-merged after checks pass
+
+---
+*Auto-dispatched by auto-dispatch-task.yml*"
+
+          # Assign Copilot
+          gh api "repos/${{ github.repository }}/issues/$ISSUE/assignees" \
+            --method POST \
+            --field assignees[]="copilot" 2>/dev/null || echo "::warning ::Could not assign Copilot — may need manual assignment"
+
+          echo "::notice ::Issue #$ISSUE assigned to Copilot"
+
+  dispatch-complex:
+    name: "Flag for Claude (complex)"
+    needs: classify-and-dispatch
+    if: needs.classify-and-dispatch.outputs.complexity == 'complex'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Claude context and flag
+        run: |
+          ISSUE=${{ github.event.issue.number }}
+          WS="${{ needs.classify-and-dispatch.outputs.workspace }}"
+          COMP="${{ needs.classify-and-dispatch.outputs.component }}"
+
+          # Read current versions
+          CTRL_VER=$(jq -r '.currentState.controllerVersion // "?"' contracts/claude-session-memory.json 2>/dev/null || echo "?")
+          AGENT_VER=$(jq -r '.currentState.agentVersion // "?"' contracts/claude-session-memory.json 2>/dev/null || echo "?")
+          LAST_RUN=$(jq -r '.currentState.lastTriggerRun // 0' contracts/claude-session-memory.json 2>/dev/null || echo "0")
+
+          # Add label for Claude
+          gh issue edit "$ISSUE" --add-label "needs-claude" 2>/dev/null || true
+
+          # Post context for Claude
+          gh issue comment "$ISSUE" --body "## Auto-Dispatch: Flagged for Claude Code
+
+**Workspace**: \`$WS\`
+**Component**: \`$COMP\`
+**Complexity**: Complex — requires Claude Code (deploy, CI, multi-file changes).
+
+### Current System State
+- Controller: **$CTRL_VER**
+- Agent: **$AGENT_VER**
+- Last run: **#$LAST_RUN**
+
+### How Claude picks this up
+1. **Automatic**: Claude reads open Issues with \`needs-claude\` label at session start
+2. **Manual**: User says \`executa a issue #$ISSUE\` in Claude Code session
+
+### For Claude
+When executing this issue:
+1. Read the issue description above for requirements
+2. Follow deploy flow in \`CLAUDE.md\` section 'Deploy Flow — Complete Guide'
+3. After completing: remove \`needs-claude\` label, add \`completed\` label, close issue
+4. Record in \`contracts/claude-session-memory.json\` executionHistory
+
+---
+*Auto-dispatched by auto-dispatch-task.yml*"
+
+          echo "::notice ::Issue #$ISSUE flagged for Claude Code (complex task)"
+
+          # Also try Copilot as backup dispatcher
+          gh api "repos/${{ github.repository }}/issues/$ISSUE/assignees" \
+            --method POST \
+            --field assignees[]="copilot" 2>/dev/null || echo "::warning ::Could not assign Copilot as backup"
