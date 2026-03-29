@@ -60,7 +60,7 @@ For the absolute latest state (versions, in-progress deploys), read:
 |---|---|
 | Controller version | `3.6.6` |
 | Agent version | `2.2.9` |
-| Last trigger run | `63` |
+| Last trigger run | `69` |
 | Last successful run | `63` |
 
 ---
@@ -72,8 +72,8 @@ This is your persistent memory from ALL previous sessions, embedded automaticall
 You already know everything below. Apply it immediately.
 
 ### Current State
-- Controller: 3.6.8 | Agent: 2.2.9
-- Last run: 66 | Status: success
+- Controller: 3.6.6 | Agent: 2.2.9
+- Last run: 69 | Status: success
 - Workspace: ws-default (Getronics)
 
 ### Claude Status
@@ -596,46 +596,6 @@ The sweeper (cron 2 min) is only a BACKUP — you are the primary merger.
 
 ---
 
-## DEPLOY COMPLIANCE PIPELINE (4 stages — MANDATORY)
-
-Every deploy goes through 4 compliance stages automatically:
-
-```
-PR → Compliance Gate (14 checks) → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn
-```
-
-### Stage 1: compliance-gate.yml (PRE-DEPLOY)
-14 static checks + pull corporate + npm ci + tsc + eslint + jest + tag validation.
-Blocks merge if violations found. Comments on PR.
-
-| Rule | What |
-|------|------|
-| version-format | No X.Y.10+ |
-| version-4-files | pkg + lock + swagger + cap |
-| swagger-ascii | No accented characters |
-| jwt-scope-singular | scope not scopes |
-| security-xss | sanitizeForOutput required |
-| security-ssrf | parseSafeIdentifier at input |
-| security-dos-loop | MAX_RESULTS limit |
-| + 7 more | ESLint, secrets, workspace isolation |
-
-### Stage 2: apply-source-change.yml (DURING)
-Setup → Session Guard → Apply & Push → CI Gate → Promote → State → Audit
-
-### Stage 3: post-deploy-validation.yml (POST-DEPLOY)
-Verifies: source version match + CAP tag promoted + state updated + corporate CI.
-Creates GitHub Issue on failure.
-
-### Stage 4: deploy-auto-learn.yml (AUTO-LEARN)
-Maps errors to patterns, generates learning report, records improvements.
-
-### Corporate Drift Detection (spark-sync-state.yml)
-Reads REAL versions from bbvinet/* repos every 5 min via BBVINET_TOKEN.
-Compares autopilot state vs reality. Detects when someone deploys independently.
-Health score -25 per component with drift.
-
----
-
 ## COMMON TASKS
 
 | Task | How |
@@ -719,4 +679,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-29T02:39:33Z | Run: 23699706254*
+*Last synced: 2026-03-29T02:46:59Z | Run: 23699819541*
