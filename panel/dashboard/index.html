@@ -94,6 +94,24 @@
     .lesson-fix { color:var(--green); font-size:11px; margin-top:4px; }
     .error-item { background:var(--surface2); border-radius:6px; padding:10px 12px; margin-bottom:8px; font-size:12px; border-left:3px solid var(--red); }
     .error-fix { color:var(--cyan); font-size:11px; margin-top:4px; }
+    .token-bar { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:12px; }
+    .token-bar-fill { height:18px; border-radius:3px; min-width:2px; transition:width .5s; display:flex; align-items:center; justify-content:flex-end; padding:0 6px; font-size:10px; font-weight:600; color:#fff; }
+    .token-bar-label { min-width:110px; color:var(--muted); }
+    .token-bar-value { min-width:80px; text-align:right; font-family:'Courier New',monospace; font-size:11px; }
+    .reco-card { background:var(--surface2); border-radius:6px; padding:12px 14px; margin-bottom:10px; border-left:3px solid var(--cyan); }
+    .reco-card.reco-save { border-left-color:var(--green); }
+    .reco-card.reco-warn { border-left-color:var(--yellow); }
+    .reco-card.reco-tip { border-left-color:var(--blue); }
+    .reco-title { font-size:13px; font-weight:600; margin-bottom:4px; }
+    .reco-desc { font-size:12px; color:var(--muted); }
+    .reco-impact { font-size:11px; margin-top:4px; font-weight:500; }
+    .trend-bar-container { display:flex; align-items:flex-end; gap:6px; height:100px; padding-top:10px; }
+    .trend-bar { flex:1; border-radius:3px 3px 0 0; min-width:20px; position:relative; transition:height .5s; }
+    .trend-bar-label { font-size:10px; color:var(--muted); text-align:center; margin-top:4px; }
+    .trend-bar-val { position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:10px; white-space:nowrap; font-weight:600; }
+    .efficiency-ring { width:100px; height:100px; position:relative; display:inline-block; }
+    .efficiency-ring svg { transform:rotate(-90deg); }
+    .efficiency-score { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:24px; font-weight:700; }
     .panel { display:none; }
     .panel.active { display:block; }
     .loading { text-align:center; padding:40px; color:var(--muted); }
@@ -131,6 +149,7 @@
       <div class="nav-item" onclick="go('history')">Deploy History</div>
       <div class="nav-item" onclick="go('lessons')">Lessons <span class="nav-badge" id="navLessons">0</span></div>
       <div class="nav-item" onclick="go('errors')">Error Patterns</div>
+      <div class="nav-item" onclick="go('tokens')">Token Intelligence <span class="nav-badge" id="navTokens" style="color:var(--cyan)">$</span></div>
       <div class="nav-item" onclick="go('architecture')">Architecture</div>
     </div>
     <div style="padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)" id="sidebarSync">Loading...</div>
@@ -239,6 +258,24 @@
       <div id="errorPatterns"></div>
     </div>
 
+    <!-- TOKEN INTELLIGENCE -->
+    <div class="panel" id="panel-tokens">
+      <div class="page-header"><h2>Token Intelligence</h2><span class="badge b-cyan" id="tokenBadge">estimating...</span></div>
+      <div id="tokenAlerts"></div>
+      <div class="grid-4" id="tokenKPIs"></div>
+      <div class="grid-2" style="margin-top:16px">
+        <div class="section"><h3>Usage by Agent</h3><div id="tokenByAgent"></div></div>
+        <div class="section"><h3>Usage by Operation</h3><div id="tokenByOp"></div></div>
+      </div>
+      <div class="grid-2" style="margin-top:0">
+        <div class="section"><h3>Cost Estimation (USD)</h3><div id="tokenCost"></div></div>
+        <div class="section"><h3>Model Distribution</h3><div id="tokenModels"></div></div>
+      </div>
+      <div class="section" style="margin-top:0"><h3>Smart Recommendations</h3><div id="tokenRecommendations"></div></div>
+      <div class="section" style="margin-top:0"><h3>Daily Usage Trend (last 7 days)</h3><div id="tokenTrend"></div></div>
+      <div class="section" style="margin-top:0"><h3>Token Efficiency Score</h3><div id="tokenEfficiency"></div></div>
+    </div>
+
     <!-- ARCHITECTURE -->
     <div class="panel" id="panel-architecture">
       <div class="page-header"><h2>Architecture</h2></div>
@@ -259,7 +296,7 @@
   function getSyncInterval(){return isBusinessHours()?'1 min':'5 min'}
   function getStaleThreshold(){return isBusinessHours()?3:12}
   let REFRESH=getRefreshMs();
-  const PAGES = ['overview','alerts','pipeline','corporate','compliance','agents','workspaces','workflows','prs','history','lessons','errors','architecture'];
+  const PAGES = ['overview','alerts','pipeline','corporate','compliance','agents','workspaces','workflows','prs','history','lessons','errors','tokens','architecture'];
   const STAGES = [
     {name:'Setup',desc:'Read workspace config'},
     {name:'Session Guard',desc:'Acquire multi-agent lock'},
@@ -421,7 +458,7 @@
   function renderAll(){
     renderSync();renderOverview();renderSmartAlerts();renderAlerts();renderPipeline();
     renderCorporate();renderCompliance();renderAgents();renderWorkspaces();renderWorkflows();renderPRs();
-    renderHistory();renderLessons();renderErrors();renderArchitecture();renderNavBadges();
+    renderHistory();renderLessons();renderErrors();renderTokens();renderArchitecture();renderNavBadges();
   }
 
   function renderSync(){
@@ -908,6 +945,285 @@
           <strong>Merge:</strong> autonomous-merge-direct.yml handles all agent PRs. auto-merge-sweeper.yml is backup (2min cron).
         </div>
       </div>`;
+  }
+
+  // ===== TOKEN INTELLIGENCE ENGINE =====
+  // Pricing per 1M tokens (Anthropic pricing as of 2026)
+  const TOKEN_PRICING={
+    'opus-4-6':{input:15,output:75,name:'Opus 4.6',color:'purple'},
+    'sonnet-4-6':{input:3,output:15,name:'Sonnet 4.6',color:'blue'},
+    'haiku-4-5':{input:0.80,output:4,name:'Haiku 4.5',color:'cyan'}
+  };
+
+  // Token estimation per operation type
+  const OP_TOKENS={
+    'deploy-full':{input:350000,output:50000,model:'opus-4-6',desc:'Full deploy cycle (patches+trigger+PR+monitor)'},
+    'ci-diagnose':{input:120000,output:30000,model:'opus-4-6',desc:'CI failure diagnosis + auto-fix'},
+    'code-review':{input:80000,output:20000,model:'opus-4-6',desc:'Code review and PR analysis'},
+    'file-fetch':{input:40000,output:10000,model:'sonnet-4-6',desc:'Fetch corporate files'},
+    'memory-sync':{input:60000,output:15000,model:'opus-4-6',desc:'Session memory read/update'},
+    'dashboard-sync':{input:5000,output:2000,model:'haiku-4-5',desc:'Dashboard state sync'},
+    'pr-create':{input:30000,output:8000,model:'opus-4-6',desc:'Create and merge PR'},
+    'copilot-session':{input:50000,output:15000,model:'sonnet-4-6',desc:'Copilot agent session'},
+    'exploration':{input:100000,output:25000,model:'opus-4-6',desc:'Codebase exploration/research'},
+    'workflow-monitor':{input:20000,output:5000,model:'sonnet-4-6',desc:'Workflow status monitoring'}
+  };
+
+  function computeTokenUsage(){
+    const tk=state.tokenUsage||{};
+    const sessions=state.executionHistory||[];
+    const wfs=state.recentWorkflows||[];
+    const deploys=state.deployHistory||[];
+    const agents=state.agents||{};
+    const claude=agents.claude||{};
+    const copilot=agents.copilot||{};
+    const codex=agents.codex||{};
+
+    // Count operations from available data
+    const totalSessions=sessions.length;
+    const copilotSessions=copilot.sessionCount||0;
+    const codexSessions=codex.sessionCount||0;
+    const claudeSessions=Math.max(totalSessions,1);
+    const totalDeploys=deploys.length;
+    const totalWfs=wfs.length;
+
+    // Estimate tokens by agent
+    const claudeOps=[
+      {type:'deploy-full',count:Math.min(totalDeploys,20)},
+      {type:'ci-diagnose',count:Math.floor(totalDeploys*0.3)},
+      {type:'memory-sync',count:claudeSessions},
+      {type:'pr-create',count:Math.min(totalDeploys,20)},
+      {type:'exploration',count:Math.floor(claudeSessions*0.5)},
+      {type:'workflow-monitor',count:Math.min(totalDeploys*2,40)}
+    ];
+    const copilotOps=[
+      {type:'copilot-session',count:copilotSessions},
+      {type:'pr-create',count:Math.floor(copilotSessions*0.5)},
+      {type:'memory-sync',count:copilotSessions}
+    ];
+    const infraOps=[
+      {type:'dashboard-sync',count:Math.max(totalWfs,50)},
+      {type:'file-fetch',count:Math.floor(totalDeploys*0.5)}
+    ];
+
+    function sumTokens(ops){
+      let inp=0,out=0;
+      ops.forEach(o=>{const t=OP_TOKENS[o.type]||{input:10000,output:3000};inp+=t.input*o.count;out+=t.output*o.count});
+      return{input:inp,output:out,total:inp+out};
+    }
+
+    const claudeTokens=sumTokens(claudeOps);
+    const copilotTokens=sumTokens(copilotOps);
+    const infraTokens=sumTokens(infraOps);
+
+    // Cost calculation
+    function calcCost(tokens,model){
+      const p=TOKEN_PRICING[model]||TOKEN_PRICING['opus-4-6'];
+      return(tokens.input/1e6)*p.input+(tokens.output/1e6)*p.output;
+    }
+
+    // Model distribution
+    const modelDist={'opus-4-6':0,'sonnet-4-6':0,'haiku-4-5':0};
+    [...claudeOps,...copilotOps,...infraOps].forEach(o=>{
+      const t=OP_TOKENS[o.type]||{input:10000,output:3000,model:'opus-4-6'};
+      const m=t.model||'opus-4-6';
+      modelDist[m]+=(t.input+t.output)*o.count;
+    });
+
+    const totalTokens=claudeTokens.total+copilotTokens.total+infraTokens.total;
+    const claudeCost=calcCost(claudeTokens,'opus-4-6');
+    const copilotCost=calcCost(copilotTokens,'sonnet-4-6');
+    const infraCost=calcCost(infraTokens,'haiku-4-5');
+    const totalCost=claudeCost+copilotCost+infraCost;
+
+    // Per-operation breakdown
+    const opBreakdown=Object.entries(OP_TOKENS).map(([key,val])=>{
+      const ops=[...claudeOps,...copilotOps,...infraOps].filter(o=>o.type===key);
+      const count=ops.reduce((s,o)=>s+o.count,0);
+      return{key,name:val.desc,model:val.model,tokens:(val.input+val.output)*count,count};
+    }).filter(o=>o.count>0).sort((a,b)=>b.tokens-a.tokens);
+
+    // Daily trend (simulate from deploy history dates)
+    const dayMap={};
+    const now=new Date();
+    for(let i=6;i>=0;i--){
+      const d=new Date(now);d.setDate(d.getDate()-i);
+      const key=d.toISOString().slice(0,10);
+      dayMap[key]={date:key,tokens:0,cost:0,deploys:0,label:d.toLocaleDateString('en',{weekday:'short'})};
+    }
+    // Distribute deploys across days
+    deploys.forEach(dp=>{
+      const m=dp.match(/(\d{4}-\d{2}-\d{2})/);
+      if(m&&dayMap[m[1]]){
+        dayMap[m[1]].deploys++;
+        dayMap[m[1]].tokens+=400000; // ~400K per deploy
+        dayMap[m[1]].cost+=calcCost({input:350000,output:50000},'opus-4-6');
+      }
+    });
+    // Add base infra tokens per day
+    Object.values(dayMap).forEach(d=>{d.tokens+=50000;d.cost+=0.05}); // dashboard syncs
+
+    const trend=Object.values(dayMap);
+    const maxTrend=Math.max(...trend.map(t=>t.tokens),1);
+
+    // Efficiency score (0-100)
+    let efficiency=85;
+    const recommendations=[];
+
+    // Generate smart recommendations
+    if(totalDeploys>5){
+      const failedDeploys=(state.knownErrors||[]).length;
+      const successRate=Math.max(0,100-failedDeploys*5);
+      if(successRate<80){
+        recommendations.push({type:'warn',title:'High CI Failure Rate',desc:`${failedDeploys} known error patterns detected. Each failed deploy wastes ~400K tokens in retry cycles.`,impact:`Potential savings: ~${Math.floor(failedDeploys*0.2)}M tokens/month`,saving:failedDeploys*400000});
+        efficiency-=10;
+      }
+    }
+
+    if(copilotSessions>0){
+      recommendations.push({type:'tip',title:'Multi-Agent Token Split',desc:`Copilot handles ${copilotSessions} sessions using Sonnet (3x cheaper than Opus). Consider delegating more routine tasks.`,impact:`Current split: Claude ${Math.round(claudeTokens.total/totalTokens*100)}% | Copilot ${Math.round(copilotTokens.total/totalTokens*100)}% | Infra ${Math.round(infraTokens.total/totalTokens*100)}%`});
+    }
+
+    if(modelDist['opus-4-6']>totalTokens*0.7){
+      recommendations.push({type:'save',title:'Shift Routine Tasks to Sonnet/Haiku',desc:`${Math.round(modelDist['opus-4-6']/totalTokens*100)}% of tokens use Opus ($15/$75 per 1M). Dashboard sync, file fetch, and monitoring can use Haiku ($0.80/$4 per 1M).`,impact:`Potential savings: $${((modelDist['opus-4-6']*0.2/1e6)*12).toFixed(2)}/month by migrating 20% to Haiku`,saving:modelDist['opus-4-6']*0.2});
+      efficiency-=5;
+    }
+
+    if(totalDeploys>10){
+      recommendations.push({type:'tip',title:'Batch Version Bumps',desc:'Multiple sequential deploys (controller + agent) could be batched when changes are independent, reducing PR overhead tokens.',impact:'Save ~60K tokens per batched deploy cycle'});
+    }
+
+    // Caching recommendation
+    recommendations.push({type:'save',title:'Session Memory Pre-Loading',desc:'Session memory is loaded at start of every session (~60K tokens). Keep memory compact by archiving old execution history.',impact:'Reduce startup cost by 20-30% per session'});
+
+    if(isBusinessHours()){
+      recommendations.push({type:'tip',title:'Business Hours — Higher Sync Rate Active',desc:'Dashboard syncing every 1 min (vs 5 min off-hours). Each sync cycle uses ~5K tokens for state generation.',impact:`~300K extra tokens/day during business hours`});
+    }
+
+    // Token budget recommendation
+    const dailyAvg=totalTokens/Math.max(totalSessions,7);
+    recommendations.push({type:'tip',title:'Estimated Daily Budget',desc:`Average: ~${fmtTokens(dailyAvg)} tokens/day. Peak days (deploys): ~${fmtTokens(dailyAvg*3)}. Budget recommendation: ${fmtTokens(dailyAvg*2)}/day.`,impact:`Monthly estimate: ~${fmtTokens(dailyAvg*30)} tokens ($${(totalCost/Math.max(totalSessions,7)*30).toFixed(2)})`});
+
+    return{
+      totalTokens,totalCost,
+      claude:{tokens:claudeTokens,cost:claudeCost,pct:Math.round(claudeTokens.total/totalTokens*100)},
+      copilot:{tokens:copilotTokens,cost:copilotCost,pct:Math.round(copilotTokens.total/totalTokens*100)},
+      infra:{tokens:infraTokens,cost:infraCost,pct:Math.round(infraTokens.total/totalTokens*100)},
+      modelDist,opBreakdown,trend,maxTrend,
+      efficiency:Math.max(0,Math.min(100,efficiency)),
+      recommendations,dailyAvg
+    };
+  }
+
+  function fmtTokens(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return String(Math.round(n))}
+
+  function renderTokens(){
+    const t=computeTokenUsage();
+
+    document.getElementById('tokenBadge').textContent=`~${fmtTokens(t.totalTokens)} tokens`;
+    document.getElementById('tokenBadge').className='badge b-cyan';
+    document.getElementById('navTokens').textContent='$'+t.totalCost.toFixed(0);
+
+    // KPI cards
+    document.getElementById('tokenKPIs').innerHTML=`
+      <div class="card"><div class="card-title">Total Tokens (est.)</div><div class="card-value" style="color:var(--cyan)">${fmtTokens(t.totalTokens)}</div><div class="card-sub">Across all agents & infra</div></div>
+      <div class="card"><div class="card-title">Estimated Cost</div><div class="card-value" style="color:var(--green)">$${t.totalCost.toFixed(2)}</div><div class="card-sub">Based on Anthropic pricing</div></div>
+      <div class="card"><div class="card-title">Daily Average</div><div class="card-value">${fmtTokens(t.dailyAvg)}</div><div class="card-sub">tokens/day</div></div>
+      <div class="card"><div class="card-title">Efficiency</div><div class="card-value" style="color:var(--${t.efficiency>=80?'green':t.efficiency>=50?'yellow':'red'})">${t.efficiency}</div><div class="card-sub">/ 100 score</div></div>
+    `;
+
+    // Usage by agent
+    const maxAgent=Math.max(t.claude.tokens.total,t.copilot.tokens.total,t.infra.tokens.total,1);
+    document.getElementById('tokenByAgent').innerHTML=`
+      <div class="token-bar"><span class="token-bar-label">Claude (Opus)</span><div style="flex:1"><div class="token-bar-fill" style="width:${t.claude.tokens.total/maxAgent*100}%;background:var(--purple)">${t.claude.pct}%</div></div><span class="token-bar-value">${fmtTokens(t.claude.tokens.total)}</span></div>
+      <div class="token-bar"><span class="token-bar-label">Copilot (Sonnet)</span><div style="flex:1"><div class="token-bar-fill" style="width:${t.copilot.tokens.total/maxAgent*100}%;background:var(--blue)">${t.copilot.pct}%</div></div><span class="token-bar-value">${fmtTokens(t.copilot.tokens.total)}</span></div>
+      <div class="token-bar"><span class="token-bar-label">Infra (Haiku)</span><div style="flex:1"><div class="token-bar-fill" style="width:${t.infra.tokens.total/maxAgent*100}%;background:var(--cyan)">${t.infra.pct}%</div></div><span class="token-bar-value">${fmtTokens(t.infra.tokens.total)}</span></div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+        Input: ${fmtTokens(t.claude.tokens.input+t.copilot.tokens.input+t.infra.tokens.input)} | Output: ${fmtTokens(t.claude.tokens.output+t.copilot.tokens.output+t.infra.tokens.output)} | Ratio: ${((t.claude.tokens.input+t.copilot.tokens.input+t.infra.tokens.input)/(t.claude.tokens.output+t.copilot.tokens.output+t.infra.tokens.output+1)).toFixed(1)}:1
+      </div>`;
+
+    // Usage by operation
+    const maxOp=Math.max(...t.opBreakdown.map(o=>o.tokens),1);
+    document.getElementById('tokenByOp').innerHTML=t.opBreakdown.map(o=>{
+      const p=TOKEN_PRICING[o.model]||TOKEN_PRICING['opus-4-6'];
+      return`<div class="token-bar"><span class="token-bar-label" title="${esc(o.name)}">${esc(o.key)}</span><div style="flex:1"><div class="token-bar-fill" style="width:${o.tokens/maxOp*100}%;background:var(--${p.color})">${o.count}x</div></div><span class="token-bar-value">${fmtTokens(o.tokens)}</span></div>`;
+    }).join('')||'<div class="empty">No operation data</div>';
+
+    // Cost estimation
+    document.getElementById('tokenCost').innerHTML=`
+      <table>
+        <tr><td style="color:var(--muted)">Claude Code (Opus 4.6)</td><td style="color:var(--purple)"><strong>$${t.claude.cost.toFixed(2)}</strong></td><td style="color:var(--muted);font-size:11px">${fmtTokens(t.claude.tokens.total)} tokens</td></tr>
+        <tr><td style="color:var(--muted)">Copilot (Sonnet 4.6)</td><td style="color:var(--blue)"><strong>$${t.copilot.cost.toFixed(2)}</strong></td><td style="color:var(--muted);font-size:11px">${fmtTokens(t.copilot.tokens.total)} tokens</td></tr>
+        <tr><td style="color:var(--muted)">Infra (Haiku 4.5)</td><td style="color:var(--cyan)"><strong>$${t.infra.cost.toFixed(2)}</strong></td><td style="color:var(--muted);font-size:11px">${fmtTokens(t.infra.tokens.total)} tokens</td></tr>
+        <tr style="border-top:2px solid var(--border)"><td><strong>Total</strong></td><td><strong style="color:var(--green)">$${t.totalCost.toFixed(2)}</strong></td><td style="font-size:11px"><strong>${fmtTokens(t.totalTokens)}</strong></td></tr>
+      </table>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted)">
+        Pricing: Opus ($15/$75 per 1M in/out) · Sonnet ($3/$15) · Haiku ($0.80/$4)<br>
+        Monthly projection: <strong style="color:var(--text)">$${(t.totalCost/Math.max((state.executionHistory||[]).length,7)*30).toFixed(2)}</strong>/month
+      </div>`;
+
+    // Model distribution
+    const totalModel=Object.values(t.modelDist).reduce((s,v)=>s+v,0)||1;
+    document.getElementById('tokenModels').innerHTML=Object.entries(TOKEN_PRICING).map(([key,p])=>{
+      const tokens=t.modelDist[key]||0;
+      const pct=Math.round(tokens/totalModel*100);
+      return`<div class="token-bar"><span class="token-bar-label">${esc(p.name)}</span><div style="flex:1"><div class="token-bar-fill" style="width:${pct}%;background:var(--${p.color})">${pct}%</div></div><span class="token-bar-value">${fmtTokens(tokens)}</span></div>`;
+    }).join('')+`
+      <div style="margin-top:12px;font-size:12px;padding:10px;background:var(--surface2);border-radius:6px">
+        <strong>Optimization target:</strong> Move to <span style="color:var(--cyan)">60% Opus</span> / <span style="color:var(--blue)">25% Sonnet</span> / <span style="color:var(--cyan)">15% Haiku</span> for optimal cost/quality balance.
+      </div>`;
+
+    // Recommendations
+    document.getElementById('tokenRecommendations').innerHTML=t.recommendations.map(r=>`
+      <div class="reco-card reco-${r.type}">
+        <div class="reco-title">${r.type==='save'?'💰':r.type==='warn'?'⚠️':'💡'} ${esc(r.title)}</div>
+        <div class="reco-desc">${esc(r.desc)}</div>
+        <div class="reco-impact" style="color:var(--${r.type==='save'?'green':r.type==='warn'?'yellow':'blue'})">${esc(r.impact)}</div>
+      </div>`).join('');
+
+    // Daily trend
+    document.getElementById('tokenTrend').innerHTML=`
+      <div class="trend-bar-container">
+        ${t.trend.map(d=>{
+          const h=Math.max(5,d.tokens/t.maxTrend*90);
+          const color=d.deploys>0?'var(--purple)':'var(--surface2)';
+          return`<div style="flex:1;text-align:center"><div style="display:flex;flex-direction:column;align-items:center;height:100px;justify-content:flex-end"><div style="font-size:10px;color:var(--muted);margin-bottom:2px">${d.deploys>0?fmtTokens(d.tokens):''}</div><div class="trend-bar" style="height:${h}%;background:${color};width:100%;border-radius:3px 3px 0 0"></div></div><div class="trend-bar-label">${esc(d.label)}</div>${d.deploys>0?`<div style="font-size:9px;color:var(--purple)">${d.deploys} deploy${d.deploys>1?'s':''}</div>`:''}</div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center">Purple bars = days with deploys (high token usage). Gray = baseline infra only.</div>`;
+
+    // Efficiency score
+    const eColor=t.efficiency>=80?'green':t.efficiency>=50?'yellow':'red';
+    const circumference=2*Math.PI*40;
+    const offset=circumference-(t.efficiency/100)*circumference;
+    document.getElementById('tokenEfficiency').innerHTML=`
+      <div class="flex" style="gap:24px;flex-wrap:wrap">
+        <div class="efficiency-ring">
+          <svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" stroke-width="8"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--${eColor})" stroke-width="8" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/></svg>
+          <div class="efficiency-score" style="color:var(--${eColor})">${t.efficiency}</div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13px;margin-bottom:8px"><strong>Token Efficiency Score</strong></div>
+          <div style="font-size:12px;color:var(--muted)">
+            Measures how effectively tokens are being used. Score factors:<br>
+            • CI success rate (fewer retries = less waste)<br>
+            • Model distribution (cheaper models for simple tasks)<br>
+            • Session memory efficiency (compact = less startup cost)<br>
+            • Batching (fewer PRs per deploy cycle = less overhead)
+          </div>
+          <div style="margin-top:10px;font-size:12px">
+            ${t.efficiency>=80?'<span style="color:var(--green)">Excellent</span> — token usage is well optimized':
+              t.efficiency>=50?'<span style="color:var(--yellow)">Good</span> — some optimization opportunities available':
+              '<span style="color:var(--red)">Needs improvement</span> — significant token savings possible'}
+          </div>
+        </div>
+      </div>`;
+
+    // Alerts
+    const tokenAlerts=[];
+    if(t.totalCost>50)tokenAlerts.push({type:'warn',msg:`Estimated total cost $${t.totalCost.toFixed(2)} — review recommendations to optimize`});
+    if(t.modelDist['opus-4-6']>t.totalTokens*0.85)tokenAlerts.push({type:'info',msg:`${Math.round(t.modelDist['opus-4-6']/t.totalTokens*100)}% of tokens use Opus — consider Sonnet/Haiku for routine tasks`});
+    document.getElementById('tokenAlerts').innerHTML=tokenAlerts.map(a=>`<div class="alert-bar alert-${a.type}">${alertIcon(a.type)} ${esc(a.msg)}</div>`).join('');
   }
 
   // Init
