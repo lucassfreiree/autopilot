@@ -1,0 +1,336 @@
+name: "[Core] Token Auto-Optimize"
+
+on:
+  schedule:
+    # Daily at 06:00 UTC (03:00 BRT) — before business hours
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (show what would change without applying)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: token-optimize
+  cancel-in-progress: false
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          fetch-depth: 1
+
+      - name: Read optimization rules
+        id: rules
+        run: |
+          RULES_FILE="contracts/token-optimization-rules.json"
+          if [ ! -f "$RULES_FILE" ]; then
+            echo "::error ::Optimization rules not found at $RULES_FILE"
+            exit 1
+          fi
+          MAX_CHARS=$(jq -r '.optimizationTargets.sessionMemoryMaxChars // 50000' "$RULES_FILE")
+          MAX_SESSIONS=$(jq -r '.optimizationTargets.executionHistoryMaxSessions // 5' "$RULES_FILE")
+          MAX_RUNS=$(jq -r '.optimizationTargets.successfulRunsMax // 5' "$RULES_FILE")
+          MAX_STEPS=$(jq -r '.optimizationTargets.stepsExecutedMaxPerSession // 5' "$RULES_FILE")
+          ARCHIVE_DAYS=$(jq -r '.optimizationTargets.archiveAfterDays // 14' "$RULES_FILE")
+          echo "max_chars=$MAX_CHARS" >> "$GITHUB_OUTPUT"
+          echo "max_sessions=$MAX_SESSIONS" >> "$GITHUB_OUTPUT"
+          echo "max_runs=$MAX_RUNS" >> "$GITHUB_OUTPUT"
+          echo "max_steps=$MAX_STEPS" >> "$GITHUB_OUTPUT"
+          echo "archive_days=$ARCHIVE_DAYS" >> "$GITHUB_OUTPUT"
+          echo "dry_run=${{ inputs.dry_run || 'false' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Measure before
+        id: before
+        run: |
+          MEMORY="contracts/claude-session-memory.json"
+          if [ ! -f "$MEMORY" ]; then
+            echo "::error ::Session memory not found"
+            exit 1
+          fi
+          SIZE_BEFORE=$(wc -c < "$MEMORY")
+          LINES_BEFORE=$(wc -l < "$MEMORY")
+          SESSIONS_COUNT=$(jq '.executionHistory.sessions | length' "$MEMORY" 2>/dev/null || echo 0)
+          RUNS_COUNT=$(jq '.workflowMonitoring.successfulRuns | length' "$MEMORY" 2>/dev/null || echo 0)
+          FAILURES_COUNT=$(jq '.workflowMonitoring.knownFailures | length' "$MEMORY" 2>/dev/null || echo 0)
+
+          echo "size=$SIZE_BEFORE" >> "$GITHUB_OUTPUT"
+          echo "lines=$LINES_BEFORE" >> "$GITHUB_OUTPUT"
+          echo "sessions=$SESSIONS_COUNT" >> "$GITHUB_OUTPUT"
+          echo "runs=$RUNS_COUNT" >> "$GITHUB_OUTPUT"
+          echo "failures=$FAILURES_COUNT" >> "$GITHUB_OUTPUT"
+
+          echo "::notice ::Before: ${SIZE_BEFORE} bytes, ${LINES_BEFORE} lines, ${SESSIONS_COUNT} sessions, ${RUNS_COUNT} runs"
+
+      - name: Optimize session memory
+        id: optimize
+        run: |
+          MEMORY="contracts/claude-session-memory.json"
+          ARCHIVE_DIR="contracts/archive"
+          mkdir -p "$ARCHIVE_DIR"
+
+          MAX_SESSIONS=${{ steps.rules.outputs.max_sessions }}
+          MAX_RUNS=${{ steps.rules.outputs.max_runs }}
+          MAX_STEPS=${{ steps.rules.outputs.max_steps }}
+          DRY_RUN=${{ steps.rules.outputs.dry_run }}
+
+          # Create Python optimization script
+          python3 << 'PYEOF'
+          import json, os, sys
+          from datetime import datetime, timedelta
+
+          MEMORY_FILE = "contracts/claude-session-memory.json"
+          ARCHIVE_DIR = "contracts/archive"
+          STATIC_REF_FILE = os.path.join(ARCHIVE_DIR, "static-reference.json")
+          EXEC_ARCHIVE_FILE = os.path.join(ARCHIVE_DIR, "execution-history-archive.json")
+          CIT_ONBOARD_FILE = os.path.join(ARCHIVE_DIR, "cit-onboarding.json")
+
+          MAX_SESSIONS = int(os.environ.get("MAX_SESSIONS", "5"))
+          MAX_RUNS = int(os.environ.get("MAX_RUNS", "5"))
+          MAX_STEPS = int(os.environ.get("MAX_STEPS", "5"))
+          DRY_RUN = os.environ.get("DRY_RUN", "false") == "true"
+
+          with open(MEMORY_FILE) as f:
+              mem = json.load(f)
+
+          changes = []
+          archived = {}
+
+          # === 1. Archive old execution history sessions ===
+          sessions = mem.get("executionHistory", {}).get("sessions", [])
+          if len(sessions) > MAX_SESSIONS:
+              archived_sessions = sessions[:-MAX_SESSIONS]
+              kept_sessions = sessions[-MAX_SESSIONS:]
+
+              # Load existing archive
+              exec_archive = []
+              if os.path.exists(EXEC_ARCHIVE_FILE):
+                  with open(EXEC_ARCHIVE_FILE) as f:
+                      exec_archive = json.load(f)
+
+              # Merge (avoid duplicates)
+              existing_ids = {s.get("id") for s in exec_archive}
+              for s in archived_sessions:
+                  if s.get("id") not in existing_ids:
+                      exec_archive.append(s)
+
+              if not DRY_RUN:
+                  with open(EXEC_ARCHIVE_FILE, "w") as f:
+                      json.dump(exec_archive, f, indent=2, ensure_ascii=False)
+                  mem["executionHistory"]["sessions"] = kept_sessions
+
+              changes.append(f"Archived {len(archived_sessions)} old sessions (kept {MAX_SESSIONS})")
+
+          # === 2. Trim successful runs ===
+          runs = mem.get("workflowMonitoring", {}).get("successfulRuns", [])
+          if len(runs) > MAX_RUNS:
+              trimmed = len(runs) - MAX_RUNS
+              if not DRY_RUN:
+                  mem["workflowMonitoring"]["successfulRuns"] = runs[-MAX_RUNS:]
+              changes.append(f"Trimmed {trimmed} old successful runs (kept {MAX_RUNS})")
+
+          # === 3. Compact stepsExecuted in remaining sessions ===
+          for session in mem.get("executionHistory", {}).get("sessions", []):
+              steps = session.get("stepsExecuted", [])
+              if len(steps) > MAX_STEPS:
+                  trimmed = len(steps) - MAX_STEPS
+                  if not DRY_RUN:
+                      session["stepsExecuted"] = steps[-MAX_STEPS:]
+                  changes.append(f"Trimmed {trimmed} steps from session {session.get('id', '?')}")
+
+              mistakes = session.get("mistakesMade", [])
+              if len(mistakes) > 3:
+                  if not DRY_RUN:
+                      session["mistakesMade"] = mistakes[-3:]
+                  changes.append(f"Trimmed mistakes in session {session.get('id', '?')}")
+
+          # === 4. Externalize static reference docs ===
+          static_fields = ["deployFlowGuide", "implementationAndMonitoringProtocol", "deployCompliancePipeline"]
+          static_data = {}
+          externalized = 0
+          for field in static_fields:
+              if field in mem and isinstance(mem[field], dict) and len(json.dumps(mem[field])) > 500:
+                  static_data[field] = mem[field]
+                  externalized += len(json.dumps(mem[field]))
+                  if not DRY_RUN:
+                      mem[field] = {"_ref": "contracts/archive/static-reference.json", "_note": "Externalized for token optimization. Full content in archive file and CLAUDE.md."}
+
+          if static_data:
+              if not DRY_RUN:
+                  # Merge with existing
+                  existing_static = {}
+                  if os.path.exists(STATIC_REF_FILE):
+                      with open(STATIC_REF_FILE) as f:
+                          existing_static = json.load(f)
+                  existing_static.update(static_data)
+                  with open(STATIC_REF_FILE, "w") as f:
+                      json.dump(existing_static, f, indent=2, ensure_ascii=False)
+              changes.append(f"Externalized {len(static_data)} static reference sections ({externalized:,} chars)")
+
+          # === 5. Externalize CIT onboarding guide ===
+          cit = mem.get("multiCompanyModel", {}).get("companies", {}).get("cit", {})
+          onboarding = cit.get("onboardingGuide")
+          if onboarding and isinstance(onboarding, dict) and len(json.dumps(onboarding)) > 1000:
+              onboard_size = len(json.dumps(onboarding))
+              if not DRY_RUN:
+                  with open(CIT_ONBOARD_FILE, "w") as f:
+                      json.dump(onboarding, f, indent=2, ensure_ascii=False)
+                  mem["multiCompanyModel"]["companies"]["cit"]["onboardingGuide"] = {
+                      "_ref": "contracts/archive/cit-onboarding.json",
+                      "_note": "Externalized for token optimization"
+                  }
+              changes.append(f"Externalized CIT onboarding guide ({onboard_size:,} chars)")
+
+          # === 6. Deduplicate known failures ===
+          failures = mem.get("workflowMonitoring", {}).get("knownFailures", [])
+          if failures:
+              seen = {}
+              deduped = []
+              for f_item in failures:
+                  key = f_item.get("step", "")
+                  if key not in seen:
+                      seen[key] = f_item
+                      deduped.append(f_item)
+                  else:
+                      # Keep the one with more info
+                      if len(json.dumps(f_item)) > len(json.dumps(seen[key])):
+                          deduped = [f_item if x.get("step") == key else x for x in deduped]
+                          seen[key] = f_item
+              removed = len(failures) - len(deduped)
+              if removed > 0:
+                  if not DRY_RUN:
+                      mem["workflowMonitoring"]["knownFailures"] = deduped
+                  changes.append(f"Deduplicated {removed} known failure entries")
+
+          # === 7. Update optimization timestamp ===
+          if not DRY_RUN:
+              mem["lastOptimized"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          # === Write result ===
+          if not DRY_RUN:
+              with open(MEMORY_FILE, "w") as f:
+                  json.dump(mem, f, indent=2, ensure_ascii=False)
+
+          # Output
+          new_size = len(json.dumps(mem, indent=2, ensure_ascii=False).encode())
+          print(f"Changes applied: {len(changes)}")
+          for c in changes:
+              print(f"  - {c}")
+          print(f"New size: {new_size:,} bytes")
+
+          # Write summary for GitHub output
+          with open(os.environ.get("GITHUB_OUTPUT", "/dev/null"), "a") as f:
+              f.write(f"changes_count={len(changes)}\n")
+              f.write(f"new_size={new_size}\n")
+              f.write(f"changes_summary={'; '.join(changes[:5])}\n")
+          PYEOF
+
+        env:
+          MAX_SESSIONS: ${{ steps.rules.outputs.max_sessions }}
+          MAX_RUNS: ${{ steps.rules.outputs.max_runs }}
+          MAX_STEPS: ${{ steps.rules.outputs.max_steps }}
+          DRY_RUN: ${{ steps.rules.outputs.dry_run }}
+
+      - name: Measure after
+        id: after
+        run: |
+          MEMORY="contracts/claude-session-memory.json"
+          SIZE_AFTER=$(wc -c < "$MEMORY")
+          SIZE_BEFORE=${{ steps.before.outputs.size }}
+          SAVED=$((SIZE_BEFORE - SIZE_AFTER))
+          PCT=$((SAVED * 100 / SIZE_BEFORE))
+          echo "size=$SIZE_AFTER" >> "$GITHUB_OUTPUT"
+          echo "saved=$SAVED" >> "$GITHUB_OUTPUT"
+          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
+          echo "::notice ::After: ${SIZE_AFTER} bytes (saved ${SAVED} bytes = ${PCT}%)"
+
+      - name: Update optimization rules metrics
+        if: steps.rules.outputs.dry_run != 'true'
+        run: |
+          RULES="contracts/token-optimization-rules.json"
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          jq --arg now "$NOW" \
+             --argjson before "${{ steps.before.outputs.size }}" \
+             --argjson after "${{ steps.after.outputs.size }}" \
+             --argjson saved "${{ steps.after.outputs.saved }}" \
+             --argjson changes "${{ steps.optimize.outputs.changes_count || 0 }}" \
+             '.lastOptimized = $now |
+              .metrics.lastMemorySize = $before |
+              .metrics.lastCompactedSize = $after |
+              .metrics.totalSavedChars += $saved |
+              .metrics.totalOptimizations += 1 |
+              .metrics.history = ([{
+                "date": $now,
+                "before": $before,
+                "after": $after,
+                "saved": $saved,
+                "changes": $changes
+              }] + (.metrics.history // []))[:10]' \
+             "$RULES" > /tmp/rules.json && mv /tmp/rules.json "$RULES"
+
+      - name: Commit optimized memory
+        if: steps.rules.outputs.dry_run != 'true' && steps.optimize.outputs.changes_count != '0'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add contracts/claude-session-memory.json contracts/archive/ contracts/token-optimization-rules.json
+          git commit -m "chore: auto-optimize token usage — saved ${{ steps.after.outputs.saved }} bytes (${{ steps.after.outputs.pct }}%) [skip ci]" || echo "Nothing to commit"
+          git push origin main || echo "Push failed — may need RELEASE_TOKEN"
+
+      - name: Update autopilot-state audit
+        if: steps.rules.outputs.dry_run != 'true' && steps.optimize.outputs.changes_count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          AUDIT_PATH="state/workspaces/ws-default/audit/token-optimize-${NOW//[:]/-}.json"
+          AUDIT=$(jq -n \
+            --arg ts "$NOW" \
+            --argjson before "${{ steps.before.outputs.size }}" \
+            --argjson after "${{ steps.after.outputs.size }}" \
+            --argjson saved "${{ steps.after.outputs.saved }}" \
+            --arg pct "${{ steps.after.outputs.pct }}%" \
+            --arg summary "${{ steps.optimize.outputs.changes_summary }}" \
+            '{
+              schemaVersion: 1,
+              type: "token-optimization",
+              timestamp: $ts,
+              agent: "github-actions",
+              before_bytes: $before,
+              after_bytes: $after,
+              saved_bytes: $saved,
+              saved_pct: $pct,
+              changes: $summary
+            }')
+
+          CONTENT_B64=$(echo "$AUDIT" | base64 -w0)
+          gh api "repos/${{ github.repository }}/contents/$AUDIT_PATH" \
+            --method PUT \
+            --field message="audit: token optimization ${{ steps.after.outputs.pct }}% reduction [skip ci]" \
+            --field content="$CONTENT_B64" \
+            --field branch="autopilot-state" > /dev/null 2>&1 || echo "::warning ::Failed to write audit"
+
+      - name: Summary
+        run: |
+          echo "## Token Auto-Optimization Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Before | ${{ steps.before.outputs.size }} bytes |" >> $GITHUB_STEP_SUMMARY
+          echo "| After | ${{ steps.after.outputs.size }} bytes |" >> $GITHUB_STEP_SUMMARY
+          echo "| Saved | ${{ steps.after.outputs.saved }} bytes (${{ steps.after.outputs.pct }}%) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Changes | ${{ steps.optimize.outputs.changes_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry Run | ${{ steps.rules.outputs.dry_run }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changes Applied" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.optimize.outputs.changes_summary }}" >> $GITHUB_STEP_SUMMARY

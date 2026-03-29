@@ -24,9 +24,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"'\"$(cat contracts/claude-session-memory.json | jq -c '.' 2>/dev/null || echo '{}')\"'\"}}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"'\"$(cat contracts/claude-session-memory.json | jq -c '{schemaVersion,contractId,description,lastUpdated,lastSessionId,lastOptimized,currentState,versioningRules,deployFlow,gitPatterns,ciPatterns,commonPatterns,optimizations,contextSeparation:{goldenRules:.contextSeparation.goldenRules},multiCompanyModel:{description:.multiCompanyModel.description,goldenRules:.multiCompanyModel.goldenRules,companies:{getronics:{workspaceId:.multiCompanyModel.companies.getronics.workspaceId,status:.multiCompanyModel.companies.getronics.status,tokenSecret:.multiCompanyModel.companies.getronics.tokenSecret,repos:.multiCompanyModel.companies.getronics.repos,repoDetails:(.multiCompanyModel.companies.getronics.repoDetails|map_values({role,currentVersion,ci}))},cit:{workspaceId:.multiCompanyModel.companies.cit.workspaceId,status:.multiCompanyModel.companies.cit.status}}},workspaceSeparationAudit:.multiCompanyModel.workspaceSeparationAudit}' 2>/dev/null || echo '{}')\"'\"}}'",
             "timeout": 10,
-            "statusMessage": "Loading session memory..."
+            "statusMessage": "Loading compact session memory..."
           }
         ]
       }
