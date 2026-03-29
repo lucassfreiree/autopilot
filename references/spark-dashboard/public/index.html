@@ -441,7 +441,7 @@
 
     // Open PRs from agents
     const prs=state.openPRs||[];
-    const agentPRs=prs.filter(p=>p.branch&&(p.branch.startsWith('claude/')||p.branch.startsWith('copilot/')||p.branch.startsWith('codex/')));
+    const agentPRs=prs.filter(p=>p.branch&&p.branch.startsWith('claude/'));
     if(agentPRs.length>2)alerts.push({type:'warn',msg:`${agentPRs.length} open agent PRs — possible queue buildup`,icon:'pr'});
 
     // Version mismatch (memory vs state)
@@ -985,7 +985,7 @@
         <a href="https://claude.ai/code" target="_blank" rel="noopener" style="background:var(--blue);color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">Abrir Claude Code</a>
         <button onclick="this.closest('div[style*=fixed]').remove()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer">Fechar</button>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:12px">O despacho automatico roda em ~30s. Tasks simples vao para o Copilot. Tasks complexas (deploy, CI, security) ficam para o Claude.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:12px">O despacho automatico roda em ~30s. O Claude Code recebe e executa automaticamente.</div>
     </div>`;
     document.body.appendChild(overlay);
     overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove()});
@@ -1112,7 +1112,7 @@
       else if(n.startsWith('[Agent]'))cat='Agent';
       else if(n.startsWith('[Infra]'))cat='Infra';
       else if(n.startsWith('Ops:'))cat='Ops';
-      else if(n.startsWith('[Copilot]'))cat='Copilot';
+      else if(n.startsWith('[Copilot]'))cat='Agent';
       if(!cats[cat])cats[cat]=[];
       cats[cat].push(wf);
     });
@@ -1160,7 +1160,7 @@
   function renderLessons(){
     const ll=state.lessonsLearned||{};
     const total=ll.total||0;
-    const allLessons=[...(ll.copilotLessons||[]),...(ll.codexLessons||[])];
+    const allLessons=[...(ll.copilotLessons||[]),...(ll.codexLessons||[]),...(ll.claudeLessons||[])];
     document.getElementById('lessonsTotal').textContent=total+' lessons';
     document.getElementById('lessonsStats').innerHTML=`
       <div class="card" style="text-align:center"><div class="card-title">Total Lessons</div><div class="card-value">${total}</div></div>
@@ -1191,8 +1191,8 @@
           <tr><td style="color:var(--muted)">autopilot-backups</td><td>Snapshots for rollback</td></tr>
           <tr><td style="color:var(--muted)">panel/</td><td>GitHub Pages UI</td></tr>
         </table>
-        <div style="margin-top:12px"><strong>Agents:</strong> Claude Code (primary), Copilot (backup), Codex (specialist)</div>
-        <div style="margin-top:6px"><strong>Branch rules:</strong> claude/* | copilot/* | codex/* → PR → squash merge (direct push to main = 403)</div>
+        <div style="margin-top:12px"><strong>Agent:</strong> Claude Code (primary autonomous agent)</div>
+        <div style="margin-top:6px"><strong>Branch rules:</strong> claude/* → PR → squash merge (direct push to main = 403)</div>
       </div>`;
 
     const c=state.controller||{};const a=state.agent||{};
@@ -1263,7 +1263,6 @@
     'memory-sync':{input:60000,output:15000,model:'opus-4-6',desc:'Session memory read/update'},
     'dashboard-sync':{input:5000,output:2000,model:'haiku-4-5',desc:'Dashboard state sync'},
     'pr-create':{input:30000,output:8000,model:'opus-4-6',desc:'Create and merge PR'},
-    'copilot-session':{input:50000,output:15000,model:'sonnet-4-6',desc:'Copilot agent session'},
     'exploration':{input:100000,output:25000,model:'opus-4-6',desc:'Codebase exploration/research'},
     'workflow-monitor':{input:20000,output:5000,model:'sonnet-4-6',desc:'Workflow status monitoring'}
   };
@@ -1273,20 +1272,13 @@
     const sessions=state.executionHistory||[];
     const wfs=state.recentWorkflows||[];
     const deploys=state.deployHistory||[];
-    const agents=state.agents||{};
-    const claude=agents.claude||{};
-    const copilot=agents.copilot||{};
-    const codex=agents.codex||{};
-
     // Count operations from available data
-    const totalSessions=sessions.length;
-    const copilotSessions=copilot.sessionCount||0;
-    const codexSessions=codex.sessionCount||0;
+    const totalSessions=(state.executionHistory||[]).length;
     const claudeSessions=Math.max(totalSessions,1);
     const totalDeploys=deploys.length;
     const totalWfs=wfs.length;
 
-    // Estimate tokens by agent
+    // Estimate tokens — Claude Code only
     const claudeOps=[
       {type:'deploy-full',count:Math.min(totalDeploys,20)},
       {type:'ci-diagnose',count:Math.floor(totalDeploys*0.3)},
@@ -1294,11 +1286,6 @@
       {type:'pr-create',count:Math.min(totalDeploys,20)},
       {type:'exploration',count:Math.floor(claudeSessions*0.5)},
       {type:'workflow-monitor',count:Math.min(totalDeploys*2,40)}
-    ];
-    const copilotOps=[
-      {type:'copilot-session',count:copilotSessions},
-      {type:'pr-create',count:Math.floor(copilotSessions*0.5)},
-      {type:'memory-sync',count:copilotSessions}
     ];
     const infraOps=[
       {type:'dashboard-sync',count:Math.max(totalWfs,50)},
@@ -1312,10 +1299,8 @@
     }
 
     const claudeTokens=sumTokens(claudeOps);
-    const copilotTokens=sumTokens(copilotOps);
     const infraTokens=sumTokens(infraOps);
 
-    // Cost calculation
     function calcCost(tokens,model){
       const p=TOKEN_PRICING[model]||TOKEN_PRICING['opus-4-6'];
       return(tokens.input/1e6)*p.input+(tokens.output/1e6)*p.output;
@@ -1323,21 +1308,20 @@
 
     // Model distribution
     const modelDist={'opus-4-6':0,'sonnet-4-6':0,'haiku-4-5':0};
-    [...claudeOps,...copilotOps,...infraOps].forEach(o=>{
+    [...claudeOps,...infraOps].forEach(o=>{
       const t=OP_TOKENS[o.type]||{input:10000,output:3000,model:'opus-4-6'};
       const m=t.model||'opus-4-6';
       modelDist[m]+=(t.input+t.output)*o.count;
     });
 
-    const totalTokens=claudeTokens.total+copilotTokens.total+infraTokens.total;
+    const totalTokens=claudeTokens.total+infraTokens.total;
     const claudeCost=calcCost(claudeTokens,'opus-4-6');
-    const copilotCost=calcCost(copilotTokens,'sonnet-4-6');
     const infraCost=calcCost(infraTokens,'haiku-4-5');
-    const totalCost=claudeCost+copilotCost+infraCost;
+    const totalCost=claudeCost+infraCost;
 
     // Per-operation breakdown
     const opBreakdown=Object.entries(OP_TOKENS).map(([key,val])=>{
-      const ops=[...claudeOps,...copilotOps,...infraOps].filter(o=>o.type===key);
+      const ops=[...claudeOps,...infraOps].filter(o=>o.type===key);
       const count=ops.reduce((s,o)=>s+o.count,0);
       return{key,name:val.desc,model:val.model,tokens:(val.input+val.output)*count,count};
     }).filter(o=>o.count>0).sort((a,b)=>b.tokens-a.tokens);
@@ -1379,9 +1363,7 @@
       }
     }
 
-    if(copilotSessions>0){
-      recommendations.push({type:'tip',title:'Multi-Agent Token Split',desc:`Copilot handles ${copilotSessions} sessions using Sonnet (3x cheaper than Opus). Consider delegating more routine tasks.`,impact:`Current split: Claude ${Math.round(claudeTokens.total/totalTokens*100)}% | Copilot ${Math.round(copilotTokens.total/totalTokens*100)}% | Infra ${Math.round(infraTokens.total/totalTokens*100)}%`});
-    }
+    recommendations.push({type:'tip',title:'Token Distribution',desc:`Claude Code handles all operations using Opus. Subagents use Haiku for exploration (cheaper).`,impact:`Current split: Claude ${Math.round(claudeTokens.total/totalTokens*100)}% | Infra ${Math.round(infraTokens.total/totalTokens*100)}%`});
 
     if(modelDist['opus-4-6']>totalTokens*0.7){
       recommendations.push({type:'save',title:'Shift Routine Tasks to Sonnet/Haiku',desc:`${Math.round(modelDist['opus-4-6']/totalTokens*100)}% of tokens use Opus ($15/$75 per 1M). Dashboard sync, file fetch, and monitoring can use Haiku ($0.80/$4 per 1M).`,impact:`Potential savings: $${((modelDist['opus-4-6']*0.2/1e6)*12).toFixed(2)}/month by migrating 20% to Haiku`,saving:modelDist['opus-4-6']*0.2});
@@ -1406,7 +1388,6 @@
     return{
       totalTokens,totalCost,
       claude:{tokens:claudeTokens,cost:claudeCost,pct:Math.round(claudeTokens.total/totalTokens*100)},
-      copilot:{tokens:copilotTokens,cost:copilotCost,pct:Math.round(copilotTokens.total/totalTokens*100)},
       infra:{tokens:infraTokens,cost:infraCost,pct:Math.round(infraTokens.total/totalTokens*100)},
       modelDist,opBreakdown,trend,maxTrend,
       efficiency:Math.max(0,Math.min(100,efficiency)),
@@ -1432,13 +1413,12 @@
     `;
 
     // Usage by agent
-    const maxAgent=Math.max(t.claude.tokens.total,t.copilot.tokens.total,t.infra.tokens.total,1);
+    const maxAgent=Math.max(t.claude.tokens.total,t.infra.tokens.total,1);
     document.getElementById('tokenByAgent').innerHTML=`
       <div class="token-bar"><span class="token-bar-label">Claude (Opus)</span><div style="flex:1"><div class="token-bar-fill" style="width:${t.claude.tokens.total/maxAgent*100}%;background:var(--purple)">${t.claude.pct}%</div></div><span class="token-bar-value">${fmtTokens(t.claude.tokens.total)}</span></div>
-      <div class="token-bar"><span class="token-bar-label">Copilot (Sonnet)</span><div style="flex:1"><div class="token-bar-fill" style="width:${t.copilot.tokens.total/maxAgent*100}%;background:var(--blue)">${t.copilot.pct}%</div></div><span class="token-bar-value">${fmtTokens(t.copilot.tokens.total)}</span></div>
       <div class="token-bar"><span class="token-bar-label">Infra (Haiku)</span><div style="flex:1"><div class="token-bar-fill" style="width:${t.infra.tokens.total/maxAgent*100}%;background:var(--cyan)">${t.infra.pct}%</div></div><span class="token-bar-value">${fmtTokens(t.infra.tokens.total)}</span></div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted)">
-        Input: ${fmtTokens(t.claude.tokens.input+t.copilot.tokens.input+t.infra.tokens.input)} | Output: ${fmtTokens(t.claude.tokens.output+t.copilot.tokens.output+t.infra.tokens.output)} | Ratio: ${((t.claude.tokens.input+t.copilot.tokens.input+t.infra.tokens.input)/(t.claude.tokens.output+t.copilot.tokens.output+t.infra.tokens.output+1)).toFixed(1)}:1
+        Input: ${fmtTokens(t.claude.tokens.input+t.infra.tokens.input)} | Output: ${fmtTokens(t.claude.tokens.output+t.infra.tokens.output)} | Ratio: ${((t.claude.tokens.input+t.infra.tokens.input)/(t.claude.tokens.output+t.infra.tokens.output+1)).toFixed(1)}:1
       </div>`;
 
     // Usage by operation
@@ -1452,7 +1432,6 @@
     document.getElementById('tokenCost').innerHTML=`
       <table>
         <tr><td style="color:var(--muted)">Claude Code (Opus 4.6)</td><td style="color:var(--purple)"><strong>$${t.claude.cost.toFixed(2)}</strong></td><td style="color:var(--muted);font-size:11px">${fmtTokens(t.claude.tokens.total)} tokens</td></tr>
-        <tr><td style="color:var(--muted)">Copilot (Sonnet 4.6)</td><td style="color:var(--blue)"><strong>$${t.copilot.cost.toFixed(2)}</strong></td><td style="color:var(--muted);font-size:11px">${fmtTokens(t.copilot.tokens.total)} tokens</td></tr>
         <tr><td style="color:var(--muted)">Infra (Haiku 4.5)</td><td style="color:var(--cyan)"><strong>$${t.infra.cost.toFixed(2)}</strong></td><td style="color:var(--muted);font-size:11px">${fmtTokens(t.infra.tokens.total)} tokens</td></tr>
         <tr style="border-top:2px solid var(--border)"><td><strong>Total</strong></td><td><strong style="color:var(--green)">$${t.totalCost.toFixed(2)}</strong></td><td style="font-size:11px"><strong>${fmtTokens(t.totalTokens)}</strong></td></tr>
       </table>
