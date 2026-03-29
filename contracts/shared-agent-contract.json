@@ -138,12 +138,12 @@
     }
   },
   "multiAgentOrchestration": {
-    "description": "3 agentes (Claude, Codex, Copilot) operam em multiplas empresas de forma 100% autonoma sem intervencao do usuario.",
-    "guide": "ops/docs/multi-agent/orchestration-guide.md",
+    "description": "Universal agent system. Claude Code is primary. Any AI can be registered as backup/specialist via agent-registry.json.",
+    "registry": "contracts/agent-registry.json",
+    "onboarding": "contracts/agent-onboarding.md",
     "agents": {
-      "claude": {"role": "primary", "backup": "copilot", "memory": "claude-session-memory.json"},
-      "codex": {"role": "specialist", "memory": "codex-session-memory.json"},
-      "copilot": {"role": "backup+tasks", "backupOf": "claude", "memory": "copilot-session-memory.json"}
+      "claude-code": {"role": "primary", "memory": "claude-session-memory.json", "status": "active"},
+      "_note": "Additional agents registered in contracts/agent-registry.json. Legacy agents (copilot, codex) files preserved for history."
     },
     "sharedState": "claude-live-status.json",
     "workspaces": {
