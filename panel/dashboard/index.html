@@ -178,6 +178,10 @@
         <div class="section"><h3>Controller Recent Commits</h3><div id="ctrlCommits"></div></div>
         <div class="section"><h3>Agent Recent Commits</h3><div id="agentCommits"></div></div>
       </div>
+      <div class="grid-2" style="margin-top:16px">
+        <div class="section"><h3>Controller Branches & PRs</h3><div id="ctrlBranches"></div></div>
+        <div class="section"><h3>Agent Branches & PRs</h3><div id="agentBranches"></div></div>
+      </div>
     </div>
 
     <!-- AGENTS -->
@@ -356,6 +360,19 @@
     // CAP vs source drift
     if(ctrlReal.sourceVersion&&ctrlReal.capTag&&ctrlReal.sourceVersion!=='?'&&ctrlReal.capTag!=='?'&&ctrlReal.sourceVersion!==ctrlReal.capTag)alerts.push({type:'warn',msg:`Controller source (${ctrlReal.sourceVersion}) != CAP tag (${ctrlReal.capTag}) — promote may be pending`,icon:'arrow'});
     if(agentReal.sourceVersion&&agentReal.capTag&&agentReal.sourceVersion!=='?'&&agentReal.capTag!=='?'&&agentReal.sourceVersion!==agentReal.capTag)alerts.push({type:'warn',msg:`Agent source (${agentReal.sourceVersion}) != CAP tag (${agentReal.capTag}) — promote may be pending`,icon:'arrow'});
+
+    // CORPORATE ACTIVITY — external devs working on repos
+    const act=state.corporateActivity||{};
+    const ctrlAct=act.controller||{};
+    const agentAct=act.agent||{};
+    if(ctrlAct.externalCommitCount>0)alerts.push({type:'info',msg:`Controller: ${ctrlAct.externalCommitCount} external commit(s) by other devs — not from autopilot`,icon:'dev'});
+    if(agentAct.externalCommitCount>0)alerts.push({type:'info',msg:`Agent: ${agentAct.externalCommitCount} external commit(s) by other devs`,icon:'dev'});
+    if(ctrlAct.openPRCount>0)alerts.push({type:'info',msg:`Controller: ${ctrlAct.openPRCount} open PR(s) from other devs`,icon:'pr'});
+    if(agentAct.openPRCount>0)alerts.push({type:'info',msg:`Agent: ${agentAct.openPRCount} open PR(s) from other devs`,icon:'pr'});
+    const ctrlFeature=(ctrlAct.featureBranches||[]).length;
+    const agentFeature=(agentAct.featureBranches||[]).length;
+    if(ctrlFeature>0)alerts.push({type:'info',msg:`Controller: ${ctrlFeature} feature branch(es): ${(ctrlAct.featureBranches||[]).map(b=>b.name).join(', ')}`,icon:'branch'});
+    if(agentFeature>0)alerts.push({type:'info',msg:`Agent: ${agentFeature} feature branch(es): ${(agentAct.featureBranches||[]).map(b=>b.name).join(', ')}`,icon:'branch'});
 
     return alerts;
   }
@@ -612,6 +629,44 @@
     }
     renderCommits(cc.recentCommits||[],'ctrlCommits');
     renderCommits(ca.recentCommits||[],'agentCommits');
+
+    // Branches & PRs from corporate repos
+    const act=state.corporateActivity||{};
+    function renderBranchesAndPRs(data,elId){
+      const el=document.getElementById(elId);
+      if(!data){el.innerHTML='<div class="empty">No data</div>';return}
+      const branches=data.featureBranches||[];
+      const prs=data.openPRs||[];
+      const ext=data.externalCommits||[];
+      let html='';
+
+      // External commits alert
+      if(ext.length>0){
+        html+=`<div class="alert-bar alert-info" style="margin-bottom:8px">👤 ${ext.length} commit(s) by external devs (not autopilot)</div>`;
+        html+=ext.map(cm=>`<div style="display:flex;gap:8px;padding:4px 0;font-size:11px;border-bottom:1px solid var(--border)"><code style="color:var(--blue)">${esc(cm.sha)}</code><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cm.message)}</div><strong>${esc(cm.author)}</strong></div>`).join('');
+      }
+
+      // Feature branches
+      if(branches.length>0){
+        html+=`<div style="margin-top:10px;font-size:12px;font-weight:600">Branches (${branches.length + 1} total)</div>`;
+        html+=`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">`;
+        html+=`<span class="badge b-green" style="font-size:10px">main</span>`;
+        html+=branches.map(b=>`<span class="badge b-blue" style="font-size:10px">${esc(b.name)}</span>`).join('');
+        html+=`</div>`;
+      }else{
+        html+=`<div style="margin-top:10px;font-size:12px;color:var(--muted)">Only main branch — no feature branches</div>`;
+      }
+
+      // Open PRs
+      if(prs.length>0){
+        html+=`<div style="margin-top:10px;font-size:12px;font-weight:600">Open PRs (${prs.length})</div>`;
+        html+=prs.map(pr=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:11px"><span class="mono" style="color:var(--muted)">#${pr.number}</span> <strong>${esc(pr.title)}</strong><br><span style="color:var(--muted)">${esc(pr.author)} · ${esc(pr.branch)} · ${fmtDate(pr.created)}</span></div>`).join('');
+      }
+
+      el.innerHTML=html||'<div class="empty">No external activity detected</div>';
+    }
+    renderBranchesAndPRs(act.controller,'ctrlBranches');
+    renderBranchesAndPRs(act.agent,'agentBranches');
   }
 
   function renderCompliance(){
