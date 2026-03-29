@@ -1,0 +1,209 @@
+name: "[Core] Emergency Watchdog"
+run-name: "${{ github.workflow }} • auto-detect + self-heal"
+
+# Autonomous watchdog that detects when no agent has been active
+# and triggers self-healing procedures automatically.
+# Runs every 6 hours. Zero human intervention required.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      force_heal:
+        description: 'Force self-healing even if system looks healthy'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['true', 'false']
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: emergency-watchdog
+  cancel-in-progress: true
+
+jobs:
+  watchdog:
+    name: "System Health Watchdog"
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check system vitals
+        id: vitals
+        run: |
+          echo "::group::Checking system vitals"
+
+          ISSUES=0
+          ACTIONS=""
+
+          # 1. Check last sync age
+          SYNC_FILE="panel/dashboard/state.json"
+          if [ -f "$SYNC_FILE" ]; then
+            LAST_SYNC=$(jq -r '.lastSync // ""' "$SYNC_FILE" 2>/dev/null)
+            if [ -n "$LAST_SYNC" ]; then
+              SYNC_AGE=$(( ($(date +%s) - $(date -d "$LAST_SYNC" +%s 2>/dev/null || echo $(date +%s))) / 60 ))
+              echo "Last sync: ${SYNC_AGE}min ago"
+              if [ "$SYNC_AGE" -gt 30 ]; then
+                ISSUES=$((ISSUES+1))
+                ACTIONS="${ACTIONS}force-sync,"
+                echo "::warning ::Dashboard sync is ${SYNC_AGE}min stale (>30min threshold)"
+              fi
+            fi
+          else
+            ISSUES=$((ISSUES+1))
+            ACTIONS="${ACTIONS}force-sync,"
+            echo "::warning ::state.json not found"
+          fi
+
+          # 2. Check last workflow activity
+          LAST_WF=$(gh run list --repo "${{ github.repository }}" --limit 1 --json createdAt --jq '.[0].createdAt' 2>/dev/null || echo "")
+          if [ -n "$LAST_WF" ]; then
+            WF_AGE=$(( ($(date +%s) - $(date -d "$LAST_WF" +%s 2>/dev/null || echo $(date +%s))) / 3600 ))
+            echo "Last workflow: ${WF_AGE}h ago"
+            if [ "$WF_AGE" -gt 24 ]; then
+              ISSUES=$((ISSUES+1))
+              ACTIONS="${ACTIONS}run-health,"
+              echo "::warning ::No workflow activity for ${WF_AGE}h"
+            fi
+          fi
+
+          # 3. Check autopilot-state health
+          HEALTH=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/health.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null | jq -r '.overall // "unknown"' 2>/dev/null || echo "unknown")
+          echo "Health status: $HEALTH"
+          if [ "$HEALTH" = "degraded" ] || [ "$HEALTH" = "critical" ]; then
+            ISSUES=$((ISSUES+1))
+            ACTIONS="${ACTIONS}run-health,"
+            echo "::warning ::System health is $HEALTH"
+          fi
+
+          # 4. Check for stuck locks
+          LOCK=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/locks/session-lock.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo "{}")
+          LOCK_AGENT=$(echo "$LOCK" | jq -r '.agentId // "none"' 2>/dev/null)
+          LOCK_EXPIRES=$(echo "$LOCK" | jq -r '.expiresAt // ""' 2>/dev/null)
+          if [ "$LOCK_AGENT" != "none" ] && [ -n "$LOCK_EXPIRES" ]; then
+            LOCK_EXP_TS=$(date -d "$LOCK_EXPIRES" +%s 2>/dev/null || echo 0)
+            NOW_TS=$(date +%s)
+            if [ "$LOCK_EXP_TS" -lt "$NOW_TS" ]; then
+              ISSUES=$((ISSUES+1))
+              ACTIONS="${ACTIONS}clean-locks,"
+              echo "::warning ::Expired lock held by $LOCK_AGENT"
+            fi
+          fi
+
+          # 5. Check takeover kit freshness
+          if [ ! -f "contracts/ai-takeover-kit.md" ]; then
+            ISSUES=$((ISSUES+1))
+            ACTIONS="${ACTIONS}regen-kit,"
+            echo "::warning ::AI takeover kit missing"
+          fi
+
+          # 6. Check session memory size
+          MEM_SIZE=$(wc -c < "contracts/claude-session-memory.json" 2>/dev/null || echo 0)
+          echo "Session memory: ${MEM_SIZE} bytes"
+          if [ "$MEM_SIZE" -gt 120000 ]; then
+            ISSUES=$((ISSUES+1))
+            ACTIONS="${ACTIONS}optimize-tokens,"
+            echo "::warning ::Session memory is ${MEM_SIZE} bytes (>120KB)"
+          fi
+
+          echo "::endgroup::"
+
+          FORCE="${{ inputs.force_heal || 'false' }}"
+          echo "issues=$ISSUES" >> "$GITHUB_OUTPUT"
+          echo "actions=$ACTIONS" >> "$GITHUB_OUTPUT"
+          echo "force=$FORCE" >> "$GITHUB_OUTPUT"
+          echo "::notice ::Found $ISSUES issues. Actions: $ACTIONS"
+
+      - name: Self-heal (if needed)
+        if: steps.vitals.outputs.issues != '0' || steps.vitals.outputs.force == 'true'
+        run: |
+          ACTIONS="${{ steps.vitals.outputs.actions }}"
+          echo "Applying self-healing actions: $ACTIONS"
+
+          if echo "$ACTIONS" | grep -q "force-sync"; then
+            echo "→ Forcing dashboard sync..."
+            gh workflow run spark-sync-state.yml 2>/dev/null && echo "  Sync triggered" || echo "  Sync dispatch failed"
+          fi
+
+          if echo "$ACTIONS" | grep -q "run-health"; then
+            echo "→ Running health check..."
+            gh workflow run health-check.yml 2>/dev/null && echo "  Health check triggered" || echo "  Health check dispatch failed"
+          fi
+
+          if echo "$ACTIONS" | grep -q "clean-locks"; then
+            echo "→ Cleaning expired locks..."
+            gh workflow run workspace-lock-gc.yml 2>/dev/null && echo "  Lock GC triggered" || echo "  Lock GC dispatch failed"
+          fi
+
+          if echo "$ACTIONS" | grep -q "optimize-tokens"; then
+            echo "→ Optimizing tokens..."
+            gh workflow run token-auto-optimize.yml 2>/dev/null && echo "  Token optimize triggered" || echo "  Token optimize dispatch failed"
+          fi
+
+          echo ""
+          echo "Self-healing actions dispatched."
+
+      - name: Create issue if critical
+        if: steps.vitals.outputs.issues > 2
+        run: |
+          ISSUE_TITLE="[Watchdog] System needs attention — ${{ steps.vitals.outputs.issues }} issues detected"
+          EXISTING=$(gh issue list --repo "${{ github.repository }}" --search "$ISSUE_TITLE" --state open --json number --jq 'length' 2>/dev/null || echo 0)
+          if [ "$EXISTING" -eq 0 ]; then
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$ISSUE_TITLE" \
+              --body "## Watchdog Report
+
+**Issues found**: ${{ steps.vitals.outputs.issues }}
+**Actions taken**: ${{ steps.vitals.outputs.actions }}
+**Time**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+### What happened
+The emergency watchdog detected multiple system issues and triggered self-healing.
+If issues persist after self-healing, manual intervention may be needed.
+
+### How to fix manually
+1. Go to [Dashboard](https://lucassfreiree.github.io/autopilot/dashboard/) → Operations Center
+2. Or trigger [Dispatch Proxy](https://github.com/lucassfreiree/autopilot/actions/workflows/dispatch-proxy.yml)
+3. Or read [AI Takeover Kit](https://github.com/lucassfreiree/autopilot/blob/main/contracts/ai-takeover-kit.md)
+
+### For any AI reading this
+Read \`contracts/ai-takeover-kit.md\` for complete instructions on how to operate this system." \
+              --label "watchdog,automated" 2>/dev/null || echo "Issue creation failed"
+          fi
+
+      - name: Write audit
+        if: steps.vitals.outputs.issues != '0'
+        run: |
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          AUDIT_PATH="state/workspaces/ws-default/audit/watchdog-${NOW//[:]/-}.json"
+          AUDIT=$(jq -n \
+            --arg ts "$NOW" \
+            --argjson issues "${{ steps.vitals.outputs.issues }}" \
+            --arg actions "${{ steps.vitals.outputs.actions }}" \
+            '{type:"watchdog",timestamp:$ts,issues:$issues,actions:$actions,status:"self-healed"}')
+
+          CONTENT_B64=$(echo "$AUDIT" | base64 -w0)
+          gh api "repos/${{ github.repository }}/contents/$AUDIT_PATH" \
+            --method PUT \
+            --field message="audit: watchdog — ${{ steps.vitals.outputs.issues }} issues [skip ci]" \
+            --field content="$CONTENT_B64" \
+            --field branch="autopilot-state" > /dev/null 2>&1 || echo "::warning ::Audit write failed"
+
+      - name: Summary
+        run: |
+          echo "## Emergency Watchdog Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Issues Found | ${{ steps.vitals.outputs.issues }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Actions Taken | ${{ steps.vitals.outputs.actions || 'none' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Force Heal | ${{ steps.vitals.outputs.force }} |" >> $GITHUB_STEP_SUMMARY

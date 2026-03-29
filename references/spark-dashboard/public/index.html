@@ -150,6 +150,8 @@
       <div class="nav-item" onclick="go('lessons')">Lessons <span class="nav-badge" id="navLessons">0</span></div>
       <div class="nav-item" onclick="go('errors')">Error Patterns</div>
       <div class="nav-item" onclick="go('tokens')">Token Intelligence <span class="nav-badge" id="navTokens" style="color:var(--cyan)">$</span></div>
+      <div class="nav-item" onclick="go('ops')" style="border-top:1px solid var(--border);margin-top:4px;padding-top:12px">Operations Center <span class="nav-badge" id="navOps" style="color:var(--orange)">SOS</span></div>
+      <div class="nav-item" onclick="go('aikit')">AI Takeover Kit</div>
       <div class="nav-item" onclick="go('architecture')">Architecture</div>
     </div>
     <div style="padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)" id="sidebarSync">Loading...</div>
@@ -278,6 +280,23 @@
       <div class="section" style="margin-top:0"><h3>Auto-Optimization Engine</h3><div id="tokenAutoOptimize"></div></div>
     </div>
 
+    <!-- OPERATIONS CENTER -->
+    <div class="panel" id="panel-ops">
+      <div class="page-header"><h2>Operations Center</h2><span class="badge b-orange">Emergency & Routine</span></div>
+      <div class="alert-bar alert-info" style="margin-bottom:16px">Este painel permite operar o sistema SEM precisar do Claude Code. Cada botao dispara uma operacao automatica via GitHub Actions. Nenhum conhecimento tecnico necessario.</div>
+      <div id="opsStatus"></div>
+      <div class="grid-2" style="margin-top:16px" id="opsGrid"></div>
+      <div class="section" style="margin-top:16px"><h3>How it Works</h3><div id="opsHowItWorks"></div></div>
+      <div class="section" style="margin-top:0"><h3>Autonomous Safety Net</h3><div id="opsSafetyNet"></div></div>
+    </div>
+
+    <!-- AI TAKEOVER KIT -->
+    <div class="panel" id="panel-aikit">
+      <div class="page-header"><h2>AI Takeover Kit</h2><span class="badge b-purple">Backup AI</span></div>
+      <div class="alert-bar alert-info" style="margin-bottom:16px">Se o Claude Code nao estiver disponivel, QUALQUER outra IA pode ler o kit abaixo e operar o sistema completo. Copie o prompt e cole em qualquer AI.</div>
+      <div id="aikitContent"></div>
+    </div>
+
     <!-- ARCHITECTURE -->
     <div class="panel" id="panel-architecture">
       <div class="page-header"><h2>Architecture</h2></div>
@@ -298,7 +317,7 @@
   function getSyncInterval(){return isBusinessHours()?'1 min':'5 min'}
   function getStaleThreshold(){return isBusinessHours()?3:12}
   let REFRESH=getRefreshMs();
-  const PAGES = ['overview','alerts','pipeline','corporate','compliance','agents','workspaces','workflows','prs','history','lessons','errors','tokens','architecture'];
+  const PAGES = ['overview','alerts','pipeline','corporate','compliance','agents','workspaces','workflows','prs','history','lessons','errors','tokens','ops','aikit','architecture'];
   const STAGES = [
     {name:'Setup',desc:'Read workspace config'},
     {name:'Session Guard',desc:'Acquire multi-agent lock'},
@@ -460,7 +479,7 @@
   function renderAll(){
     renderSync();renderOverview();renderSmartAlerts();renderAlerts();renderPipeline();
     renderCorporate();renderCompliance();renderAgents();renderWorkspaces();renderWorkflows();renderPRs();
-    renderHistory();renderLessons();renderErrors();renderTokens();renderArchitecture();renderNavBadges();
+    renderHistory();renderLessons();renderErrors();renderTokens();renderOps();renderAIKit();renderArchitecture();renderNavBadges();
   }
 
   function renderSync(){
@@ -1309,6 +1328,172 @@
       <div style="margin-top:12px;background:var(--surface2);border-radius:6px;padding:12px;font-size:12px">
         <strong>How it works:</strong> The <code>token-auto-optimize.yml</code> workflow runs daily at 06:00 UTC. It reads <code>token-optimization-rules.json</code>, applies all compaction rules to session memory, archives old data, and commits the optimized files. The SessionStart hook injects only essential memory sections (~50% reduction). Subagent model routing is enforced via <code>.claude/rules/</code>.
       </div>`;
+  }
+
+  // ===== OPERATIONS CENTER =====
+  const OPS_ACTIONS=[
+    {id:'check-health',label:'Verificar Saude do Sistema',desc:'Roda verificacao completa: estado, locks, drift, CI, versoes',category:'monitor',icon:'💚',safe:true},
+    {id:'force-dashboard-sync',label:'Forcar Sync do Dashboard',desc:'Atualiza o dashboard AGORA com os dados mais recentes',category:'monitor',icon:'🔄',safe:true},
+    {id:'diagnose-controller-ci',label:'Diagnosticar CI do Controller',desc:'Baixa logs da esteira corporativa e analisa erros do Controller',category:'diagnose',icon:'🔍',safe:true},
+    {id:'diagnose-agent-ci',label:'Diagnosticar CI do Agent',desc:'Baixa logs da esteira corporativa e analisa erros do Agent',category:'diagnose',icon:'🔍',safe:true},
+    {id:'check-controller-ci',label:'Status CI Controller',desc:'Verifica resultado atual da esteira de build do Controller',category:'monitor',icon:'📋',safe:true},
+    {id:'check-agent-ci',label:'Status CI Agent',desc:'Verifica resultado atual da esteira de build do Agent',category:'monitor',icon:'📋',safe:true},
+    {id:'backup-state',label:'Backup do Estado',desc:'Cria snapshot do estado atual para rollback futuro',category:'safety',icon:'💾',safe:true},
+    {id:'restore-state',label:'Restaurar Estado (Rollback)',desc:'Restaura o estado a partir do ultimo backup',category:'safety',icon:'⏪',safe:false},
+    {id:'optimize-tokens',label:'Otimizar Uso de Tokens',desc:'Compacta memoria e reduz custo de tokens automaticamente',category:'optimize',icon:'💰',safe:true},
+    {id:'cleanup-branches',label:'Limpar Branches Antigas',desc:'Remove branches mergeadas e stale automaticamente',category:'maintenance',icon:'🧹',safe:true},
+    {id:'freeze-releases',label:'Congelar Releases',desc:'Bloqueia novos deploys (janela de manutencao)',category:'safety',icon:'🧊',safe:false},
+    {id:'unfreeze-releases',label:'Descongelar Releases',desc:'Libera deploys novamente apos manutencao',category:'safety',icon:'🔥',safe:false},
+    {id:'run-improvement-scan',label:'Scan de Melhorias',desc:'Analisa o sistema inteiro e sugere melhorias automaticas',category:'optimize',icon:'🧠',safe:true}
+  ];
+
+  function renderOps(){
+    const REPO='lucassfreiree/autopilot';
+    const DISPATCH_URL=`https://github.com/${REPO}/actions/workflows/dispatch-proxy.yml`;
+
+    // System status summary
+    const h=computeHealth();
+    const sync=state.lastSync;
+    const syncAge=sync?Math.floor((Date.now()-new Date(sync).getTime())/60000):999;
+    document.getElementById('opsStatus').innerHTML=`
+      <div class="grid-4">
+        <div class="card"><div class="card-title">Sistema</div><div class="card-value" style="color:var(--${h.color})">${h.score>=80?'OK':h.score>=50?'ATENCAO':'CRITICO'}</div><div class="card-sub">Health: ${h.score}/100</div></div>
+        <div class="card"><div class="card-title">Dashboard Sync</div><div class="card-value" style="color:var(--${syncAge<5?'green':syncAge<15?'yellow':'red'})">${syncAge}min</div><div class="card-sub">${syncAge<5?'Atualizado':'Verificar sync'}</div></div>
+        <div class="card"><div class="card-title">Pipeline</div><div class="card-value">${badge((state.pipeline||{}).status||'idle')}</div><div class="card-sub">#${(state.pipeline||{}).lastRun||0}</div></div>
+        <div class="card"><div class="card-title">Watchdog</div><div class="card-value" style="color:var(--green)">Ativo</div><div class="card-sub">Verifica a cada 6h</div></div>
+      </div>`;
+
+    // Group by category
+    const cats={monitor:[],diagnose:[],safety:[],optimize:[],maintenance:[]};
+    const catNames={monitor:'Monitoramento',diagnose:'Diagnostico',safety:'Seguranca & Rollback',optimize:'Otimizacao',maintenance:'Manutencao'};
+    const catColors={monitor:'blue',diagnose:'cyan',safety:'red',optimize:'green',maintenance:'yellow'};
+    OPS_ACTIONS.forEach(a=>{if(cats[a.category])cats[a.category].push(a)});
+
+    document.getElementById('opsGrid').innerHTML=Object.entries(cats).map(([cat,actions])=>{
+      if(!actions.length)return'';
+      return`<div class="section"><h3 style="color:var(--${catColors[cat]})">${catNames[cat]}</h3>
+        ${actions.map(a=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div style="font-size:20px">${a.icon}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600">${esc(a.label)}</div>
+              <div style="font-size:11px;color:var(--muted)">${esc(a.desc)}</div>
+            </div>
+            <a href="${DISPATCH_URL}" target="_blank" rel="noopener"
+               style="background:var(--${a.safe?catColors[cat]:'red'});color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;display:inline-block">
+              ${a.safe?'Executar':'⚠️ Executar'}
+            </a>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+
+    // How it works
+    document.getElementById('opsHowItWorks').innerHTML=`
+      <div style="font-size:13px;color:var(--muted)">
+        <ol style="padding-left:20px;line-height:2">
+          <li>Clique no botao <strong>"Executar"</strong> ao lado da operacao desejada</li>
+          <li>Voce sera redirecionado para o GitHub Actions</li>
+          <li>Na pagina do GitHub, selecione a operacao no dropdown <strong>"Operation to execute"</strong></li>
+          <li>Digite <strong>YES</strong> no campo de confirmacao</li>
+          <li>Clique <strong>"Run workflow"</strong></li>
+          <li>Aguarde a execucao (1-5 minutos). O resultado aparece no dashboard automaticamente.</li>
+        </ol>
+        <div style="margin-top:12px;background:var(--surface2);border-radius:6px;padding:12px">
+          <strong>Link direto:</strong> <a href="${DISPATCH_URL}" target="_blank" rel="noopener">${DISPATCH_URL}</a>
+        </div>
+      </div>`;
+
+    // Safety net
+    document.getElementById('opsSafetyNet').innerHTML=`
+      <div style="font-size:13px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
+          <div style="background:var(--surface2);border-radius:6px;padding:12px;border-left:3px solid var(--green)">
+            <div style="font-weight:600;margin-bottom:4px">Emergency Watchdog</div>
+            <div style="font-size:12px;color:var(--muted)">Roda automaticamente a cada 6h. Detecta: sync stale, locks expirados, saude degradada, memoria grande. Auto-corrige tudo sem intervencao.</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px;border-left:3px solid var(--purple)">
+            <div style="font-weight:600;margin-bottom:4px">AI Takeover Kit</div>
+            <div style="font-size:12px;color:var(--muted)">Documento completo que QUALQUER IA pode ler e operar o sistema. Inclui prompts prontos, passo-a-passo de deploy, e guia de troubleshooting.</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px;border-left:3px solid var(--cyan)">
+            <div style="font-weight:600;margin-bottom:4px">Token Auto-Optimize</div>
+            <div style="font-size:12px;color:var(--muted)">Roda diariamente. Compacta memoria, arquiva dados antigos, externaliza docs estaticos. Reduz custo em 30-50%.</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:6px;padding:12px;border-left:3px solid var(--yellow)">
+            <div style="font-weight:600;margin-bottom:4px">Dashboard Auto-Improve</div>
+            <div style="font-size:12px;color:var(--muted)">Valida accuracy dos dados diariamente. Detecta inconsistencias e cria Issues automaticamente se encontra problemas.</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ===== AI TAKEOVER KIT (Dashboard view) =====
+  function renderAIKit(){
+    const REPO='lucassfreiree/autopilot';
+    const KIT_URL=`https://github.com/${REPO}/blob/main/contracts/ai-takeover-kit.md`;
+    const c=state.controller||{};const a=state.agent||{};
+    const vr=state.versionRules||{};
+    const p=state.pipeline||{};
+
+    const quickPrompt=`Leia o arquivo contracts/ai-takeover-kit.md do repositorio ${REPO} no GitHub. Depois leia contracts/claude-session-memory.json para o estado atual. Me diga: versao do controller, versao do agent, ultimo run, e se ha algum problema. Se eu pedir para fazer deploy, siga o passo-a-passo do takeover kit EXATAMENTE.`;
+
+    document.getElementById('aikitContent').innerHTML=`
+      <div class="section">
+        <h3>Quick Start para outra IA</h3>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Copie o prompt abaixo e cole em QUALQUER IA (ChatGPT, Gemini, etc.) para ela assumir o controle do sistema:</div>
+        <div style="background:var(--surface2);border-radius:6px;padding:16px;font-family:monospace;font-size:12px;line-height:1.6;border:1px solid var(--border);cursor:pointer;position:relative" onclick="navigator.clipboard.writeText(this.innerText).then(()=>{this.querySelector('.copy-msg').style.display='block';setTimeout(()=>this.querySelector('.copy-msg').style.display='none',2000)})">
+          <div class="copy-msg" style="display:none;position:absolute;top:8px;right:8px;background:var(--green);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px">Copiado!</div>
+          ${esc(quickPrompt)}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Clique no texto acima para copiar</div>
+      </div>
+
+      <div class="section">
+        <h3>Estado Atual do Sistema</h3>
+        <div style="font-size:13px;margin-bottom:12px;color:var(--muted)">Estas informacoes sao as que a IA de backup precisa saber:</div>
+        <table>
+          <tr><td style="color:var(--muted)">Controller Version</td><td><strong>${esc(c.version||'?')}</strong></td><td>${badge(c.ciResult||'?')}</td></tr>
+          <tr><td style="color:var(--muted)">Agent Version</td><td><strong>${esc(a.version||'?')}</strong></td><td>${badge(a.ciResult||'?')}</td></tr>
+          <tr><td style="color:var(--muted)">Last Pipeline Run</td><td><strong>#${p.lastRun||0}</strong></td><td>${badge(p.status||'idle')}</td></tr>
+          <tr><td style="color:var(--muted)">Last Successful Run</td><td>#${vr.lastSuccessfulRun||0}</td><td></td></tr>
+          <tr><td style="color:var(--muted)">Version Rule</td><td colspan="2" style="font-size:12px">After X.Y.9 → X.(Y+1).0 — NEVER X.Y.10</td></tr>
+          <tr><td style="color:var(--muted)">Next Controller</td><td><strong>${nextVersion(c.version)}</strong></td><td></td></tr>
+          <tr><td style="color:var(--muted)">Next Agent</td><td><strong>${nextVersion(a.version)}</strong></td><td></td></tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <h3>Prompts Prontos (copie e cole em qualquer IA)</h3>
+        ${[
+          {title:'Verificar status',prompt:'Read contracts/claude-session-memory.json from repo '+REPO+'. Tell me current controller version, agent version, last run number, and any issues.'},
+          {title:'Fazer deploy (version bump)',prompt:'I need to deploy a version bump for the controller in repo '+REPO+'. Read contracts/ai-takeover-kit.md for the full process. Current version: '+(c.version||'?')+'. New version: '+nextVersion(c.version)+'. Last run: '+(p.lastRun||0)+'. Follow ALL steps exactly.'},
+          {title:'Diagnosticar falha',prompt:'The last deploy failed in repo '+REPO+'. Go to GitHub Actions, find the latest apply-source-change.yml run, check which stage failed, and tell me the error. Then suggest a fix from contracts/ai-takeover-kit.md section 4.'},
+          {title:'Corrigir dashboard',prompt:'The dashboard at https://lucassfreiree.github.io/autopilot/dashboard/ is showing stale data. Trigger the spark-sync-state.yml workflow in repo '+REPO+' via GitHub Actions. Then verify the dashboard updated.'}
+        ].map(p=>`
+          <div style="background:var(--surface2);border-radius:6px;padding:12px;margin-bottom:10px;cursor:pointer;border-left:3px solid var(--purple)" onclick="navigator.clipboard.writeText('${esc(p.prompt.replace(/'/g,"\\'"))}')">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">${esc(p.title)}</div>
+            <div style="font-size:11px;font-family:monospace;color:var(--muted);line-height:1.5">${esc(p.prompt)}</div>
+            <div style="font-size:10px;color:var(--blue);margin-top:4px">Clique para copiar</div>
+          </div>`).join('')}
+      </div>
+
+      <div class="section">
+        <h3>Documentacao Completa</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <a href="${KIT_URL}" target="_blank" rel="noopener" style="background:var(--purple-dim);color:var(--purple);padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">AI Takeover Kit (Completo)</a>
+          <a href="https://github.com/${REPO}/blob/main/CLAUDE.md" target="_blank" rel="noopener" style="background:var(--blue-dim);color:var(--blue);padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">CLAUDE.md (Full Docs)</a>
+          <a href="https://github.com/${REPO}/blob/main/contracts/claude-session-memory.json" target="_blank" rel="noopener" style="background:var(--green-dim);color:var(--green);padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">Session Memory (State)</a>
+          <a href="https://github.com/${REPO}/actions" target="_blank" rel="noopener" style="background:var(--orange-dim);color:var(--orange);padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600">GitHub Actions</a>
+        </div>
+      </div>`;
+  }
+
+  function nextVersion(v){
+    if(!v||v==='?')return'?';
+    const parts=v.split('.').map(Number);
+    if(parts.length!==3)return'?';
+    if(parts[2]>=9)return parts[0]+'.'+(parts[1]+1)+'.0';
+    return parts[0]+'.'+parts[1]+'.'+(parts[2]+1);
   }
 
   // Init
