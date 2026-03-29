@@ -85,8 +85,6 @@
         "contracts/copilot-session-memory.json",
         "contracts/copilot-mega-prompt.md",
         "contracts/copilot-super-prompt.md",
-        "contracts/copilot-deploy-guide.md",
-        "contracts/copilot-backup-protocol.md",
         "contracts/copilot-isolation-rules.md",
         ".github/copilot-instructions.md"
       ],
