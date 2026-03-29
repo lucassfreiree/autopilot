@@ -58,10 +58,10 @@ For the absolute latest state (versions, in-progress deploys), read:
 
 | Item | Value |
 |---|---|
-| Controller version | `3.6.6` |
-| Agent version | `2.2.9` |
+| Controller version | `3.6.9` |
+| Agent version | `2.3.1` |
 | Last trigger run | `69` |
-| Last successful run | `63` |
+| Last successful run | `69` |
 
 ---
 
@@ -323,7 +323,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 
 ## VERSIONING RULES
 
-- **Current versions**: Controller `3.6.6`, Agent `2.2.9`
+- **Current versions**: Controller `3.6.9`, Agent `2.3.1`
 - **Pattern**: `unknown` — After X.Y.9, next is X.(Y+1).0 — NEVER X.Y.10
 - **5 places to update** (controller):
   1. `package.json` — `version` field
@@ -434,6 +434,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | release-controller.yml | [Release] Controller | manual |
 | release-freeze.yml | [Release] Freeze / Unfreeze | manual |
 | release-metrics.yml | [Release] Metrics | scheduled, manual |
+| repo-cleanup.yml | [Infra] Repo Cleanup | scheduled, manual |
 | restore-state.yml | [Core] Restore: State Rollback | manual |
 | seed-workspace.yml | [Core] Seed Workspace | manual |
 | session-guard.yml | [Core] Session Guard | reusable |
@@ -681,4 +682,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-29T13:10:02Z | Run: 23709784957*
+*Last synced: 2026-03-29T13:17:42Z | Run: 23709924597*
