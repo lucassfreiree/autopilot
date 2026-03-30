@@ -116,7 +116,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ (1 files)
-  audit/ (459 files)
+  audit/ (461 files)
   improvements/ (1 files)
   metrics/ (8 files)
   handoffs/ (1 files)
@@ -150,7 +150,7 @@ Edit a trigger file on `main` branch, bump the `run` field.
 |---|---|---|---|
 | `trigger/agent-bridge.json` | agent-bridge.yml | SHARED | all workspaces | context, include_patches, include_session_memory, model, task, workspace_id |
 | `trigger/agent-sync.json` | agent-sync.yml | GETRONICS | ws-default | BBVINET_TOKEN | context, task, workspace_id |
-| `trigger/ci-diagnose.json` | ci-diagnose.yml | GETRONICS | ws-default | BBVINET_TOKEN | commit_sha, component, note, workspace_id |
+| `trigger/ci-diagnose.json` | ci-diagnose.yml | GETRONICS | ws-default | BBVINET_TOKEN | component, note, workspace_id |
 | `trigger/ci-status.json` | ci-status-check.yml | GETRONICS | ws-default | BBVINET_TOKEN | commit_sha, component, note, workspace_id |
 | `trigger/clone-repos.json` | clone-corporate-repos.yml | GETRONICS | ws-default | BBVINET_TOKEN | note, repos |
 | `trigger/codex-commit.json` | codex-apply.yml | SHARED | all workspaces | Codex agent commit automation | auto_merge, branch_suffix, model, target_files, task, workspace_id |
@@ -417,4 +417,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | Handoff to Claude | Dispatch `enqueue-agent-handoff.yml`, `to_agent=claude` |
 
 ---
-*Last synced: 2026-03-30T13:08:26Z | Run: 23746301964*
+*Last synced: 2026-03-30T13:15:10Z | Run: 23746583661*
