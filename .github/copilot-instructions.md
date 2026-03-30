@@ -415,6 +415,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | dashboard-auto-improve.yml | [Core] Dashboard Auto-Improve | scheduled, manual |
 | deploy-auto-learn.yml | [Core] Deploy Auto-Learn | manual |
 | deploy-panel.yml | [Infra] Deploy Panel (GitHub Pages) | push, manual |
+| deploy-pipeline-monitor.yml | [Core] Deploy Pipeline Monitor | scheduled, manual |
 | dispatch-proxy.yml | [Core] Operations Dispatch Proxy | manual |
 | drift-correction.yml | [Corp] Drift Correction | scheduled, manual |
 | emergency-watchdog.yml | [Core] Emergency Watchdog | scheduled, manual |
@@ -480,6 +481,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | copilot-post-deploy-sync.yml | version, run_number |
 | copilot-task-dispatch.yml | task, task_type, component, version |
 | deploy-auto-learn.yml | source |
+| deploy-pipeline-monitor.yml | workspace_id, force_dispatch_monitor |
 | dispatch-proxy.yml | operation, confirm, workspace |
 | drift-correction.yml | workspace_id, dry_run |
 | emergency-watchdog.yml | force_heal |
@@ -700,4 +702,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-30T13:46:47Z | Run: 23748050260*
+*Last synced: 2026-03-30T13:53:32Z | Run: 23748370140*
