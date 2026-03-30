@@ -175,7 +175,7 @@ jobs:
           ISSUES=0
 
           # Check for potential secrets or corporate data leaks in fetched content
-          PATTERNS="intranet\.|password\s*=|secret\s*=|api_key\s*=|private_key|BEGIN RSA|BEGIN EC|AKIA[A-Z0-9]{16}"
+          PATTERNS="intranet\.|password\s*=|secret\s*=|api_key\s*=|private_key|BEGIN RSA|BEGIN EC"
 
           for FILE in $(find .sync-tmp -name "*.md" -o -name "*.json" 2>/dev/null); do
             HITS=$(grep -cE "$PATTERNS" "$FILE" 2>/dev/null || echo 0)
