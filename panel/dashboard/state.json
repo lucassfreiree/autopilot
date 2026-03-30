@@ -1,23 +1,23 @@
 {
-  "lastSync": "2026-03-30T17:15:00Z",
-  "syncSource": "autopilot/manual-fix",
+  "lastSync": "2026-03-30T19:45:00Z",
+  "syncSource": "autopilot/claude-code",
   "controller": {
-    "version": "3.7.0",
+    "version": "3.7.3",
     "status": "promoted",
     "ciResult": "success",
     "promoted": true
   },
   "agent": {
-    "version": "2.3.3",
+    "version": "2.3.2",
     "status": "ci-passed",
     "ciResult": "success",
-    "promoted": true
+    "promoted": false
   },
   "pipeline": {
-    "status": "deploying",
+    "status": "idle",
     "lastRun": 77,
     "component": "controller",
-    "version": "3.7.1"
+    "version": "3.7.3"
   },
   "agents": {
     "claude": { "status": "active" },
@@ -31,7 +31,7 @@
   "recentWorkflows": [],
   "openPRs": [],
   "metadata": {
-    "stateVersion": 5,
+    "stateVersion": 6,
     "totalWorkspaces": 2,
     "degraded": false
   }
