@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-30T15:30:00Z",
+  "lastUpdated": "2026-03-30T19:15:00Z",
   "lastSessionId": "session_01N6wTVvkGd7Hs1zMtus8i5i",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1388,7 +1388,9 @@
       "spark_dashboard_repo": "lucassfreiree/spark-dashboard e o repo do dashboard externo. Tem Dependabot configurado (weekly). Auto-merge workflow em .github/workflows/auto-merge-dependabot.yml (patch/minor = auto, major = label needs-review). Arquivos de referencia ficam em references/spark-dashboard/ no autopilot. sync-spark-dashboard.yml sincroniza automaticamente. MCP server mcp__b66412ee tem read+merge access (nao write). mcp__github__ NAO tem acesso.",
       "mcp_servers_access": "mcp__github__ (original): acesso somente a lucassfreiree/autopilot (read+write+merge). mcp__b66412ee__ (novo): acesso a lucassfreiree/spark-dashboard (read+merge, SEM write/push). Para push no spark-dashboard: usar sync-spark-dashboard.yml via RELEASE_TOKEN.",
       "no_restricted_syntax_no_for_of": "CRITICO: ESLint no-restricted-syntax proibe for...of neste codebase. NUNCA usar 'for (const x of y)'. SEMPRE usar array iterations: .map(), .reduce(), .filter(), Object.fromEntries(Object.entries().map()). Afeta: qualquer arquivo TypeScript nos patches do controller.",
-      "ci_gate_broken_always_check_logs": "CRITICO: CI Gate e sabidamente quebrado (ci_gate_preexisting_bug). NUNCA assumir que CI passou so porque CI Gate reportou sucesso. SEMPRE buscar o ci-logs-controller-*.txt mais recente no autopilot-state e verificar se ha erro real. Tempo ~3.5min = falha, ~14min = passou."
+      "ci_gate_broken_always_check_logs": "CRITICO: CI Gate e sabidamente quebrado (ci_gate_preexisting_bug). NUNCA assumir que CI passou so porque CI Gate reportou sucesso. SEMPRE buscar o ci-logs-controller-*.txt mais recente no autopilot-state e verificar se ha erro real. Tempo ~3.5min = falha, ~14min = passou.",
+      "active_live_monitoring_mandatory": "CRITICO MAXIMA PRIORIDADE: Em TODA sessao, o agente DEVE monitorar ATIVAMENTE e em TEMPO REAL todos os pipelines (autopilot workflows E esteira corporativa). NAO esperar usuario reportar falha. PROTOCOLO: (1) Ao iniciar sessao: verificar ci-monitor-controller.json, ci-monitor-agent.json, controller-release-state.json, agent-release-state.json, e ultimo ci-logs-controller-*.txt. (2) Apos qualquer deploy: polling a cada 2-3 min ate confirmar sucesso ou falha. (3) Detectou falha: diagnosticar e corrigir IMEDIATAMENTE sem perguntar. (4) Deploy so e considerado COMPLETO quando ci-logs mostra 'Test Suites: 0 failed' E 'Tests: 0 failed'. Referencia: CLAUDE.md secao 'Live Monitoring Protocol'. O usuario NAO deve jamais ter que reportar uma falha ao agente — o agente deve detectar e corrigir autonomamente.",
+      "update_tests_with_response_shape_changes": "CRITICO: Quando mudar o shape de um response (adicionar bounds, limitar entries, alterar campos), SEMPRE atualizar os testes correspondentes NO MESMO DEPLOY. Incluir arquivos de teste na lista de changes do trigger/source-change.json. Buscar com: grep -rn 'campo_alterado' src/__tests__/ para encontrar TODOS. Verificar mock setup (jest.mock + beforeEach) E as expectativas (expect.objectContaining). Incluir AMBOS os paths de teste: src/__tests__/unit/ E src/__tests__/controllers/."
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
     "gha_no_heredoc_in_run": "CRITICO: NUNCA usar heredoc (cat <<EOF / cat <<'EOF') dentro de blocos run: | em GitHub Actions. O GHA parser le TODO o bloco run: como YAML literal ANTES de avaliar como shell. Qualquer linha com dois-pontos (ex: 'Workspace: $WS') e interpretada como YAML key-value e quebra. FIX: usar variavel simples com string inline. Ex: BODY='texto sem colon' e depois gh issue comment --body \"$BODY\". NUNCA heredoc.",
@@ -1466,30 +1468,16 @@
   "currentState": {
     "controllerVersion": "3.7.2",
     "agentVersion": "2.3.3",
-    "lastTriggerRun": 79,
-    "lastSuccessfulRun": 73,
+    "lastTriggerRun": 80,
+    "lastSuccessfulRun": 80,
     "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)",
-    "pendingDeploy": {
-      "historia": "#930188",
-      "component": "agent",
-      "version": "3.7.2",
-      "triggerRun": 79,
-      "status": "CI_MONITORING",
-      "nextStep": "run #79 triggered (fix for...of lint). Monitor ci-logs-controller-*.txt",
-      "patches": [
-        "patches/cronjob-callback.ts (Agent endpoint)",
-        "patches/agent-apis.ts (route registration)",
-        "patches/cronjob-callback.test.ts (unit tests — import paths fixed)",
-        "patches/agent-swagger.json (swagger 2.3.3)"
-      ],
-      "controllerPending": {
-        "version": "3.7.1",
-        "patches": [
-          "patches/cronjob-result.controller.ts (Controller endpoint)",
-          "patches/cronjob-result.controller.test.ts (unit tests)",
-          "patches/agentsRouter.ts (route registration)"
-        ],
-        "status": "WAITING_FOR_AGENT"
+    "historia930188": "COMPLETED — controller 3.7.2 CI PASSED (run #80, 2026-03-30T19:03Z). ciOutcome=success. CAP tag=3.7.2. Security fixes: XSS sanitizeForOutput, SSRF validateTrustedUrl, DoS boundedEntries, no for...of. 3 iterations: run78(for...of ESLint), run79(count:1 test), run80(PASS).",
+    "pendingDeploy": null,
+    "nextDeploy": {
+      "note": "No pending deploy. Controller 3.7.2 and Agent 2.3.3 both deployed and promoted.",
+      "nextVersion": {
+        "controller": "3.7.3",
+        "agent": "2.3.4"
       }
     }
   },

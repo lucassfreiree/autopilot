@@ -406,7 +406,7 @@ state/workspaces/ws-default/workspace.json
 - **CAP values path**: `releases/openshift/hml/deploy/values.yaml`
 - **Reference file**: `references/controller-cap/values.yaml`
 - **Image**: `docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller`
-- **Current deployed tag**: `3.7.0`
+- **Current deployed tag**: `3.7.2`
 - **Image line**: `image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:<TAG>`
 - **K8s Secret**: `psc-sre-automacao-controller-runtime` (11 keys: JWT_SECRET, AUTH_API_KEYS_SCOPES, SCOPE_*, AWS_REGION, OSS_*)
 - **K8s Secret**: `sre-controller-auth` (4 keys: OAS_TRUSTED_NAMESPACE, OAS_TRUSTED_SERVICE_ACCOUNT, OAS_ORIGIN_NAMESPACE_HEADERS, OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS)
@@ -728,6 +728,59 @@ The corporate "Esteira de Build NPM" runs INDEPENDENTLY after code is pushed.
 | ALWAYS diagnose and fix CI failures automatically | Download logs, analyze, create fix, re-deploy — NO user intervention |
 | ALWAYS map errors and solutions | Record in session memory knownFailures + errorRecovery for fast resolution |
 | ALWAYS verify JWT claim names | Agent reads `payload.scope` (singular), never `scopes` (plural) |
+| **ALWAYS monitor ALL pipelines LIVE every session** | Never wait for user to report a failure. At session start AND after every deploy: actively poll ci-logs, autopilot workflows, AND esteira corporativa every 2-3 min until confirmed success or failure |
+
+## Live Monitoring Protocol (MANDATORY — Every Session)
+
+> **This is not optional.** Active live monitoring of ALL pipelines is required in every session.
+> Failure to monitor = failure to deploy. The user must NEVER have to report a CI failure to Claude.
+
+### At Session Start — ALWAYS run these checks:
+1. Read `state/workspaces/ws-default/ci-monitor-controller.json` → last `ciOutcome`
+2. Read `state/workspaces/ws-default/ci-monitor-agent.json` → last `ciOutcome`
+3. Read `state/workspaces/ws-default/controller-release-state.json` → `status`, `ciResult`
+4. Read `state/workspaces/ws-default/agent-release-state.json` → `status`, `ciResult`
+5. Check `ci-logs-controller-*.txt` (latest) for test/lint/build errors
+6. Check `ci-logs-agent-*.txt` (latest) for errors
+7. If ANY outstanding failure: diagnose and fix IMMEDIATELY without waiting for user to ask
+
+### After Every Deploy — Active Polling Protocol:
+```
+1. After PR merge: wait 30s, then check apply-source-change run status
+2. Every 2-3 minutes: poll ci-logs for new files (higher job ID = newer)
+3. Pattern "Test Suites: X failed" → IMMEDIATE FIX (don't wait for user)
+4. Pattern "error TS" → IMMEDIATE FIX
+5. Pattern "X problems (X errors)" → IMMEDIATE FIX
+6. Pattern "Test Suites: X passed, 0 failed" + no errors → SUCCESS → update memory
+7. Timeout: after 30 min without new log → trigger ci-diagnose manually
+```
+
+### CI Timing Guide:
+| Duration | Meaning | Action |
+|----------|---------|--------|
+| < 5 min | CI failed (test/lint error) | Check latest ci-log immediately |
+| ~14 min | CI passed | Confirm Docker image built, promote CAP |
+| > 30 min no log | CI stuck or not triggered | Trigger ci-diagnose manually |
+
+### How to Check CI Status Quickly:
+```bash
+# List latest ci-logs (sort by job ID — higher = newer)
+# Via MCP: get_file_contents owner=lucassfreiree repo=autopilot path=state/workspaces/ws-default ref=autopilot-state
+# Find files matching ci-logs-controller-*.txt, sort by name, read the largest job ID
+
+# Read latest log:
+# get_file_contents path=state/workspaces/ws-default/ci-logs-controller-<highest_id>.txt
+# Search for: "Test Suites:", "Tests:", "FAIL ", "error TS", "problems (", "VERSAO:"
+```
+
+### Autonomous Loop Status:
+- `ci-monitor-loop.yml` → polls corporate CI, on failure triggers `fix-corporate-ci` + `ci-diagnose` + creates Issue
+- `fix-corporate-ci.yml` → auto-fixes lint errors, re-dispatches `ci-monitor-loop` with fix SHA
+- `deploy-pipeline-monitor.yml` → every 10min, detects stuck pipelines, auto-dispatches
+- `workflow-sentinel.yml` → every 4h, ensures monitoring stack is running
+
+> **Even with autonomous workflows**: Claude MUST personally verify — autonomous workflows can fail silently.
+> Do NOT rely solely on automation. ALWAYS verify manually during active sessions.
 
 ## apply-source-change Pipeline (7 Stages)
 ```
