@@ -89,9 +89,14 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const headSha   = '${{ steps.policy.outputs.head_sha }}';
-            const maxWaitMs = 3 * 60 * 1000; // 3 minutes max (was 10)
-            const pollMs    = 15 * 1000;      // 15 seconds (was 30)
+            const maxWaitMs = 15 * 60 * 1000; // 15 minutes — compliance gate needs npm ci + tsc + jest
+            const pollMs    = 20 * 1000;      // 20 seconds
+            const initialWaitMs = 30 * 1000;  // 30s initial delay so check suites are created
             const start     = Date.now();
+
+            // Wait for GitHub to create check suites before polling
+            core.notice('Initial 30s wait for check suites to be created…');
+            await new Promise(r => setTimeout(r, initialWaitMs));
 
             // Collect ALL merge-related workflow run IDs to exclude them.
             // These workflows wait for each other = deadlock if we wait for them.
@@ -121,17 +126,19 @@ jobs:
               }
             } catch (e) { core.warning(`Could not list running workflows: ${e.message}`); }
 
-            // Also exclude suites that are "queued" (waiting for approval) — these will never complete
-            core.notice(`Waiting for checks on ${headSha} (max 3 min)…`);
+            // Only exclude action_required suites (manual approval gates) — NOT queued ones
+            // queued = GitHub Actions not started yet (must wait), action_required = manual gate (will never auto-complete)
+            core.notice(`Polling checks on ${headSha} (max 15 min)…`);
 
             while (true) {
               const { data: suites } = await github.rest.checks.listSuitesForRef({
                 owner: context.repo.owner, repo: context.repo.repo, ref: headSha, per_page: 100,
               });
 
-              // Exclude merge workflows + queued/action_required suites (they'll never complete on their own)
+              // Exclude: merge workflows (deadlock) + action_required (manual gates that won't complete)
+              // Do NOT exclude 'queued' — those are checks waiting to start (compliance-gate, etc.)
               const relevant = suites.check_suites.filter(s =>
-                !excludeSuiteIds.has(s.id) && s.status !== 'queued'
+                !excludeSuiteIds.has(s.id) && s.conclusion !== 'action_required'
               );
 
               const pending = relevant.filter(s => s.status !== 'completed');
