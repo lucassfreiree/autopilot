@@ -311,8 +311,10 @@ jobs:
           done
 
           # ── Decision 3: Disabled workflows → re-enable ──
+          # SKIP intentionally disabled workflows (Codex/Copilot/Agent bridges — centralized in Claude Code)
+          INTENTIONALLY_DISABLED="codex-apply|codex-deploy|codex-autonomous|sync-codex-prompt|auto-pr-codex|copilot-post-deploy|copilot-setup|copilot-task|sync-copilot-prompt|agent-bridge|agent-sync|autopilot-dispatcher"
           DISABLED=$(gh api "repos/$REPO/actions/workflows?per_page=100" \
-            --jq '[.workflows[] | select(.state != "active") | {id: .id, name: .name, state: .state}]' 2>/dev/null || echo '[]')
+            --jq '[.workflows[] | select(.state != "active") | {id: .id, name: .name, state: .state, path: .path}]' 2>/dev/null || echo '[]')
 
           _DIS_COUNT=$(echo "$DISABLED" | jq 'length' 2>/dev/null || echo 0)
           _DIS_IDX=0
@@ -321,6 +323,16 @@ jobs:
             _DIS_IDX=$((_DIS_IDX + 1))
             D_NAME=$(echo "$D" | jq -r '.name')
             D_ID=$(echo "$D" | jq -r '.id')
+            D_PATH=$(echo "$D" | jq -r '.path')
+            # Skip workflows that were intentionally disabled (.yml.disabled or in exclusion list)
+            if echo "$D_PATH" | grep -qE "\.disabled$"; then
+              echo "Skipping intentionally disabled: $D_NAME ($D_PATH)"
+              continue
+            fi
+            if echo "$D_PATH" | grep -qE "$INTENTIONALLY_DISABLED"; then
+              echo "Skipping intentionally disabled: $D_NAME"
+              continue
+            fi
             ACTIONS=$(echo "$ACTIONS" | jq --arg name "$D_NAME" --argjson id "$D_ID" '. + [{
               type: "re-enable",
               target: $name,

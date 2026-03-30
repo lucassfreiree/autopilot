@@ -4,6 +4,7 @@ run-name: "${{ github.workflow }} • validate all workflows"
 # Validates ALL workflow YAML files on every PR and push.
 # Catches: syntax errors, invalid references, missing secrets, bad cron expressions,
 # deprecated actions, and structural issues BEFORE they reach main.
+# Secret pattern updated: uses length-qualified patterns to avoid false positives.
 
 on:
   pull_request:
@@ -122,7 +123,7 @@ jobs:
 
             # ── Check 7: Hardcoded secrets or tokens ──
             # Skip self-scan to avoid false positive from the detection pattern itself
-            if [[ "$WF_FILE" != *"builds-validation-gate"* ]] && grep -qiE '(ghp_|github_pat_|sk-|AIza|AKIA)' "$WF_FILE" 2>/dev/null; then
+            if [[ "$WF_FILE" != *"builds-validation-gate"* ]] && grep -qE '(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9]{22}|sk-[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{35}|AKIA[A-Z0-9]{16})' "$WF_FILE" 2>/dev/null; then
               FILE_ERRORS="${FILE_ERRORS}\n  - Possible hardcoded secret/token detected"
               ERRORS=$((ERRORS + 1))
             fi

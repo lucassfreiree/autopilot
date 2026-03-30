@@ -72,6 +72,7 @@ jobs:
           REPAIRS="[]"
 
           # ── Pattern 1: Detect disabled workflows ──
+          # SKIP intentionally disabled workflows (Codex/Copilot/Agent bridges — centralized in Claude Code)
           echo "::group::Checking for disabled workflows"
           DISABLED=$(gh api "repos/$REPO/actions/workflows?per_page=100" \
             --jq '[.workflows[] | select(.state == "disabled_manually" or .state == "disabled_inactivity") | {id: .id, name: .name, path: .path, state: .state}]' 2>/dev/null || echo '[]')
@@ -81,7 +82,17 @@ jobs:
             WF_NAME=$(echo "$WF" | jq -r '.name' 2>/dev/null || echo "")
             WF_ID=$(echo "$WF" | jq -r '.id' 2>/dev/null || echo "")
             WF_STATE=$(echo "$WF" | jq -r '.state' 2>/dev/null || echo "")
+            WF_PATH=$(echo "$WF" | jq -r '.path // ""' 2>/dev/null || echo "")
             [ -z "$WF_NAME" ] || [ -z "$WF_ID" ] && continue
+            # Skip intentionally disabled (.yml.disabled files or known Codex/Copilot workflows)
+            if echo "$WF_PATH" | grep -qE '\.disabled$'; then
+              echo "Skipping intentionally disabled: $WF_NAME"
+              continue
+            fi
+            if echo "$WF_PATH" | grep -qE 'codex-|copilot-|sync-codex|sync-copilot|auto-pr-codex|agent-bridge|agent-sync|autopilot-dispatcher'; then
+              echo "Skipping intentionally disabled: $WF_NAME"
+              continue
+            fi
             REPAIRS=$(echo "$REPAIRS" | jq --argjson r "{
               \"type\": \"re-enable\",
               \"workflow_id\": $WF_ID,
