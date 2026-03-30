@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 376,
+  "branch": "claude/controller-3.7.1-historia-930188",
+  "timestamp": "2026-03-30T16:54:32Z",
+  "runId": "23756818950",
+  "healthStatus": "degraded"
+}
