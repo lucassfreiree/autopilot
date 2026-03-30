@@ -115,7 +115,7 @@ jobs:
             echo "::warning ::Failed to push dashboard HTML to $SPARK_REPO (non-critical)"
 
       - name: Update panel/dashboard/state.json (GitHub Pages)
-        if: always() && steps.state.outputs.state_b64 != ''
+        if: always() && steps.state.outputs.state_ready == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
