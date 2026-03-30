@@ -962,3 +962,38 @@ jobs:
           echo "| 4. Promote | ${{ needs.promote.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 5. Save State | ${{ needs.save-state.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| 6. Audit | running |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 7. CI Monitor | dispatched |" >> "$GITHUB_STEP_SUMMARY"
+
+  # ═══════════════════════════════════════════════════════════════
+  #  STAGE 7 → CI Monitor: activate autonomous CI monitoring loop
+  # ═══════════════════════════════════════════════════════════════
+  ci-monitor:
+    name: "7. CI Monitor (activate)"
+    needs: [setup, apply-and-push, audit]
+    if: always() && needs.apply-and-push.outputs.pushed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Dispatch ci-monitor-loop"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -e
+          WS_ID="${{ needs.setup.outputs.ws_id }}"
+          COMPONENT="${{ needs.setup.outputs.component }}"
+          COMMIT_SHA="${{ needs.apply-and-push.outputs.sha }}"
+
+          echo "=== Stage 7: Activating CI Monitor Loop ==="
+          echo "workspace=$WS_ID component=$COMPONENT sha=$COMMIT_SHA"
+
+          gh workflow run ci-monitor-loop.yml \
+            --repo "$AUTOPILOT_REPO" \
+            --ref main \
+            --field workspace_id="$WS_ID" \
+            --field component="$COMPONENT" \
+            --field commit_sha="$COMMIT_SHA"
+
+          echo "CI Monitor Loop dispatched — will poll corporate CI, auto-diagnose failures, and auto-fix."
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 7. CI Monitor" >> "$GITHUB_STEP_SUMMARY"
+          echo "Dispatched ci-monitor-loop for **$COMPONENT** (sha: \`$COMMIT_SHA\`)" >> "$GITHUB_STEP_SUMMARY"
+          echo "The loop will poll the corporate Esteira de Build NPM and auto-remediate failures." >> "$GITHUB_STEP_SUMMARY"
