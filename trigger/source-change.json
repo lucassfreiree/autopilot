@@ -3,7 +3,7 @@
   "workspace_id": "ws-default",
   "component": "agent",
   "change_type": "multi-file",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "changes": [
     {
       "action": "replace-file",
@@ -11,20 +11,35 @@
       "content_ref": "patches/agent-swagger.json"
     },
     {
+      "action": "replace-file",
+      "target_path": "src/apis/cronjob-callback.ts",
+      "content_ref": "patches/cronjob-callback.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/routes/apis.ts",
+      "content_ref": "patches/agent-apis.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "test/apis/cronjob-callback.test.ts",
+      "content_ref": "patches/cronjob-callback.test.ts"
+    },
+    {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"2.3.1\"",
-      "replace": "\"version\": \"2.3.2\""
+      "search": "\"version\": \"2.3.2\"",
+      "replace": "\"version\": \"2.3.3\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"2.3.1\"",
-      "replace": "\"version\": \"2.3.2\""
+      "search": "\"version\": \"2.3.2\"",
+      "replace": "\"version\": \"2.3.3\""
     }
   ],
-  "commit_message": "chore(agent): version bump 2.3.2 — e2e validation test",
+  "commit_message": "feat(agent): implement cronjob callback endpoint (#930188)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 71
+  "run": 72
 }
