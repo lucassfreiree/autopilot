@@ -17,9 +17,9 @@
     }
   ],
   "fixes": [],
-  "lastRun": "2026-03-30T20:05:34Z",
-  "lastHealth": "degraded",
-  "runCount": 16,
+  "lastRun": "2026-03-30T20:36:28Z",
+  "lastHealth": "critical",
+  "runCount": 17,
   "healthHistory": [
     {
       "ts": "2026-03-30T04:25:02Z",
@@ -84,6 +84,10 @@
     {
       "ts": "2026-03-30T20:05:34Z",
       "health": "degraded"
+    },
+    {
+      "ts": "2026-03-30T20:36:28Z",
+      "health": "critical"
     }
   ]
 }
