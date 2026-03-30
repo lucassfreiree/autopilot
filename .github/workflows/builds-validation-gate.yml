@@ -121,7 +121,8 @@ jobs:
             fi
 
             # ── Check 7: Hardcoded secrets or tokens ──
-            if grep -qiE '(ghp_|github_pat_|sk-|AIza|AKIA)' "$WF_FILE" 2>/dev/null; then
+            # Skip self-scan to avoid false positive from the detection pattern itself
+            if [[ "$WF_FILE" != *"builds-validation-gate"* ]] && grep -qiE '(ghp_|github_pat_|sk-|AIza|AKIA)' "$WF_FILE" 2>/dev/null; then
               FILE_ERRORS="${FILE_ERRORS}\n  - Possible hardcoded secret/token detected"
               ERRORS=$((ERRORS + 1))
             fi
