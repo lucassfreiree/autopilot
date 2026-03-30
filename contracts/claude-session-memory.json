@@ -1367,7 +1367,35 @@
       "mcp_servers_access": "mcp__github__ (original): acesso somente a lucassfreiree/autopilot (read+write+merge). mcp__b66412ee__ (novo): acesso a lucassfreiree/spark-dashboard (read+merge, SEM write/push). Para push no spark-dashboard: usar sync-spark-dashboard.yml via RELEASE_TOKEN."
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
-    "gha_no_heredoc_in_run": "CRITICO: NUNCA usar heredoc (cat <<EOF / cat <<'EOF') dentro de blocos run: | em GitHub Actions. O GHA parser le TODO o bloco run: como YAML literal ANTES de avaliar como shell. Qualquer linha com dois-pontos (ex: 'Workspace: $WS') e interpretada como YAML key-value e quebra. FIX: usar variavel simples com string inline. Ex: BODY='texto sem colon' e depois gh issue comment --body \"$BODY\". NUNCA heredoc."
+    "gha_no_heredoc_in_run": "CRITICO: NUNCA usar heredoc (cat <<EOF / cat <<'EOF') dentro de blocos run: | em GitHub Actions. O GHA parser le TODO o bloco run: como YAML literal ANTES de avaliar como shell. Qualquer linha com dois-pontos (ex: 'Workspace: $WS') e interpretada como YAML key-value e quebra. FIX: usar variavel simples com string inline. Ex: BODY='texto sem colon' e depois gh issue comment --body \"$BODY\". NUNCA heredoc.",
+    "prevention_rules": {
+      "description": "Regras de prevencao OBRIGATORIAS antes de criar/editar workflows ou dashboard",
+      "before_any_workflow_edit": [
+        "NUNCA usar heredoc (cat <<EOF) dentro de run: | blocks",
+        "NUNCA usar **bold**: (markdown) dentro de run: | blocks",
+        "NUNCA colocar mais de 15000 chars em um unico run: | block — extrair para script externo",
+        "NUNCA passar JSON grande via steps.outputs entre jobs — usar env ou arquivo",
+        "NUNCA usar cancel-in-progress:true em workflows com push trigger de alta frequencia",
+        "NUNCA usar set -euo pipefail em workflows que fazem gh api calls com fallback",
+        "SEMPRE adicionar concurrency group em workflows com schedule",
+        "SEMPRE validar YAML com python3 yaml.safe_load() antes de commitar",
+        "SEMPRE validar JS com node vm.compileFunction() antes de commitar dashboard HTML",
+        "SEMPRE testar state.json com json.load() antes de commitar"
+      ],
+      "before_any_dashboard_edit": [
+        "NUNCA usar backtick escaped (backslash-backtick) em template literals — usar backtick real",
+        "NUNCA escrever state.json com conteudo vazio — validar tamanho > 100 bytes",
+        "SEMPRE mover panel update para dentro do collect-state.sh (mesmo processo)",
+        "SEMPRE validar braces balance apos editar HTML"
+      ],
+      "before_any_deploy": [
+        "SEMPRE verificar imports/paths no test match a estrutura do repo corporativo",
+        "SEMPRE verificar se JWTService.generateCallbackToken existe antes de referenciar",
+        "SEMPRE incluir swagger atualizado com novos endpoints",
+        "SEMPRE registrar novas rotas no roteador (apis.ts / agentsRouter.ts)"
+      ]
+    },
+    "dashboard_state_empty": "CRITICO: state.json foi escrito VAZIO (0 bytes) pelo step 7 do spark-sync-state porque steps.state.outputs.state_b64 ficou vazio (limite de tamanho GHA outputs). FIX: mover o update do panel/dashboard/state.json para DENTRO do collect-state.sh (mesmo processo, sem output cross-step). SEMPRE validar STATE_B64 > 100 chars antes de escrever."
   },
   "deployFlowGuide": {
     "_ref": "contracts/archive/static-reference.json#deployFlowGuide",
