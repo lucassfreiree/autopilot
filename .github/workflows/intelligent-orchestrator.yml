@@ -104,8 +104,12 @@ jobs:
           # Critical monitoring stack
           MONITORS=("Spark Dashboard Sync" "Workflow Health Monitor" "Workflow Auto-Repair" "Emergency Watchdog" "Workflow Sentinel" "Dashboard Auto-Improve" "Builds Validation Gate")
 
-          for WF_NAME in $(echo "$WF_DEFS" | jq -r '.[].name' 2>/dev/null); do
-            WF_ID=$(echo "$WF_DEFS" | jq -r --arg n "$WF_NAME" '.[] | select(.name == $n) | .id' 2>/dev/null || echo "")
+          _WF_COUNT=$(echo "$WF_DEFS" | jq 'length' 2>/dev/null || echo 0)
+          _WF_IDX=0
+          while [ "$_WF_IDX" -lt "$_WF_COUNT" ]; do
+            WF_NAME=$(echo "$WF_DEFS" | jq -r ".[$_WF_IDX].name" 2>/dev/null || echo "")
+            WF_ID=$(echo "$WF_DEFS" | jq -r ".[$_WF_IDX].id" 2>/dev/null || echo "")
+            _WF_IDX=$((_WF_IDX + 1))
             [ -z "$WF_ID" ] && continue
 
             # Last 5 runs for this workflow
@@ -258,7 +262,11 @@ jobs:
           fi
 
           # ── Decision 2: Failing workflows → categorize and plan ──
-          for ENTRY in $(echo "$FAILING" | jq -c '.[]' 2>/dev/null); do
+          _FAIL_COUNT=$(echo "$FAILING" | jq 'length' 2>/dev/null || echo 0)
+          _FAIL_IDX=0
+          while [ "$_FAIL_IDX" -lt "$_FAIL_COUNT" ]; do
+            ENTRY=$(echo "$FAILING" | jq -c ".[$_FAIL_IDX]" 2>/dev/null || echo '{}')
+            _FAIL_IDX=$((_FAIL_IDX + 1))
             WF_NAME=$(echo "$ENTRY" | jq -r '.name')
             WF_ID=$(echo "$ENTRY" | jq -r '.id')
             CONSEC=$(echo "$ENTRY" | jq -r '.consecutive')
@@ -306,7 +314,11 @@ jobs:
           DISABLED=$(gh api "repos/$REPO/actions/workflows?per_page=100" \
             --jq '[.workflows[] | select(.state != "active") | {id: .id, name: .name, state: .state}]' 2>/dev/null || echo '[]')
 
-          for D in $(echo "$DISABLED" | jq -c '.[]' 2>/dev/null); do
+          _DIS_COUNT=$(echo "$DISABLED" | jq 'length' 2>/dev/null || echo 0)
+          _DIS_IDX=0
+          while [ "$_DIS_IDX" -lt "$_DIS_COUNT" ]; do
+            D=$(echo "$DISABLED" | jq -c ".[$_DIS_IDX]" 2>/dev/null || echo '{}')
+            _DIS_IDX=$((_DIS_IDX + 1))
             D_NAME=$(echo "$D" | jq -r '.name')
             D_ID=$(echo "$D" | jq -r '.id')
             ACTIONS=$(echo "$ACTIONS" | jq --arg name "$D_NAME" --argjson id "$D_ID" '. + [{
@@ -362,7 +374,11 @@ jobs:
           SUCCESS=0
           FAILED=0
 
-          for ACTION in $(echo "$PLAN" | jq -c '.[]' 2>/dev/null); do
+          _ACT_COUNT=$(echo "$PLAN" | jq 'length' 2>/dev/null || echo 0)
+          _ACT_IDX=0
+          while [ "$_ACT_IDX" -lt "$_ACT_COUNT" ]; do
+            ACTION=$(echo "$PLAN" | jq -c ".[$_ACT_IDX]" 2>/dev/null || echo '{}')
+            _ACT_IDX=$((_ACT_IDX + 1))
             TYPE=$(echo "$ACTION" | jq -r '.type')
             TARGET=$(echo "$ACTION" | jq -r '.target')
             WF_ID=$(echo "$ACTION" | jq -r '.workflow_id // ""')
