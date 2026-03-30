@@ -24,6 +24,12 @@ type AutomationMetadata = {
 
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 const DEFAULT_AGENT_CALL_TIMEOUT_MS = 30_000;
+const TRUSTED_AGENT_URL_PATTERN =
+  /^https?:\/\/(?!.*@)[a-zA-Z0-9._-]+(?::[0-9]{1,5})?(?:\/[^\s<>"']*)?$/;
+
+function validateTrustedUrl(url: string): boolean {
+  return Boolean(url) && TRUSTED_AGENT_URL_PATTERN.test(url);
+}
 
 function sanitizeForOutput(value: unknown): string {
   return String(value ?? "")
@@ -247,6 +253,11 @@ export async function postOasAutomation(
         ok: false,
         error: "Agent not registered for given cluster/namespace",
       });
+      return;
+    }
+
+    if (!validateTrustedUrl(trustedAgentUrl)) {
+      res.status(500).json({ ok: false, error: "Resolved agent URL is not trusted" });
       return;
     }
 
