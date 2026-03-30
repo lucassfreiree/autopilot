@@ -64,10 +64,10 @@ describe("CronjobCallbackAPI", () => {
   describe("validateCronjobCallback", () => {
     test("returns 400 when body is not a JSON object", async () => {
       const app = await makeApp();
+      // Arrays pass body-parser strict mode but fail our isRecord() check
       const res = await request(app)
         .post("/api/cronjob/callback")
-        .set("Content-Type", "application/json")
-        .send('"not-an-object"');
+        .send([]);
       expect(res.status).toBe(400);
       expect(res.body.ok).toBe(false);
       expect(res.body.details).toContain("Request body must be a JSON object.");
