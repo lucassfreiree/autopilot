@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 378,
+  "branch": "claude/simplify-dashboard-workspaces-AAvYq",
+  "timestamp": "2026-03-30T18:22:11Z",
+  "runId": "23760676490",
+  "healthStatus": "degraded"
+}
