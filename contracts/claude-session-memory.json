@@ -608,7 +608,7 @@
     "lastTriggerRun": 72,
     "lastSuccessfulRun": 71,
     "lastDeployPR": 197,
-    "pipelineStatus": "IN_PROGRESS — agent 2.3.3 (run #72) deploying cronjob callback",
+    "pipelineStatus": "CI_GATE_FAILED — agent 2.3.3 (run #72). ci-diagnose triggered (run #26). Check logs on autopilot-state.",
     "multiFilePayload": {
       "change_type": "multi-file",
       "changesFormat": [
@@ -1406,7 +1406,29 @@
     "lastTriggerRun": 72,
     "lastSuccessfulRun": 71,
     "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)",
-    "pendingDeploy": null
+    "pendingDeploy": {
+      "historia": "#930188",
+      "component": "agent",
+      "version": "2.3.3",
+      "triggerRun": 72,
+      "status": "CI_GATE_FAILED",
+      "nextStep": "Run ci-diagnose to get logs. If CI Gate false positive, re-trigger with skip_ci_wait:true. If real failure, fix patches and re-deploy.",
+      "patches": [
+        "patches/cronjob-callback.ts (Agent endpoint)",
+        "patches/agent-apis.ts (route registration)",
+        "patches/cronjob-callback.test.ts (unit tests)",
+        "patches/agent-swagger.json (swagger 2.3.3)"
+      ],
+      "controllerPending": {
+        "version": "3.7.1",
+        "patches": [
+          "patches/cronjob-result.controller.ts (Controller endpoint)",
+          "patches/cronjob-result.controller.test.ts (unit tests)",
+          "patches/agentsRouter.ts (route registration)"
+        ],
+        "status": "WAITING_FOR_AGENT"
+      }
+    }
   },
   "deployCompliancePipeline": {
     "_ref": "contracts/archive/static-reference.json#deployCompliancePipeline",
