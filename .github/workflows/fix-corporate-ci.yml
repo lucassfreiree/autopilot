@@ -23,6 +23,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: fix-corporate-ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 env:
   AUTOPILOT_REPO: lucassfreiree/autopilot
   STATE_BRANCH: autopilot-state

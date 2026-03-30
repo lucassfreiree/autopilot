@@ -34,6 +34,10 @@ permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: compliance-gate-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   # ═══════════════════════════════════════════
   # STAGE 1: Static Analysis (no network needed)

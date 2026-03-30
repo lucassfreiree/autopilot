@@ -1,7 +1,7 @@
 name: "[Core] Auto-Merge Sweeper"
 run-name: "${{ github.workflow }} • sweep open agent PRs"
 
-# DEFINITIVE auto-merge solution. Runs every minute.
+# DEFINITIVE auto-merge solution. Runs every 5 minutes.
 # Handles EVERYTHING automatically:
 # - Draft PRs → mark as ready
 # - Conflict PRs → update branch (rebase from main)
@@ -12,7 +12,7 @@ run-name: "${{ github.workflow }} • sweep open agent PRs"
 
 on:
   schedule:
-    - cron: '* * * * *'
+    - cron: '*/5 * * * *'
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch: {}

@@ -38,6 +38,10 @@ on:
         description: "Agent that blocked us (if any)"
         value: ${{ jobs.guard.outputs.blocked_by }}
 
+concurrency:
+  group: session-guard-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
 env:
   AUTOPILOT_REPO: lucassfreiree/autopilot
   STATE_BRANCH: autopilot-state

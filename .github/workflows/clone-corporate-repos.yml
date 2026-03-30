@@ -19,6 +19,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: clone-corporate-repos-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 env:
   AUTOPILOT_REPO: lucassfreiree/autopilot
 

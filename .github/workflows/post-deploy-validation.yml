@@ -23,6 +23,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: post-deploy-validation-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: "Post-Deploy Validation"
