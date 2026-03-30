@@ -1,18 +1,45 @@
 {
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
-  "component": "agent",
+  "component": "controller",
   "change_type": "multi-file",
-  "version": "2.3.3",
+  "version": "3.7.1",
   "changes": [
     {
+      "action": "search-replace",
+      "target_path": "package.json",
+      "search": "\"version\": \"3.7.0\"",
+      "replace": "\"version\": \"3.7.1\""
+    },
+    {
+      "action": "search-replace",
+      "target_path": "package-lock.json",
+      "search": "\"version\": \"3.7.0\"",
+      "replace": "\"version\": \"3.7.1\""
+    },
+    {
       "action": "replace-file",
-      "target_path": "src/__tests__/unit/cronjob-callback.test.ts",
-      "content_ref": "patches/cronjob-callback.test.ts"
+      "target_path": "src/swagger/swagger.json",
+      "content_ref": "patches/controller-swagger.json"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/cronjob-result.controller.ts",
+      "content_ref": "patches/cronjob-result.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/__tests__/unit/cronjob-result.controller.test.ts",
+      "content_ref": "patches/cronjob-result.controller.test.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/routes/agentsRouter.ts",
+      "content_ref": "patches/agentsRouter.ts"
     }
   ],
-  "commit_message": "fix(agent): fix body-parser strict mode in test (#930188)",
+  "commit_message": "feat(controller): add cronjob result endpoint (#930188)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 76
+  "run": 77
 }
