@@ -3,19 +3,19 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.7.2",
+  "version": "3.7.3",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.7.1\"",
-      "replace": "\"version\": \"3.7.2\""
+      "search": "\"version\": \"3.7.2\"",
+      "replace": "\"version\": \"3.7.3\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.1\"",
-      "replace": "\"version\": \"3.7.2\""
+      "search": "\"version\": \"3.7.2\"",
+      "replace": "\"version\": \"3.7.3\""
     },
     {
       "action": "replace-file",
@@ -58,8 +58,8 @@
       "content_ref": "patches/cronjob-result.controller.test.ts"
     }
   ],
-  "commit_message": "fix(controller): security fixes + fix test count expectation (#930188)",
+  "commit_message": "fix(security): harden XSS sanitization, SSRF validation and DoS loop bounds",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 80
+  "run": 81
 }
