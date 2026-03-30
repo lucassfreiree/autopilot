@@ -287,6 +287,11 @@ export async function postOasAutomation(
     const timeoutMs = readAgentCallTimeoutMs();
     const abort = new AbortController();
     const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
+    if (!validateTrustedUrl(trustedAgentUrl)) {
+      res.status(500).json({ ok: false, error: "Resolved agent URL is not trusted" });
+      return;
+    }
+
     let resp: Awaited<ReturnType<typeof fetch>>;
     try {
       resp = await fetch(trustedAgentUrl, {

@@ -492,6 +492,8 @@ export async function getExecutionSnapshot(
       ? summary.lastUpdateISO
       : traceStatus.lastUpdateAt;
 
+  const boundedMerged = merged.slice(0, MAX_ENTRIES_PER_EXEC);
+
   const currentSnapshot: ExecutionSnapshot = {
     ok: true,
     execId,
@@ -499,8 +501,8 @@ export async function getExecutionSnapshot(
     statusLabel: statusLabelFor(topStatus),
     finished: topStatus === "DONE" || topStatus === "ERROR",
     lastUpdate,
-    count: merged.length,
-    entries: merged,
+    count: boundedMerged.length,
+    entries: boundedMerged,
   };
 
   const persistedSnapshot = await loadPersistedExecutionSnapshot(execId);
@@ -599,9 +601,10 @@ export async function pushAgentExecutionLogs(
     return;
   }
 
-  const entries = Array.isArray(body.entries)
+  const rawEntries = Array.isArray(body.entries)
     ? (body.entries as AnyLogEntry[])
     : [];
+  const entries = rawEntries.slice(0, MAX_ENTRIES_PER_EXEC);
 
   const sourceRaw = typeof body.source === "string" ? body.source.trim() : "";
   const source = sourceRaw ? sourceRaw.toLowerCase() : "agent";
@@ -765,7 +768,9 @@ export async function getAgentExecutionLogs(
       ? Math.min(Math.floor(limitParsed), MAX_RESULTS)
       : MAX_RESULTS;
 
-  const filtered = payload.entries.filter((e) => {
+  const boundedPayloadEntries = payload.entries.slice(0, MAX_RESULTS);
+
+  const filtered = boundedPayloadEntries.filter((e) => {
     if (!hasTimeFilter && !limit) return true;
     const rec = isRecord(e) ? e : {};
     const ts = typeof rec.ts === "string" ? rec.ts : "";
