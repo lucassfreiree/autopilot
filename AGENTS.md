@@ -116,7 +116,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
-  audit/ (418 files)
+  audit/ (420 files)
   improvements/ (1 files)
   metrics/ (7 files)
   handoffs/ (1 files)
@@ -254,6 +254,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | autopilot-dispatcher.yml | [Core] Autopilot Dispatcher | manual |
 | backup-state.yml | [Core] Backup: State Snapshot | scheduled, manual |
 | bootstrap.yml | [Core] Bootstrap: Full Setup | manual |
+| builds-validation-gate.yml | [Core] Builds Validation Gate | scheduled, push, manual, PR |
 | check-repo-access.yml | [Corp] Check: Repo Access | push, manual |
 | ci-diagnose.yml | [Corp] CI: Diagnose Error Logs | trigger file, manual |
 | ci-failure-analysis.yml | [Agent] CI Failure Analysis | manual |
@@ -306,6 +307,9 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | test-corporate-flow.yml | [Corp] Test: Corporate E2E Flow | trigger file, manual |
 | test-full-flow.yml | [Corp] Test: Full Flow (Controller + Agent) | trigger file, manual |
 | token-auto-optimize.yml | [Core] Token Auto-Optimize | scheduled, manual |
+| workflow-auto-repair.yml | [Core] Workflow Auto-Repair | manual |
+| workflow-health-monitor.yml | [Core] Workflow Health Monitor | scheduled, manual |
+| workflow-sentinel.yml | [Core] Workflow Sentinel | scheduled, manual |
 | workspace-lock-gc.yml | [Core] Lock GC | scheduled, manual |
 
 
@@ -360,6 +364,9 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | test-corporate-flow.yml | workspace_id, dry_run |
 | test-full-flow.yml | workspace_id, test_type, include_lint_error |
 | token-auto-optimize.yml | dry_run |
+| workflow-auto-repair.yml | source, target_workflow, dry_run |
+| workflow-health-monitor.yml | lookback_hours, auto_repair |
+| workflow-sentinel.yml | force_repair |
 
 
 ---
@@ -406,4 +413,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | Handoff to Claude | Dispatch `enqueue-agent-handoff.yml`, `to_agent=claude` |
 
 ---
-*Last synced: 2026-03-30T00:44:58Z | Run: 23723116230*
+*Last synced: 2026-03-30T00:53:36Z | Run: 23723297610*
