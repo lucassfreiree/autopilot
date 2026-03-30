@@ -367,6 +367,8 @@ export async function getCronjobStatus(
 
   try {
     const snapshot = await getExecutionSnapshot(execId);
+    const MAX_STATUS_ENTRIES = 500;
+    const boundedEntries = snapshot.entries.slice(0, MAX_STATUS_ENTRIES);
 
     res.status(200).json({
       ok: true,
@@ -375,8 +377,8 @@ export async function getCronjobStatus(
       statusLabel: snapshot.statusLabel,
       finished: snapshot.finished,
       lastUpdate: snapshot.lastUpdate,
-      count: snapshot.count,
-      entries: snapshot.entries,
+      count: boundedEntries.length,
+      entries: boundedEntries,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

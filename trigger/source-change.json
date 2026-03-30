@@ -3,19 +3,19 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.7.1",
+  "version": "3.7.2",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.7.0\"",
-      "replace": "\"version\": \"3.7.1\""
+      "search": "\"version\": \"3.7.1\"",
+      "replace": "\"version\": \"3.7.2\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.0\"",
-      "replace": "\"version\": \"3.7.1\""
+      "search": "\"version\": \"3.7.1\"",
+      "replace": "\"version\": \"3.7.2\""
     },
     {
       "action": "replace-file",
@@ -24,22 +24,32 @@
     },
     {
       "action": "replace-file",
+      "target_path": "src/controllers/oas-sre-controller.controller.ts",
+      "content_ref": "patches/oas-sre-controller.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/oas-execute.controller.ts",
+      "content_ref": "patches/oas-execute.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/execute.controller.ts",
+      "content_ref": "patches/execute.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/agents-execute-logs.controller.ts",
+      "content_ref": "patches/agents-execute-logs.controller.ts"
+    },
+    {
+      "action": "replace-file",
       "target_path": "src/controllers/cronjob-result.controller.ts",
       "content_ref": "patches/cronjob-result.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/unit/cronjob-result.controller.test.ts",
-      "content_ref": "patches/cronjob-result.controller.test.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/routes/agentsRouter.ts",
-      "content_ref": "patches/agentsRouter.ts"
     }
   ],
-  "commit_message": "feat(controller): add cronjob result endpoint (#930188)",
+  "commit_message": "fix(controller): security fixes — XSS, SSRF, DoS-by-loop (#930188)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 77
+  "run": 78
 }

@@ -60,6 +60,12 @@ type AllowedImage = {
 
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 const DEFAULT_AGENT_CALL_TIMEOUT_MS = 35_000;
+const TRUSTED_AGENT_URL_PATTERN =
+  /^https?:\/\/(?!.*@)[a-zA-Z0-9._-]+(?::[0-9]{1,5})?(?:\/[^\s<>"']*)?$/;
+
+function validateTrustedUrl(url: string): boolean {
+  return Boolean(url) && TRUSTED_AGENT_URL_PATTERN.test(url);
+}
 
 function asRecord(value: unknown): JsonRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -76,6 +82,17 @@ function sanitizeForOutput(value: unknown): string {
     .replace(/[\r\n\t]+/g, " ")
     .trim()
     .slice(0, 256);
+}
+
+function sanitizeEnvValues(envs: JsonRecord): JsonRecord {
+  const result: JsonRecord = {};
+  for (const [key, value] of Object.entries(envs)) {
+    result[key] =
+      typeof value === "string"
+        ? value.replace(/[<>"'&]/g, "").replace(/[\r\n\t]+/g, " ").trim()
+        : value;
+  }
+  return result;
 }
 
 function safeLogValue(value: unknown): string {
@@ -270,7 +287,7 @@ function validateSreControllerPayload(body: unknown): ValidationResult {
   return {
     ok: true,
     image: imageRaw,
-    envs,
+    envs: sanitizeEnvValues(envs),
     clustersNames,
   };
 }
@@ -293,6 +310,9 @@ async function callAgent(
   headers: Record<string, string>,
   payload: unknown,
 ): Promise<{ status: number; ok: boolean }> {
+  if (!validateTrustedUrl(url)) {
+    return { status: 400, ok: false };
+  }
   const timeoutMs = readAgentCallTimeoutMs();
   const abort = new AbortController();
   const timeoutId = setTimeout(() => abort.abort(), timeoutMs);

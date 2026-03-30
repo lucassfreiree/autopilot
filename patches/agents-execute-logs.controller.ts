@@ -19,6 +19,8 @@ import { readSyncPollIntervalMs } from "../util/sync-poll-interval";
 
 export type ExecStatus = "RUNNING" | "PENDING" | "DONE" | "ERROR";
 
+const MAX_ENTRIES_PER_EXEC = 500;
+
 export type LogEntry = {
   ts: string;
   reqId?: string;
@@ -644,7 +646,9 @@ export async function pushAgentExecutionLogs(
       ? { ...normalizedBase, status: execStatus }
       : normalizedBase;
 
-    buf.push(normalized);
+    if (buf.length < MAX_ENTRIES_PER_EXEC) {
+      buf.push(normalized);
+    }
 
     const statusVal =
       typeof rec.status === "number" || typeof rec.status === "string"
