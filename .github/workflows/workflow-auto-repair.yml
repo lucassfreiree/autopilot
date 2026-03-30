@@ -216,8 +216,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Execute repairs
+        env:
+          REPAIRS_JSON: ${{ needs.diagnose.outputs.repairs }}
         run: |
-          REPAIRS='${{ needs.diagnose.outputs.repairs }}'
+          REPAIRS="$REPAIRS_JSON"
+          echo "$REPAIRS" | jq empty 2>/dev/null || REPAIRS='[]'
           APPLIED=0
           FAILED=0
 
@@ -308,12 +311,16 @@ jobs:
           echo "- Skipped (alert-only): $(echo "$REPAIRS" | jq '[.[] | select(.type == "alert-only")] | length')" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Save repair audit
+        env:
+          REPAIRS_JSON: ${{ needs.diagnose.outputs.repairs }}
         run: |
+          SAFE_REPAIRS="$REPAIRS_JSON"
+          echo "$SAFE_REPAIRS" | jq empty 2>/dev/null || SAFE_REPAIRS='[]'
           AUDIT=$(jq -n \
             --arg timestamp "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
             --arg source "${{ github.event.inputs.source || 'scheduled' }}" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --argjson repairs '${{ needs.diagnose.outputs.repairs }}' \
+            --argjson repairs "$SAFE_REPAIRS" \
             '{timestamp: $timestamp, source: $source, runUrl: $run_url, repairs: $repairs}')
 
           AUDIT_B64=$(echo "$AUDIT" | base64 -w0)

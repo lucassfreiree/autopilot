@@ -122,7 +122,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          set -e
+          # No set -e — scan must complete even if individual checks fail
           SCOPE="${{ needs.setup.outputs.scope }}"
           ISSUES='[]'
           TOTAL=0; CRIT=0; HIGH=0; MED=0; LOW=0; FIXABLE=0
@@ -130,7 +130,7 @@ jobs:
           add_issue() {
             local SEV="$1" FILE="$2" DESC="$3" FIX="$4"
             ISSUES=$(echo "$ISSUES" | jq --arg s "$SEV" --arg f "$FILE" --arg d "$DESC" --arg fix "$FIX" \
-              '. + [{severity:$s, file:$f, description:$d, autoFixable:($fix == "true")}]')
+              '. + [{severity:$s, file:$f, description:$d, autoFixable:($fix == "true")}]' 2>/dev/null || echo "$ISSUES")
             TOTAL=$((TOTAL + 1))
             case "$SEV" in
               critical) CRIT=$((CRIT + 1)) ;;

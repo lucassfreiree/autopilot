@@ -233,11 +233,16 @@ jobs:
     steps:
       - name: Build action plan
         id: plan
+        env:
+          IN_FAILING: ${{ needs.observe.outputs.failing_workflows }}
+          IN_KB: ${{ needs.observe.outputs.knowledge_base }}
         run: |
           HEALTH="${{ needs.observe.outputs.ecosystem_health }}"
-          FAILING='${{ needs.observe.outputs.failing_workflows }}'
+          FAILING="$IN_FAILING"
+          echo "$FAILING" | jq empty 2>/dev/null || FAILING='[]'
           DASH_STALE="${{ needs.observe.outputs.dashboard_stale }}"
-          KB='${{ needs.observe.outputs.knowledge_base }}'
+          KB="$IN_KB"
+          echo "$KB" | jq empty 2>/dev/null || KB='{}'
 
           ACTIONS="[]"
 
@@ -347,8 +352,12 @@ jobs:
     steps:
       - name: Execute action plan
         id: execute
+        env:
+          ACTION_PLAN: ${{ needs.decide.outputs.action_plan }}
         run: |
-          PLAN='${{ needs.decide.outputs.action_plan }}'
+          PLAN="$ACTION_PLAN"
+          # Validate JSON
+          echo "$PLAN" | jq empty 2>/dev/null || PLAN='[]'
           RESULTS="[]"
           SUCCESS=0
           FAILED=0
@@ -424,11 +433,19 @@ jobs:
       GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
       - name: Update knowledge base
+        env:
+          IN_HEALTH: ${{ needs.observe.outputs.ecosystem_health || 'unknown' }}
+          IN_FAILING: ${{ needs.observe.outputs.failing_workflows || '[]' }}
+          IN_RESULTS: ${{ needs.act.outputs.results || '[]' }}
+          IN_KB: ${{ needs.observe.outputs.knowledge_base || '{}' }}
         run: |
-          HEALTH="${{ needs.observe.outputs.ecosystem_health || 'unknown' }}"
-          FAILING='${{ needs.observe.outputs.failing_workflows || '[]' }}'
-          RESULTS='${{ needs.act.outputs.results || '[]' }}'
-          KB='${{ needs.observe.outputs.knowledge_base || '{}' }}'
+          HEALTH="$IN_HEALTH"
+          FAILING="$IN_FAILING"
+          echo "$FAILING" | jq empty 2>/dev/null || FAILING='[]'
+          RESULTS="$IN_RESULTS"
+          echo "$RESULTS" | jq empty 2>/dev/null || RESULTS='[]'
+          KB="$IN_KB"
+          echo "$KB" | jq empty 2>/dev/null || KB='{}'
           NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 
           # Build learning entry
@@ -489,7 +506,8 @@ jobs:
             --jq '.[0].number // ""' 2>/dev/null || echo "")
 
           if [ -z "$EXISTING" ]; then
-            FAILING='${{ needs.observe.outputs.failing_workflows || '[]' }}'
+            FAILING="${{ needs.observe.outputs.failing_workflows }}"
+            echo "$FAILING" | jq empty 2>/dev/null || FAILING='[]'
             FAILING_DETAIL=$(echo "$FAILING" | jq -r '.[] | select(.consecutive >= 5) | "- **\(.name)**: \(.consecutive) consecutive failures"' 2>/dev/null || echo "- Details unavailable")
 
             gh api "repos/$REPO/issues" \
