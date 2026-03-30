@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-30T15:00:00Z",
+  "lastUpdated": "2026-03-30T15:30:00Z",
   "lastSessionId": "session_01N6wTVvkGd7Hs1zMtus8i5i",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1429,7 +1429,8 @@
         "O unico motivo para perguntar: credencial ausente ou decisao de negocio irreversivel"
       ]
     },
-    "dashboard_state_empty": "CRITICO: state.json foi escrito VAZIO (0 bytes) pelo step 7 do spark-sync-state porque steps.state.outputs.state_b64 ficou vazio (limite de tamanho GHA outputs). FIX: mover o update do panel/dashboard/state.json para DENTRO do collect-state.sh (mesmo processo, sem output cross-step). SEMPRE validar STATE_B64 > 100 chars antes de escrever."
+    "dashboard_state_empty": "CRITICO: state.json foi escrito VAZIO (0 bytes) pelo step 7 do spark-sync-state porque steps.state.outputs.state_b64 ficou vazio (limite de tamanho GHA outputs). FIX: mover o update do panel/dashboard/state.json para DENTRO do collect-state.sh (mesmo processo, sem output cross-step). SEMPRE validar STATE_B64 > 100 chars antes de escrever.",
+    "skills_and_intelligence": "Skills em .claude/skills/ (devops-sre-cloud, observability, security-expert). Rules em .claude/rules/autonomous-devops-sre.md. Sync workflow: sync-community-resources.yml (weekly). Security hook PreToolUse bloqueia rm -rf, DROP TABLE, curl|sh. SEMPRE mapear novos artefatos no CLAUDE.md e session memory no MESMO commit."
   },
   "deployFlowGuide": {
     "_ref": "contracts/archive/static-reference.json#deployFlowGuide",
@@ -1529,5 +1530,45 @@
       "Fixed: autonomous-merge-direct.yml — queued filter bug causing instant merge without compliance gate",
       "Fixed: apply-source-change.yml — Stage 7 added to dispatch ci-monitor-loop explicitly"
     ]
+  },
+  "communityIntelligence": {
+    "description": "Auto-synced intelligence from community sources to turbocharge DevOps/SRE/Cloud/Observability capabilities",
+    "sources": [
+      {
+        "name": "anthropics/skills",
+        "url": "https://github.com/anthropics/skills",
+        "focus": "Official Anthropic skill patterns (17 skills)"
+      },
+      {
+        "name": "hesreallyhim/awesome-claude-code",
+        "url": "https://github.com/hesreallyhim/awesome-claude-code",
+        "focus": "Community hooks, slash commands, CLAUDE.md patterns, tooling"
+      },
+      {
+        "name": "hesreallyhim/a-list-of-claude-code-agents",
+        "url": "https://github.com/hesreallyhim/a-list-of-claude-code-agents",
+        "focus": "Agent orchestration patterns, SRE incident agent, observability agent"
+      },
+      {
+        "name": "awesomeclaude.ai",
+        "url": "https://awesomeclaude.ai",
+        "focus": "Curated best practices"
+      }
+    ],
+    "syncWorkflow": "sync-community-resources.yml",
+    "schedule": "Every Monday 07:00 UTC",
+    "securityNotes": "ToxicSkills (Snyk Feb 2026): 13.4% public skills have critical vulns. All content validated before apply. Corporate identifiers stripped.",
+    "skillsInstalled": [
+      ".claude/skills/devops-sre-cloud.md",
+      ".claude/skills/observability.md",
+      ".claude/skills/security-expert.md"
+    ],
+    "rulesInstalled": [
+      ".claude/rules/autonomous-devops-sre.md"
+    ],
+    "securityHooks": {
+      "PreToolUse_Bash": "Blocks destructive patterns: rm -rf, DROP TABLE, curl|sh, dd if=, chmod 777",
+      "inspiraton": "Dippy (awesome-claude-code) + parry (prompt injection scanner)"
+    }
   }
 }

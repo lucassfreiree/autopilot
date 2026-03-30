@@ -35,6 +35,16 @@ Zero local dependencies. 100% GitHub-native.
 - `patches/` — Source code patches applied to corporate repos via apply-source-change pipeline
 - `references/` — Reference files from corporate repos not yet migrated to GitHub
   - `references/controller-cap/values.yaml` — Controller CAP values.yaml (source: GitHub `bbvinet/psc_releases_cap_sre-aut-controller`, auto-promoted by Stage 4)
+- `.claude/skills/` — Autonomous specialist skills (DevOps/SRE/Cloud/Observability/Security)
+  - `.claude/skills/devops-sre-cloud.md` — K8s, Terraform, CI/CD, AWS/Azure/GCP, production IaC
+  - `.claude/skills/observability.md` — Prometheus, Grafana, Loki, OpenTelemetry, SLO framework
+  - `.claude/skills/security-expert.md` — OWASP, container hardening, supply chain, prompt injection
+- `.claude/rules/` — Behavior rules for Claude Code
+  - `.claude/rules/autonomous-devops-sre.md` — Autonomous DevOps/SRE specialist behavior
+  - `.claude/rules/token-efficiency.md` — Token usage optimization rules
+  - `.claude/rules/token-auto-optimization.md` — Auto-optimization for token costs
+  - `.claude/rules/cost-reduction-mandate.md` — Owner directive for cost minimization
+- `.claude/intelligence/` — Auto-generated community intelligence sync reports
 - `ops/` — Operational environment (scripts, runbooks, templates, checklists)
   - `ops/ops-config.json` — Operational environment master config
   - `ops/scripts/` — Executable operational scripts by domain
@@ -591,6 +601,7 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | token-auto-optimize.yml | Daily token usage optimization (compact memory, archive old sessions) |
 | sync-copilot-prompt.yml | Auto-regenerates Copilot prompt when project changes |
 | sync-spark-dashboard.yml | Sync workflows + HTML from autopilot references to spark-dashboard repo |
+| sync-community-resources.yml | Weekly auto-sync intelligence from anthropics/skills, awesome-claude-code, a-list-of-agents. Security-validated. |
 
 ### Codex Automation
 | Workflow | Purpose |
