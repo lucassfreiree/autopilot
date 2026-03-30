@@ -1570,5 +1570,33 @@
       "PreToolUse_Bash": "Blocks destructive patterns: rm -rf, DROP TABLE, curl|sh, dd if=, chmod 777",
       "inspiraton": "Dippy (awesome-claude-code) + parry (prompt injection scanner)"
     }
+  },
+  "centralizedAgentModel": {
+    "description": "Operations centralized in Claude Code + GitHub. Codex/Copilot/Gemini/ChatGPT workflows DISABLED.",
+    "activeAgent": "Claude Code",
+    "disabledWorkflows": [
+      "codex-apply.yml",
+      "codex-deploy.yml",
+      "codex-autonomous-pr.yml",
+      "sync-codex-prompt.yml",
+      "auto-pr-codex.yml",
+      "copilot-post-deploy-sync.yml",
+      "copilot-setup-steps.yml",
+      "copilot-task-dispatch.yml",
+      "sync-copilot-prompt.yml",
+      "agent-bridge.yml",
+      "agent-sync.yml",
+      "autopilot-dispatcher.yml"
+    ],
+    "disabledTriggers": [
+      "trigger/codex-commit.json",
+      "trigger/codex-deploy.json",
+      "trigger/agent-bridge.json",
+      "trigger/agent-sync.json",
+      "trigger/copilot-task.json"
+    ],
+    "reason": "Owner directive: centralize in Claude Code + GitHub. No Codex/Copilot/Gemini.",
+    "date": "2026-03-30",
+    "safetyValidation": "Verified no downstream breakage: apply-source-change, deploy-auto-learn, post-deploy-validation, deploy-pipeline-monitor all independent"
   }
 }
