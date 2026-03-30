@@ -58,9 +58,8 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           BBVINET_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
-          # NOTE: Do NOT use pipefail here — pipes with `gh api | base64 || echo`
-          # fail with pipefail because the first command's exit code propagates.
-          set -e
+          # No set -e: each command handles its own errors with || fallbacks
+          # This prevents cascading failures from API calls that return non-zero
 
           # ── Release states from autopilot-state (what AUTOPILOT thinks) ──
           CTRL_STATE=$(gh api "repos/${{ github.repository }}/contents/state/workspaces/ws-default/controller-release-state.json?ref=autopilot-state" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
@@ -133,29 +132,9 @@ jobs:
           # Agent latest commits
           AGENT_LATEST_COMMITS=$(GH_TOKEN="${BBVINET_TOKEN:-$GH_TOKEN}" gh api "repos/bbvinet/psc-sre-automacao-agent/commits?per_page=5" --jq '[.[:5] | .[] | {sha: .sha[:8], message: .commit.message[:80], author: .commit.author.name, date: .commit.author.date}]' 2>/dev/null || echo '[]')
 
-          # ══════════════════════════════════════════════════════════
-          # ── BUILD STATUS per commit (correlate builds with SHAs) ──
-          # ══════════════════════════════════════════════════════════
+          # Build status — simplified to avoid fragile for-loops
           CTRL_BUILDS="[]"
-          if [ -n "$BBVINET_TOKEN" ]; then
-            # Get check-runs for last 3 commits on controller
-            for SHA in $(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/bbvinet/psc-sre-automacao-controller/commits?per_page=3" --jq '.[].sha' 2>/dev/null); do
-              BUILD=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/bbvinet/psc-sre-automacao-controller/commits/$SHA/check-runs" --jq '{sha: "'${SHA:0:8}'", total: .total_count, checks: [.check_runs[:5][] | {name: .name, status: .status, conclusion: .conclusion}]}' 2>/dev/null || echo '{}')
-              if [ -n "$BUILD" ] && [ "$BUILD" != "{}" ]; then
-                CTRL_BUILDS=$(echo "$CTRL_BUILDS" | jq --argjson b "$BUILD" '. + [$b]')
-              fi
-            done
-          fi
-
           AGENT_BUILDS="[]"
-          if [ -n "$BBVINET_TOKEN" ]; then
-            for SHA in $(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/bbvinet/psc-sre-automacao-agent/commits?per_page=3" --jq '.[].sha' 2>/dev/null); do
-              BUILD=$(GH_TOKEN="$BBVINET_TOKEN" gh api "repos/bbvinet/psc-sre-automacao-agent/commits/$SHA/check-runs" --jq '{sha: "'${SHA:0:8}'", total: .total_count, checks: [.check_runs[:5][] | {name: .name, status: .status, conclusion: .conclusion}]}' 2>/dev/null || echo '{}')
-              if [ -n "$BUILD" ] && [ "$BUILD" != "{}" ]; then
-                AGENT_BUILDS=$(echo "$AGENT_BUILDS" | jq --argjson b "$BUILD" '. + [$b]')
-              fi
-            done
-          fi
 
           echo "::notice ::Real versions — Controller: $CTRL_REAL_VER (CAP: $CTRL_CAP_TAG), Agent: $AGENT_REAL_VER (CAP: $AGENT_CAP_TAG)"
 
@@ -192,14 +171,17 @@ jobs:
               --jq '[.[] | {number: .number, title: .title, author: .user.login, branch: .head.ref, created: .created_at, draft: .draft}]' 2>/dev/null || echo '[]')
           fi
 
-          # Detect external activity (commits NOT by github-actions bot = human dev)
-          CTRL_EXTERNAL_COMMITS=$(echo "$CTRL_LATEST_COMMITS" | jq '[.[] | select(.author != "github-actions[bot]" and .author != "github-actions")]' 2>/dev/null || echo '[]')
-          AGENT_EXTERNAL_COMMITS=$(echo "$AGENT_LATEST_COMMITS" | jq '[.[] | select(.author != "github-actions[bot]" and .author != "github-actions")]' 2>/dev/null || echo '[]')
+          # Detect external activity
+          CTRL_EXTERNAL_COMMITS=$(echo "$CTRL_LATEST_COMMITS" | jq -c '[.[]? | select(.author != "github-actions[bot]" and .author != "github-actions")]' 2>/dev/null || echo '[]')
+          AGENT_EXTERNAL_COMMITS=$(echo "$AGENT_LATEST_COMMITS" | jq -c '[.[]? | select(.author != "github-actions[bot]" and .author != "github-actions")]' 2>/dev/null || echo '[]')
 
-          echo "::notice ::Controller branches: $(echo "$CTRL_BRANCHES" | jq 'length'), external commits: $(echo "$CTRL_EXTERNAL_COMMITS" | jq 'length'), open PRs: $(echo "$CTRL_PRS" | jq 'length')"
-          echo "::notice ::Agent branches: $(echo "$AGENT_BRANCHES" | jq 'length'), external commits: $(echo "$AGENT_EXTERNAL_COMMITS" | jq 'length'), open PRs: $(echo "$AGENT_PRS" | jq 'length')"
+          echo "::notice ::Data collection complete"
 
-          # ── Build comprehensive state.json with FULL intelligence ──
+          # Pre-compute improvements to avoid nested pipe in argjson
+          IMPROVEMENTS=$(cat contracts/improvement-history.json 2>/dev/null | jq -c '{summary:.summary,count:(.improvements|length),latest:(.improvements[:3]|map({id,date,type,title}))}' 2>/dev/null || echo 'null')
+          [ -z "$IMPROVEMENTS" ] && IMPROVEMENTS='null'
+
+          # ── Build comprehensive state.json ──
           jq -n \
             --argjson ctrl "$CTRL_STATE" \
             --argjson agent "$AGENT_STATE" \
@@ -228,7 +210,7 @@ jobs:
             --argjson agent_prs "$AGENT_PRS" \
             --argjson ctrl_ext "$CTRL_EXTERNAL_COMMITS" \
             --argjson agent_ext "$AGENT_EXTERNAL_COMMITS" \
-            --argjson improvements "$(cat contracts/improvement-history.json 2>/dev/null | jq -c '{summary:.summary,count:(.improvements|length),latest:(.improvements[:3]|map({id,date,type,title,"impact":.impact}))}' 2>/dev/null || echo 'null')" \
+            --argjson improvements "$IMPROVEMENTS" \
             '{
               lastSync: now | strftime("%Y-%m-%dT%H:%M:%SZ"),
               syncSource: "autopilot/spark-sync-state.yml",
@@ -454,8 +436,17 @@ jobs:
               }
             }' > /tmp/state.json
 
-          cat /tmp/state.json | jq '.lastSync'
-          echo "state_b64=$(base64 -w0 /tmp/state.json)" >> "$GITHUB_OUTPUT"
+          STATE_SIZE=$(wc -c < /tmp/state.json)
+          echo "::notice ::state.json size: ${STATE_SIZE} bytes"
+          cat /tmp/state.json | jq -r '.lastSync' || echo "?"
+
+          # Write base64 to file instead of GITHUB_OUTPUT (avoids 1MB limit)
+          base64 -w0 /tmp/state.json > /tmp/state_b64.txt
+          B64_SIZE=$(wc -c < /tmp/state_b64.txt)
+          echo "::notice ::base64 size: ${B64_SIZE} bytes"
+
+          # Use GITHUB_OUTPUT only for small flag
+          echo "has_state=true" >> "$GITHUB_OUTPUT"
 
       - name: Push state to Spark repo
         if: steps.config.outputs.skip != 'true'
@@ -463,7 +454,8 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           SPARK_REPO="${{ steps.config.outputs.repo }}"
-          STATE_B64="${{ steps.state.outputs.state_b64 }}"
+          STATE_B64=$(cat /tmp/state_b64.txt 2>/dev/null || echo "")
+          if [ -z "$STATE_B64" ]; then echo "::warning ::No state to push"; exit 0; fi
 
           EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/public/state.json" --jq '.sha' 2>/dev/null || echo "")
 
@@ -512,11 +504,12 @@ jobs:
           fi
 
       - name: Update panel/dashboard/state.json (GitHub Pages)
-        if: always() && steps.state.outputs.state_b64 != ''
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          STATE_B64="${{ steps.state.outputs.state_b64 }}"
+          STATE_B64=$(cat /tmp/state_b64.txt 2>/dev/null || echo "")
+          if [ -z "$STATE_B64" ]; then echo "::warning ::No state to push"; exit 0; fi
           REPO="${{ github.repository }}"
           FILE_PATH="panel/dashboard/state.json"
 
