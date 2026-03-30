@@ -198,9 +198,9 @@ jobs:
           echo "ecosystem_health=$HEALTH" >> "$GITHUB_OUTPUT"
           echo "failing_count=$FAILING_COUNT" >> "$GITHUB_OUTPUT"
           echo "failing_workflows=$(echo "$FAILING" | jq -c '.' 2>/dev/null || echo '[]')" >> "$GITHUB_OUTPUT"
-          echo "stale_monitors=$(echo -e "$STALE_MONITORS" | head -20)" >> "$GITHUB_OUTPUT"
+          echo "stale_monitors=$(echo -e "$STALE_MONITORS" | head -20 | tr '\n' '|')" >> "$GITHUB_OUTPUT"
           echo "dashboard_stale=$DASH_STALE" >> "$GITHUB_OUTPUT"
-          echo "trigger_anomalies=$(echo -e "$TRIGGER_ISSUES" | head -10)" >> "$GITHUB_OUTPUT"
+          echo "trigger_anomalies=$(echo -e "$TRIGGER_ISSUES" | head -10 | tr '\n' '|')" >> "$GITHUB_OUTPUT"
           echo "needs_action=$NEEDS_ACTION" >> "$GITHUB_OUTPUT"
           echo "knowledge_base=$(echo "$KB" | jq -c '.' 2>/dev/null || echo '{}')" >> "$GITHUB_OUTPUT"
 

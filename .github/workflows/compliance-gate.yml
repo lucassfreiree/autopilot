@@ -295,6 +295,7 @@ jobs:
               replace-file)
                 CONTENT_REF=$(echo "$ch" | jq -r '.content_ref')
                 if [ -f "$CONTENT_REF" ]; then
+                  mkdir -p "/tmp/corporate/$(dirname "$TARGET")"
                   cp "$CONTENT_REF" "/tmp/corporate/$TARGET"
                   echo "✅ replace-file: $TARGET from $CONTENT_REF"
                 else
