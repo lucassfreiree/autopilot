@@ -1371,5 +1371,13 @@
       "totalUsers": 2,
       "implication": "Always use cheapest model possible. Minimize unnecessary reads. Batch operations aggressively. Be aware that real remaining budget may be less than estimated."
     }
+  },
+  "dashboardSyncIssue": {
+    "problem": "state.json not updating since 2026-03-29T13:49:55Z. Fix PR #334 merged but sync may still be failing.",
+    "rootCause": "SHA conflicts when writing to panel/dashboard/state.json via GitHub API + [skip ci] preventing Pages deploy",
+    "fixApplied": "PR #334 — retry 3x with fresh SHA, removed [skip ci], added error logging",
+    "sourceOfTruth": "CAP repo values.yaml image tag (bbvinet/psc_releases_cap_sre-aut-controller and agent)",
+    "mustVerify": "Check if spark-sync-state runs are completing successfully after PR #334",
+    "agentVersionDiscrepancy": "autopilot-state says 2.3.2 promoted, but state.json shows 2.3.1 because sync is stale"
   }
 }

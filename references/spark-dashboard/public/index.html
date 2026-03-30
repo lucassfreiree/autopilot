@@ -806,25 +806,10 @@
 
         ${ctrlVer!=='—'||agentVer!=='—'?`
         <div class="grid-4" style="margin-bottom:16px">
-          <div class="card" style="padding:12px"><div class="card-title">Controller</div><div class="card-value" style="color:var(--${statusColor(isDefault?c.ciResult:'idle')})">${esc(ctrlVer)}</div><div class="card-sub">${isDefault?badge(c.ciResult||'?'):''} ${isDefault&&c.promoted?badge('promoted','green'):''}</div></div>
-          <div class="card" style="padding:12px"><div class="card-title">Agent</div><div class="card-value" style="color:var(--${statusColor(isDefault?a.ciResult:'idle')})">${esc(agentVer)}</div><div class="card-sub">${isDefault?badge(a.ciResult||'?'):''} ${isDefault&&a.promoted?badge('promoted','green'):''}</div></div>
+          <div class="card" style="padding:12px"><div class="card-title">Controller</div><div class="card-value" style="color:var(--${statusColor(isDefault?c.ciResult:'idle')})">${isDefault&&cc.capTag&&cc.capTag!=='?'?esc(cc.capTag):esc(ctrlVer)}</div><div class="card-sub">${isDefault?badge(c.ciResult||'?'):''} ${isDefault&&c.promoted?badge('promoted','green'):''} ${isDefault&&cc.capTag&&cc.capTag!=='?'?'<span style="font-size:10px;color:var(--muted)">CAP</span>':''}</div></div>
+          <div class="card" style="padding:12px"><div class="card-title">Agent</div><div class="card-value" style="color:var(--${statusColor(isDefault?a.ciResult:'idle')})">${isDefault&&ca.capTag&&ca.capTag!=='?'?esc(ca.capTag):esc(agentVer)}</div><div class="card-sub">${isDefault?badge(a.ciResult||'?'):''} ${isDefault&&a.promoted?badge('promoted','green'):''} ${isDefault&&ca.capTag&&ca.capTag!=='?'?'<span style="font-size:10px;color:var(--muted)">CAP</span>':''}</div></div>
           <div class="card" style="padding:12px"><div class="card-title">Last Run</div><div class="card-value">#${isDefault?p.lastRun||0:0}</div><div class="card-sub">${badge(isDefault?p.status||'idle':'idle')}</div></div>
           <div class="card" style="padding:12px"><div class="card-title">Pipeline</div><div class="card-value" style="color:var(--${statusColor(w.pipelineStatus||'idle')})">${esc(w.pipelineStatus||'idle')}</div></div>
-        </div>`:''}
-
-        ${isDefault&&(cc.sourceVersion||ca.sourceVersion)?`
-        <div class="section"><h3>Corporate Reality</h3>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Real versions read directly from corporate repos (bbvinet/*). Last check: ${fmtDate(corp.lastChecked)}</div>
-          <div class="grid-2">
-            <div class="card" style="padding:12px"><div class="card-title">Controller (Real)</div>
-              <div style="font-size:18px;font-weight:700;color:var(--${cc.drift?'red':'green'})">${esc(cc.sourceVersion||'?')}</div>
-              <div class="card-sub">CAP: ${esc(cc.capTag||'?')} ${cc.drift?badge('DRIFT','red'):badge('synced','green')}</div>
-            </div>
-            <div class="card" style="padding:12px"><div class="card-title">Agent (Real)</div>
-              <div style="font-size:18px;font-weight:700;color:var(--${ca.drift?'red':'green'})">${esc(ca.sourceVersion||'?')}</div>
-              <div class="card-sub">CAP: ${esc(ca.capTag||'?')} ${ca.drift?badge('DRIFT','red'):badge('synced','green')}</div>
-            </div>
-          </div>
         </div>`:''}
 
         ${ctx&&ctx.links.length?`
