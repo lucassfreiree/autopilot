@@ -589,6 +589,7 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | dispatch-proxy.yml | Operations dispatch proxy for multi-workspace routing |
 | token-auto-optimize.yml | Daily token usage optimization (compact memory, archive old sessions) |
 | sync-copilot-prompt.yml | Auto-regenerates Copilot prompt when project changes |
+| sync-spark-dashboard.yml | Sync workflows + HTML from autopilot references to spark-dashboard repo |
 
 ### Codex Automation
 | Workflow | Purpose |

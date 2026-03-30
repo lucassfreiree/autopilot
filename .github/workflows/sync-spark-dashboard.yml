@@ -1,0 +1,69 @@
+name: "[Infra] Sync Spark Dashboard Repo"
+run-name: "${{ github.workflow }} • push workflows + HTML to spark-dashboard"
+
+# Syncs autopilot reference files to the spark-dashboard repo.
+# Pushes: auto-merge-dependabot.yml, dependabot.yml, index.html
+# Uses RELEASE_TOKEN which has repo scope on all user repos.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'references/spark-dashboard/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-spark-repo
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: "Sync to spark-dashboard"
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      SPARK_REPO: lucassfreiree/spark-dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync workflow files
+        run: |
+          # Push auto-merge-dependabot.yml
+          FILE="references/spark-dashboard/.github/workflows/auto-merge-dependabot.yml"
+          if [ -f "$FILE" ]; then
+            CONTENT_B64=$(base64 -w0 < "$FILE")
+            EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/.github/workflows/auto-merge-dependabot.yml" --jq '.sha' 2>/dev/null || echo "")
+
+            PAYLOAD=$(jq -n \
+              --arg content "$CONTENT_B64" \
+              --arg sha "$EXISTING_SHA" \
+              --arg message "chore: sync auto-merge-dependabot.yml from autopilot [auto]" \
+              '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)')
+
+            gh api "repos/$SPARK_REPO/contents/.github/workflows/auto-merge-dependabot.yml" \
+              --method PUT --input - <<< "$PAYLOAD" > /dev/null 2>&1 && \
+              echo "::notice ::auto-merge-dependabot.yml synced" || \
+              echo "::warning ::Failed to sync auto-merge-dependabot.yml"
+          fi
+
+      - name: Sync dashboard HTML
+        run: |
+          FILE="references/spark-dashboard/public/index.html"
+          if [ -f "$FILE" ]; then
+            CONTENT_B64=$(base64 -w0 < "$FILE")
+            EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/public/index.html" --jq '.sha' 2>/dev/null || echo "")
+
+            PAYLOAD=$(jq -n \
+              --arg content "$CONTENT_B64" \
+              --arg sha "$EXISTING_SHA" \
+              --arg message "chore: sync dashboard HTML from autopilot [auto]" \
+              '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)')
+
+            gh api "repos/$SPARK_REPO/contents/public/index.html" \
+              --method PUT --input - <<< "$PAYLOAD" > /dev/null 2>&1 && \
+              echo "::notice ::index.html synced" || \
+              echo "::warning ::Failed to sync index.html"
+          fi
