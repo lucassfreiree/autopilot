@@ -416,3 +416,4 @@ fi
 
 jq -r '.lastSync' /tmp/state.json 2>/dev/null || echo "unknown"
 echo "state_b64=$(base64 -w0 /tmp/state.json)" >> "$GITHUB_OUTPUT"
+echo "state_ready=true" >> "$GITHUB_OUTPUT"
