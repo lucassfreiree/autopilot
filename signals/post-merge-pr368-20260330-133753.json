@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 368,
+  "branch": "claude/ci-diagnose-agent-2.3.3-run73",
+  "timestamp": "2026-03-30T13:37:53Z",
+  "runId": "23747634436",
+  "healthStatus": "degraded"
+}
