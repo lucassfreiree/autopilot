@@ -446,6 +446,7 @@ The **apply-source-change.yml** pipeline runs in 7 stages:
 | session-guard.yml | [Core] Session Guard | reusable |
 | spark-sync-state.yml | [Infra] Spark Dashboard Sync | scheduled, trigger file, manual |
 | sync-codex-prompt.yml | [Infra] Sync Codex Prompt | trigger file, manual |
+| sync-spark-dashboard.yml | [Infra] Sync Spark Dashboard Repo | push, manual |
 | test-corporate-flow.yml | [Corp] Test: Corporate E2E Flow | trigger file, manual |
 | test-full-flow.yml | [Corp] Test: Full Flow (Controller + Agent) | trigger file, manual |
 | token-auto-optimize.yml | [Core] Token Auto-Optimize | scheduled, manual |
@@ -698,4 +699,4 @@ Rules:
 
 
 ---
-*Last synced: 2026-03-30T11:06:17Z | Run: 23741586981*
+*Last synced: 2026-03-30T12:17:04Z | Run: 23744247088*
