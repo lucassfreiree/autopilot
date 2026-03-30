@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 381,
+  "branch": "claude/fix-ci-autonomous-loop",
+  "timestamp": "2026-03-30T18:39:40Z",
+  "runId": "23761439729",
+  "healthStatus": "degraded"
+}
