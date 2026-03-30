@@ -74,6 +74,9 @@ HEALTH=$(safe_content "repos/$REPO/contents/state/workspaces/ws-default/health.j
 # ── CI Monitor state ──
 CI_MONITOR=$(safe_content "repos/$REPO/contents/state/workspaces/ws-default/ci-monitor-controller.json?ref=autopilot-state" '{}')
 
+# ── Deploy Pipeline Monitor state ──
+PIPELINE_STATUS=$(safe_content "repos/$REPO/contents/state/workspaces/ws-default/pipeline-status.json?ref=autopilot-state" '{}')
+
 # ══════════════════════════════════════════════════════════
 # ── REAL CORPORATE VERSIONS (source of truth from repos) ──
 # ══════════════════════════════════════════════════════════
@@ -198,6 +201,7 @@ jq -n \
   --argjson ctrl_ext "$CTRL_EXTERNAL_COMMITS" \
   --argjson agent_ext "$AGENT_EXTERNAL_COMMITS" \
   --argjson improvements "$IMPROVEMENTS" \
+  --argjson pipeline_status "$PIPELINE_STATUS" \
   '{
     lastSync: now | strftime("%Y-%m-%dT%H:%M:%SZ"),
     syncSource: "autopilot/spark-sync-state.yml",
@@ -271,6 +275,7 @@ jq -n \
 
     health: $health,
     ciMonitor: $ci_monitor,
+    pipelineStatus: $pipeline_status,
 
     workspaces: [
       {

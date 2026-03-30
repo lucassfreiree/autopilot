@@ -467,6 +467,10 @@
           <div id="improvementsContent" class="empty">Select workspace</div>
         </div>
         <div class="card" style="grid-column: 1 / -1">
+          <h3>Deploy Pipeline Status</h3>
+          <div id="pipelineMonitorContent" class="empty">Select workspace</div>
+        </div>
+        <div class="card" style="grid-column: 1 / -1">
           <h3>Recent Audit</h3>
           <div id="auditContent" class="empty">Select workspace</div>
         </div>
@@ -661,6 +665,28 @@
           <tr><th>Status</th><td>${badge(agent.status)}</td></tr>
         </table>`;
       } else { agentEl.innerHTML = '<div class="empty">Never released</div>'; }
+
+      // Deploy Pipeline Monitor
+      const pipelineMonEl = document.getElementById('pipelineMonitorContent');
+      const ps = await ghContent(`${wsPath}/pipeline-status.json`);
+      if (ps && ps.components) {
+        const healthColor = ps.overallHealth === 'ok' ? 'var(--green)' : ps.overallHealth === 'degraded' ? 'var(--warn)' : 'var(--red)';
+        const stageIcon = s => ({ 'complete': '✅', 'ci-passed': '✅', 'ci-monitoring': '🔄', 'deploy-recent-waiting': '⏳', 'stuck-no-monitor': '⚠️', 'ci-failed': '❌', 'ci-timeout': '⚠️', 'auto-fixing': '🔧', 'idle': '—', 'no-deploy': '—' }[s] || '?');
+        let html = `<div style="margin-bottom:8px;font-size:12px;color:var(--muted)">Updated: ${ps.updatedAt} &nbsp;|&nbsp; Health: <b style="color:${healthColor}">${ps.overallHealth}</b> &nbsp;|&nbsp; Auto-dispatched: ${ps.autoDispatched || 'none'}</div>`;
+        html += '<table><tr><th>Component</th><th>Version</th><th>Stage</th><th>CI Monitor</th><th>Deploy Age</th><th>Health</th></tr>';
+        for (const [comp, d] of Object.entries(ps.components)) {
+          html += `<tr>
+            <td>${comp}</td>
+            <td>${d.version || '-'}</td>
+            <td>${stageIcon(d.stage)} ${d.stage}</td>
+            <td>${d.ciMonitorResult || '-'}</td>
+            <td>${d.deployAge || '-'}</td>
+            <td>${badge(d.health)}</td>
+          </tr>`;
+        }
+        html += '</table>';
+        pipelineMonEl.innerHTML = html;
+      } else { pipelineMonEl.innerHTML = '<div class="empty">No pipeline monitor data yet</div>'; }
 
       // Workspace config for corporate tab
       const wsConfig = await ghContent(`${wsPath}/workspace.json`);

@@ -56,6 +56,7 @@ jobs:
             "[Core] Builds Validation Gate"
             "[Core] Intelligent Orchestrator"
             "[Core] Dashboard Auto-Improve"
+            "[Core] Deploy Pipeline Monitor"
           )
 
           SICK_COUNT=0
