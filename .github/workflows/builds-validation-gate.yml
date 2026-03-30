@@ -4,6 +4,7 @@ run-name: "${{ github.workflow }} • validate all workflows"
 # Validates ALL workflow YAML files on every PR and push.
 # Catches: syntax errors, invalid references, missing secrets, bad cron expressions,
 # deprecated actions, and structural issues BEFORE they reach main.
+# Secret pattern updated: uses length-qualified patterns to avoid false positives.
 
 on:
   pull_request:
