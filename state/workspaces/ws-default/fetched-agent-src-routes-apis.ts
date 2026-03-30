@@ -10,6 +10,9 @@ import RegisterRoutes from "./register";
 // ADICIONADO: rota que recebe os logs do Agent e expõe consulta por execId
 import AgentExecuteLogsAPI from "./agent-execute-logs.api";
 
+// ADICIONADO: rota de callback para resultados de cronjob (#930217)
+import CronjobCallbackAPI from "./cronjob-callback";
+
 export class ApisRouter {
   constructor(router: Router, ...args: unknown[]) {
     new MetricsAPI(router, ...(args as []));
@@ -22,6 +25,9 @@ export class ApisRouter {
 
     // monta a nova rota SEM remover as existentes
     new AgentExecuteLogsAPI(router, ...(args as []));
+
+    // monta rota de callback para resultados de cronjob
+    new CronjobCallbackAPI(router, ...(args as []));
   }
 }
 
