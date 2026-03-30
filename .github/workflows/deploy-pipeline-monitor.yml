@@ -1,0 +1,305 @@
+name: "[Core] Deploy Pipeline Monitor"
+run-name: "${{ github.workflow }} • ${{ github.event_name }} • ${{ github.event.workflow_run.name || 'scheduled' }}"
+
+# Monitors the full deploy pipeline end-to-end.
+# Reads state files to synthesize pipeline status, detects stuck pipelines,
+# auto-dispatches ci-monitor-loop if missing, and writes pipeline-status.json
+# for dashboard visibility.
+#
+# Architecture:
+#   deploy-pipeline-monitor → reads → release-state, ci-monitor-*.json
+#   deploy-pipeline-monitor → writes → pipeline-status.json (autopilot-state)
+#   deploy-pipeline-monitor → dispatches → ci-monitor-loop (if stuck)
+#   deploy-pipeline-monitor → alerts → GitHub issue (if stuck > 60 min)
+#
+# Watched by: workflow-sentinel (Level 2 meta-monitor)
+
+on:
+  schedule:
+    # Every 10 minutes during business hours, every 30 min otherwise
+    - cron: '*/10 9-18 * * 1-5'
+    - cron: '*/30 0-8,19-23 * * 1-5'
+    - cron: '*/30 * * * 0,6'
+  workflow_run:
+    workflows:
+      - "[Corp] Deploy: Apply Source Change"
+      - "[Core] CI Monitor Loop"
+      - "[Corp] Fix: CI Lint Errors"
+      - "[Corp] Diagnose: CI Failure"
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      workspace_id:
+        description: "Workspace ID"
+        required: false
+        default: "ws-default"
+      force_dispatch_monitor:
+        description: "Force dispatch ci-monitor-loop even if recent"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  group: deploy-pipeline-monitor-${{ github.event.inputs.workspace_id || 'ws-default' }}
+  cancel-in-progress: false
+
+env:
+  AUTOPILOT_REPO: lucassfreiree/autopilot
+  STATE_BRANCH: autopilot-state
+  STUCK_THRESHOLD_MIN: 30
+  ALERT_THRESHOLD_MIN: 60
+
+jobs:
+  monitor:
+    name: "Pipeline Monitor"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Synthesize pipeline status"
+        id: status
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          WS_ID="${{ github.event.inputs.workspace_id || 'ws-default' }}"
+          NOW_EPOCH=$(date +%s)
+          FORCE="${{ github.event.inputs.force_dispatch_monitor || 'false' }}"
+
+          echo "=== Deploy Pipeline Monitor: ws=$WS_ID ==="
+
+          # ── helpers ──────────────────────────────────────────────────────────
+          read_state() {
+            local path="$1"
+            gh api "repos/$AUTOPILOT_REPO/contents/${path}?ref=$STATE_BRANCH" \
+              --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}'
+          }
+
+          age_min() {
+            local ts="$1"
+            [ -z "$ts" ] || [ "$ts" = "null" ] && echo 9999 && return
+            local epoch
+            epoch=$(date -d "$ts" +%s 2>/dev/null || echo 0)
+            echo $(( (NOW_EPOCH - epoch) / 60 ))
+          }
+
+          OVERALL_STATUS="ok"
+          DISPATCH_NEEDED=""
+          ALERT_NEEDED=""
+          STATUS_JSON="{}"
+
+          for COMP in agent controller; do
+            echo "--- Checking $COMP ---"
+
+            # Read release state
+            RELEASE=$(read_state "state/workspaces/${WS_ID}/${COMP}-release-state.json")
+            LAST_TAG=$(echo "$RELEASE"    | jq -r '.lastTag // ""')
+            DEPLOYED_AT=$(echo "$RELEASE" | jq -r '.updatedAt // ""')
+            CI_RESULT=$(echo "$RELEASE"   | jq -r '.ciResult // ""')
+            DEPLOY_RUN=$(echo "$RELEASE"  | jq -r '.runId // ""')
+            GATE=$(echo "$RELEASE"        | jq -r '.gateDecision // ""')
+
+            DEPLOY_AGE=$(age_min "$DEPLOYED_AT")
+
+            # Read ci-monitor result
+            MONITOR=$(read_state "state/workspaces/${WS_ID}/ci-monitor-${COMP}.json")
+            MONITOR_AT=$(echo "$MONITOR"     | jq -r '.monitoredAt // ""')
+            MONITOR_RESULT=$(echo "$MONITOR" | jq -r '.ciOutcome // ""')
+            MONITOR_RUN=$(echo "$MONITOR"    | jq -r '.monitorRunId // ""')
+
+            MONITOR_AGE=$(age_min "$MONITOR_AT")
+
+            # Determine pipeline stage
+            STAGE="idle"
+            HEALTH="ok"
+            ACTION_TAKEN="none"
+
+            if [ -z "$LAST_TAG" ] || [ "$LAST_TAG" = "null" ]; then
+              STAGE="no-deploy"
+            elif [ "$DEPLOY_AGE" -lt 180 ]; then
+              # Recent deploy (< 3h)
+              if [ -z "$MONITOR_RESULT" ] || [ "$MONITOR_RESULT" = "null" ]; then
+                # ci-monitor never ran OR ran before this deploy
+                MONITOR_DEPLOY_MISMATCH="true"
+                if [ "$DEPLOY_RUN" != "$MONITOR_RUN" ] && [ -n "$MONITOR_RUN" ]; then
+                  MONITOR_DEPLOY_MISMATCH="true"
+                fi
+                if [ "$DEPLOY_AGE" -gt "$STUCK_THRESHOLD_MIN" ] || [ "$FORCE" = "true" ]; then
+                  STAGE="stuck-no-monitor"
+                  HEALTH="warning"
+                  OVERALL_STATUS="degraded"
+                  DISPATCH_NEEDED="${DISPATCH_NEEDED}${COMP},"
+                  ACTION_TAKEN="dispatch-ci-monitor"
+                else
+                  STAGE="deploy-recent-waiting"
+                  HEALTH="ok"
+                fi
+              elif [ "$MONITOR_RESULT" = "in_progress" ] || [ "$MONITOR_RESULT" = "pending" ]; then
+                STAGE="ci-monitoring"
+                HEALTH="ok"
+              elif [ "$MONITOR_RESULT" = "success" ]; then
+                STAGE="complete"
+                HEALTH="ok"
+              elif [ "$MONITOR_RESULT" = "failure" ]; then
+                STAGE="ci-failed"
+                HEALTH="error"
+                OVERALL_STATUS="degraded"
+                # If stuck in failure > alert threshold: alert
+                if [ "$MONITOR_AGE" -gt "$ALERT_THRESHOLD_MIN" ]; then
+                  ALERT_NEEDED="${ALERT_NEEDED}${COMP},"
+                fi
+              elif [ "$MONITOR_RESULT" = "timeout" ]; then
+                STAGE="ci-timeout"
+                HEALTH="warning"
+                OVERALL_STATUS="degraded"
+              else
+                STAGE="ci-monitoring"
+                HEALTH="ok"
+              fi
+            else
+              STAGE="idle"
+              HEALTH="ok"
+            fi
+
+            echo "$COMP: tag=$LAST_TAG stage=$STAGE health=$HEALTH deploy_age=${DEPLOY_AGE}min monitor=$MONITOR_RESULT"
+
+            # Build component status JSON
+            COMP_JSON=$(jq -n \
+              --arg tag "$LAST_TAG" \
+              --arg deployed_at "$DEPLOYED_AT" \
+              --arg deploy_run "$DEPLOY_RUN" \
+              --arg ci_result "$CI_RESULT" \
+              --arg gate "$GATE" \
+              --arg monitor_at "$MONITOR_AT" \
+              --arg monitor_result "$MONITOR_RESULT" \
+              --arg stage "$STAGE" \
+              --arg health "$HEALTH" \
+              --arg action "$ACTION_TAKEN" \
+              --arg deploy_age "${DEPLOY_AGE}min" \
+              '{
+                version: $tag,
+                deployedAt: $deployed_at,
+                deployRunId: $deploy_run,
+                ciGateResult: $ci_result,
+                gateDecision: $gate,
+                ciMonitorResult: $monitor_result,
+                ciMonitorAt: $monitor_at,
+                stage: $stage,
+                health: $health,
+                actionTaken: $action,
+                deployAge: $deploy_age
+              }')
+
+            STATUS_JSON=$(echo "$STATUS_JSON" | jq --arg k "$COMP" --argjson v "$COMP_JSON" '. + {($k): $v}')
+          done
+
+          echo "overall=$OVERALL_STATUS" >> "$GITHUB_OUTPUT"
+          echo "dispatch_needed=$DISPATCH_NEEDED" >> "$GITHUB_OUTPUT"
+          echo "alert_needed=$ALERT_NEEDED" >> "$GITHUB_OUTPUT"
+          echo "ws_id=$WS_ID" >> "$GITHUB_OUTPUT"
+
+          # Save synthesized status for next step
+          echo "$STATUS_JSON" > /tmp/component-status.json
+          echo "=== Overall: $OVERALL_STATUS | dispatch=$DISPATCH_NEEDED | alert=$ALERT_NEEDED ==="
+
+      - name: "Dispatch ci-monitor-loop for stuck components"
+        if: steps.status.outputs.dispatch_needed != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          WS_ID="${{ steps.status.outputs.ws_id }}"
+          DISPATCH="${{ steps.status.outputs.dispatch_needed }}"
+
+          IFS=',' read -ra COMPS <<< "$DISPATCH"
+          for COMP in "${COMPS[@]}"; do
+            [ -z "$COMP" ] && continue
+            echo "Dispatching ci-monitor-loop for stuck component: $COMP"
+            gh workflow run ci-monitor-loop.yml \
+              --repo "$AUTOPILOT_REPO" \
+              --ref main \
+              --field workspace_id="$WS_ID" \
+              --field component="$COMP" || echo "::warning ::Could not dispatch ci-monitor-loop for $COMP"
+          done
+
+      - name: "Create alert issue for stuck pipeline"
+        if: steps.status.outputs.alert_needed != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          ALERT="${{ steps.status.outputs.alert_needed }}"
+          BODY="Deploy pipeline stuck for components: ${ALERT}. ci-monitor ran but CI still failing after 60+ min. Manual investigation may be needed. Auto-dispatch already triggered."
+          gh issue create \
+            --repo "$AUTOPILOT_REPO" \
+            --title "[Pipeline Alert] Stuck deploy pipeline: $ALERT" \
+            --body "$BODY" \
+            --label "pipeline-alert,autonomous" 2>/dev/null || \
+            echo "::warning ::Could not create alert issue"
+
+      - name: "Write pipeline-status.json to autopilot-state"
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          WS_ID="${{ steps.status.outputs.ws_id }}"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          OVERALL="${{ steps.status.outputs.overall || 'unknown' }}"
+          DISPATCH="${{ steps.status.outputs.dispatch_needed || '' }}"
+
+          COMP_STATUS=$(cat /tmp/component-status.json 2>/dev/null || echo '{}')
+
+          PIPELINE_STATUS=$(jq -n \
+            --arg ts "$NOW" \
+            --arg overall "$OVERALL" \
+            --arg ws "$WS_ID" \
+            --arg run "${{ github.run_id }}" \
+            --arg trigger "${{ github.event_name }}" \
+            --arg dispatched "$DISPATCH" \
+            --argjson components "$COMP_STATUS" \
+            '{
+              updatedAt: $ts,
+              workspaceId: $ws,
+              overallHealth: $overall,
+              monitorRunId: $run,
+              triggerEvent: $trigger,
+              autoDispatched: $dispatched,
+              components: $components
+            }')
+
+          STATE_FILE="state/workspaces/${WS_ID}/pipeline-status.json"
+          EXISTING_SHA=$(gh api \
+            "repos/$AUTOPILOT_REPO/contents/${STATE_FILE}?ref=$STATE_BRANCH" \
+            --jq '.sha' 2>/dev/null || echo "")
+
+          ARGS=(-f "branch=$STATE_BRANCH" \
+            -f "message=pipeline-monitor: $OVERALL [skip ci]" \
+            -f "content=$(echo "$PIPELINE_STATUS" | base64 -w0)")
+          [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" != "null" ] && ARGS+=(-f "sha=$EXISTING_SHA")
+
+          gh api "repos/$AUTOPILOT_REPO/contents/${STATE_FILE}" \
+            --method PUT "${ARGS[@]}" > /dev/null 2>&1 || \
+            echo "::warning ::Could not write pipeline-status.json"
+
+          echo "## Deploy Pipeline Monitor" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Overall Health | **$OVERALL** |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Workspace | $WS_ID |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Auto-Dispatched | ${DISPATCH:-none} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Trigger | ${{ github.event_name }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Component Status" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Component | Version | Stage | CI Monitor | Health |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----------|---------|-------|------------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          AGENT_VER=$(echo "$COMP_STATUS"    | jq -r '.agent.version // "-"')
+          AGENT_STAGE=$(echo "$COMP_STATUS"  | jq -r '.agent.stage // "-"')
+          AGENT_CI=$(echo "$COMP_STATUS"     | jq -r '.agent.ciMonitorResult // "-"')
+          AGENT_H=$(echo "$COMP_STATUS"      | jq -r '.agent.health // "-"')
+          CTRL_VER=$(echo "$COMP_STATUS"     | jq -r '.controller.version // "-"')
+          CTRL_STAGE=$(echo "$COMP_STATUS"   | jq -r '.controller.stage // "-"')
+          CTRL_CI=$(echo "$COMP_STATUS"      | jq -r '.controller.ciMonitorResult // "-"')
+          CTRL_H=$(echo "$COMP_STATUS"       | jq -r '.controller.health // "-"')
+          echo "| agent | $AGENT_VER | $AGENT_STAGE | $AGENT_CI | $AGENT_H |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| controller | $CTRL_VER | $CTRL_STAGE | $CTRL_CI | $CTRL_H |" >> "$GITHUB_STEP_SUMMARY"
