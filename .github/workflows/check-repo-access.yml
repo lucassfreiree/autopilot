@@ -8,6 +8,10 @@ on:
     paths:
       - '.github/workflows/check-repo-access.yml'
 
+concurrency:
+  group: check-repo-access-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   check-access:
     name: "Validate Token Access"

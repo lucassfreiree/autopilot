@@ -21,6 +21,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ci-failure-analysis-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 env:
   REPO: lucassfreiree/autopilot
   STATE_BRANCH: autopilot-state

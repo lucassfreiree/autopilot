@@ -18,6 +18,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: restore-state-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
 env:
   REPO: lucassfreiree/autopilot
   STATE_BRANCH: autopilot-state

@@ -25,6 +25,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ci-diagnose-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 env:
   AUTOPILOT_REPO: lucassfreiree/autopilot
   STATE_BRANCH: autopilot-state
