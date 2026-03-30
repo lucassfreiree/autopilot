@@ -373,7 +373,7 @@ describe("cronjob-result.controller", () => {
           statusLabel: "Done",
           finished: true,
           lastUpdate: "2024-01-01T00:00:00.000Z",
-          count: 1,
+          count: 0,
           entries: [],
         }),
       );
