@@ -13,7 +13,7 @@
     "stack": "Node 22, TypeScript, Express, Jest, SQLite, S3"
   },
   "agent": {
-    "version": "2.3.1",
+    "version": "2.3.2",
     "status": "promoted",
     "ciResult": "success",
     "promoted": true,
@@ -133,7 +133,7 @@
       "stack": "Node/TypeScript (NestJS, Jest, ESLint)",
       "token": "BBVINET_TOKEN",
       "controllerVersion": "3.7.0",
-      "agentVersion": "2.3.1",
+      "agentVersion": "2.3.2",
       "pipelineStatus": "success",
       "repos": [
         "psc-sre-automacao-controller",
@@ -151,28 +151,6 @@
       "controllerVersion": null,
       "agentVersion": null,
       "pipelineStatus": "not-configured",
-      "repos": []
-    },
-    {
-      "id": "ws-socnew",
-      "company": "SocNew (terceiro)",
-      "status": "locked",
-      "stack": null,
-      "token": null,
-      "controllerVersion": null,
-      "agentVersion": null,
-      "pipelineStatus": "locked",
-      "repos": []
-    },
-    {
-      "id": "ws-corp-1",
-      "company": "Corp-1 (terceiro)",
-      "status": "locked",
-      "stack": null,
-      "token": null,
-      "controllerVersion": null,
-      "agentVersion": null,
-      "pipelineStatus": "locked",
       "repos": []
     }
   ],
