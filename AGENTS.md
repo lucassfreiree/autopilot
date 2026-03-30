@@ -116,7 +116,7 @@ lucassfreiree/autopilot (this repo)
   controller-release-state.json
   release-freeze.json
   locks/ ({"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}0 files)
-  audit/ (442 files)
+  audit/ (444 files)
   improvements/ (1 files)
   metrics/ (8 files)
   handoffs/ (1 files)
@@ -305,6 +305,7 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | session-guard.yml | [Core] Session Guard | reusable |
 | spark-sync-state.yml | [Infra] Spark Dashboard Sync | scheduled, trigger file, manual |
 | sync-copilot-prompt.yml | [Infra] Sync Copilot Prompt | trigger file, manual |
+| sync-spark-dashboard.yml | [Infra] Sync Spark Dashboard Repo | push, manual |
 | test-corporate-flow.yml | [Corp] Test: Corporate E2E Flow | trigger file, manual |
 | test-full-flow.yml | [Corp] Test: Full Flow (Controller + Agent) | trigger file, manual |
 | token-auto-optimize.yml | [Core] Token Auto-Optimize | scheduled, manual |
@@ -415,4 +416,4 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/<WS_ID>/{FILE}?r
 | Handoff to Claude | Dispatch `enqueue-agent-handoff.yml`, `to_agent=claude` |
 
 ---
-*Last synced: 2026-03-30T11:06:26Z | Run: 23741586970*
+*Last synced: 2026-03-30T12:17:09Z | Run: 23744247073*
