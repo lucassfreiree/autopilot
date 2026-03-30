@@ -2,6 +2,6 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "agent",
-  "files": "src/routes/apis.ts,src/controllers/execute.controller.ts,src/util/jwt.ts",
-  "run": 23
+  "files": "src/routes/apis.ts,src/controllers/execute.controller.ts,src/util/jwt.ts,src/routes/index.ts,package.json,src/app.ts",
+  "run": 24
 }
