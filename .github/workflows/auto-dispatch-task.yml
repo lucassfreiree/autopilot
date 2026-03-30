@@ -96,22 +96,7 @@ jobs:
           COMP="${{ needs.classify-and-dispatch.outputs.component }}"
 
           # Post instructions for Copilot
-          BODY=$(cat <<HEREDOC
-## Auto-Dispatch: Assigned to Copilot Coding Agent
-
-Workspace: $WS | Component: $COMP | Complexity: Simple
-
-### Instructions
-1. Read contracts/ai-takeover-kit.md for system context
-2. Read contracts/claude-session-memory.json for current state
-3. Implement the requested changes
-4. Create PR with branch copilot/task-${ISSUE}
-5. PR will be auto-merged after checks pass
-
-Auto-dispatched by auto-dispatch-task.yml
-HEREDOC
-)
-          gh issue comment "$ISSUE" --body "$BODY"
+          gh issue comment "$ISSUE" --body "Auto-Dispatch - Assigned to Copilot. Workspace=$WS Component=$COMP. Read contracts/ai-takeover-kit.md, implement changes, create PR copilot/task-${ISSUE}."
 
           # Assign Copilot
           gh api "repos/${{ github.repository }}/issues/$ISSUE/assignees" \
@@ -145,30 +130,8 @@ HEREDOC
           gh issue edit "$ISSUE" --add-label "needs-claude" 2>/dev/null || true
 
           # Post context for Claude
-          gh issue comment "$ISSUE" --body "## Auto-Dispatch: Flagged for Claude Code
-
-Workspace: \`$WS\`
-Component: \`$COMP\`
-Complexity: Complex — requires Claude Code (deploy, CI, multi-file changes).
-
-### Current System State
-- Controller: **$CTRL_VER**
-- Agent: **$AGENT_VER**
-- Last run: **#$LAST_RUN**
-
-### How Claude picks this up
-1. Automatic: Claude reads open Issues with \`needs-claude\` label at session start
-2. Manual: User says \`executa a issue #$ISSUE\` in Claude Code session
-
-### For Claude
-When executing this issue:
-1. Read the issue description above for requirements
-2. Follow deploy flow in \`CLAUDE.md\` section 'Deploy Flow — Complete Guide'
-3. After completing: remove \`needs-claude\` label, add \`completed\` label, close issue
-4. Record in \`contracts/claude-session-memory.json\` executionHistory
-
----
-*Auto-dispatched by auto-dispatch-task.yml*"
+          COMMENT="Auto-Dispatch - Flagged for Claude Code. WS=$WS COMP=$COMP (complex task). Ctrl=$CTRL_VER Agent=$AGENT_VER Run=#$LAST_RUN. Follow deploy flow in CLAUDE.md."
+          gh issue comment "$ISSUE" --body "$COMMENT"
 
           echo "::notice ::Issue #$ISSUE flagged for Claude Code (complex task)"
 

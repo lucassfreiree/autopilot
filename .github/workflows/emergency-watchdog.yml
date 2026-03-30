@@ -157,19 +157,10 @@ jobs:
           ISSUE_TITLE="[Watchdog] System needs attention — ${{ steps.vitals.outputs.issues }} issues detected"
           EXISTING=$(gh issue list --repo "${{ github.repository }}" --search "$ISSUE_TITLE" --state open --json number --jq 'length' 2>/dev/null || echo 0)
           if [ "$EXISTING" -eq 0 ]; then
-            BODY=$(cat <<'HEREDOC'
-## Watchdog Report
-
-Issues detected and self-healing attempted.
-Check the dashboard or AI Takeover Kit for details.
-
-[Dashboard](https://lucassfreiree.github.io/autopilot/dashboard/) | [AI Takeover Kit](https://github.com/lucassfreiree/autopilot/blob/main/contracts/ai-takeover-kit.md)
-HEREDOC
-)
             gh issue create \
               --repo "${{ github.repository }}" \
               --title "$ISSUE_TITLE" \
-              --body "$BODY" \
+              --body "Watchdog Report - Issues detected and self-healing attempted. Check dashboard for details." \
               --label "watchdog,automated" 2>/dev/null || echo "Issue creation failed"
           fi
 
