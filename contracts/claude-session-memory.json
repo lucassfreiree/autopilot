@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-30T20:00:00Z",
+  "lastUpdated": "2026-03-30T19:50:00Z",
   "lastSessionId": "session_01N6wTVvkGd7Hs1zMtus8i5i",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -530,6 +530,28 @@
             "fix": "Bumpar para 3.5.4",
             "prevention": "Sempre checar versioningRules.currentVersion na memoria"
           }
+        ]
+      },
+      {
+        "sessionId": "session_01W2fV29kcrkKJBFfvgWqYW5",
+        "date": "2026-03-30",
+        "summary": "Security update + community sync + centralization + cost optimization",
+        "prs": [
+          383,
+          389,
+          390
+        ],
+        "actions": [
+          "3 specialist skills created (devops-sre-cloud, observability, security-expert)",
+          "autonomous-devops-sre behavior rules created",
+          "sync-community-resources.yml workflow created",
+          "PreToolUse security hook added",
+          "12 Codex/Copilot/Agent-bridge workflows disabled",
+          "builds-validation-gate sk- false positive fixed",
+          "orchestrator + auto-repair protected from re-enabling disabled workflows",
+          "auto-merge-sweeper reduced to */5",
+          "18 workflows got concurrency groups",
+          "dashboard state.json fixed (controller 3.7.3, agent 2.3.2)"
         ]
       }
     ]
@@ -1390,7 +1412,15 @@
       "no_restricted_syntax_no_for_of": "CRITICO: ESLint no-restricted-syntax proibe for...of neste codebase. NUNCA usar 'for (const x of y)'. SEMPRE usar array iterations: .map(), .reduce(), .filter(), Object.fromEntries(Object.entries().map()). Afeta: qualquer arquivo TypeScript nos patches do controller.",
       "ci_gate_broken_always_check_logs": "CRITICO: CI Gate e sabidamente quebrado (ci_gate_preexisting_bug). NUNCA assumir que CI passou so porque CI Gate reportou sucesso. SEMPRE buscar o ci-logs-controller-*.txt mais recente no autopilot-state e verificar se ha erro real. Tempo ~3.5min = falha, ~14min = passou.",
       "active_live_monitoring_mandatory": "CRITICO MAXIMA PRIORIDADE: Em TODA sessao, o agente DEVE monitorar ATIVAMENTE e em TEMPO REAL todos os pipelines (autopilot workflows E esteira corporativa). NAO esperar usuario reportar falha. PROTOCOLO: (1) Ao iniciar sessao: verificar ci-monitor-controller.json, ci-monitor-agent.json, controller-release-state.json, agent-release-state.json, e ultimo ci-logs-controller-*.txt. (2) Apos qualquer deploy: polling a cada 2-3 min ate confirmar sucesso ou falha. (3) Detectou falha: diagnosticar e corrigir IMEDIATAMENTE sem perguntar. (4) Deploy so e considerado COMPLETO quando ci-logs mostra 'Test Suites: 0 failed' E 'Tests: 0 failed'. Referencia: CLAUDE.md secao 'Live Monitoring Protocol'. O usuario NAO deve jamais ter que reportar uma falha ao agente — o agente deve detectar e corrigir autonomamente.",
-      "update_tests_with_response_shape_changes": "CRITICO: Quando mudar o shape de um response (adicionar bounds, limitar entries, alterar campos), SEMPRE atualizar os testes correspondentes NO MESMO DEPLOY. Incluir arquivos de teste na lista de changes do trigger/source-change.json. Buscar com: grep -rn 'campo_alterado' src/__tests__/ para encontrar TODOS. Verificar mock setup (jest.mock + beforeEach) E as expectativas (expect.objectContaining). Incluir AMBOS os paths de teste: src/__tests__/unit/ E src/__tests__/controllers/."
+      "update_tests_with_response_shape_changes": "CRITICO: Quando mudar o shape de um response (adicionar bounds, limitar entries, alterar campos), SEMPRE atualizar os testes correspondentes NO MESMO DEPLOY. Incluir arquivos de teste na lista de changes do trigger/source-change.json. Buscar com: grep -rn 'campo_alterado' src/__tests__/ para encontrar TODOS. Verificar mock setup (jest.mock + beforeEach) E as expectativas (expect.objectContaining). Incluir AMBOS os paths de teste: src/__tests__/unit/ E src/__tests__/controllers/.",
+      "concurrency_groups_added": "Added concurrency groups to 18 workflows (PR #389). session-guard/restore-state/release-approval/release-freeze use cancel-in-progress:false.",
+      "sweeper_frequency_reduced": "auto-merge-sweeper changed from every 1min to every 5min. Saves ~1400 runs/day.",
+      "dashboard_state_stale_fix": "panel/dashboard/state.json goes stale when spark-sync fails. Fix: update from autopilot-state release-state files.",
+      "sync_community_resources_workflow": "sync-community-resources.yml weekly Monday 07:00 UTC. Cannot dispatch via MCP — use GitHub UI or wait schedule.",
+      "health_json_false_positive_lock": "health.json degraded from released lock file existing. Resolves on next health-check or lock-gc run.",
+      "orchestrator_re_enables_disabled_workflows": "Fixed: exclusion filter for .disabled + known codex/copilot patterns in orchestrator + auto-repair.",
+      "sk_false_positive_in_validation_gate": "Fixed: sk-[A-Za-z0-9]{20,} requires 20+ chars after prefix.",
+      "gha_yml_disabled_not_scanned": "Renaming to .yml.disabled doesnt trigger path filter. Include a real .yml change to trigger gate."
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
     "gha_no_heredoc_in_run": "CRITICO: NUNCA usar heredoc (cat <<EOF / cat <<'EOF') dentro de blocos run: | em GitHub Actions. O GHA parser le TODO o bloco run: como YAML literal ANTES de avaliar como shell. Qualquer linha com dois-pontos (ex: 'Workspace: $WS') e interpretada como YAML key-value e quebra. FIX: usar variavel simples com string inline. Ex: BODY='texto sem colon' e depois gh issue comment --body \"$BODY\". NUNCA heredoc.",
