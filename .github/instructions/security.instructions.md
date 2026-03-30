@@ -40,10 +40,21 @@ Each workspace has exactly one authorized token:
 |---|---|
 | Input validation | Use `parseSafeIdentifier()` on all inputs — NEVER inside `fetch`/`postJson` |
 | Error output | Use `sanitizeForOutput()` on error messages to prevent XSS |
+| Response output | Use `sanitizeForOutput()` on ANY user-controlled value reflected in response JSON (e.g. image names, identifiers) |
 | JWT claims | Read `payload.scope` (singular) — NEVER `payload.scopes` (plural) |
-| URL validation | `validateTrustedUrl()` at the input layer only, not inside HTTP helpers |
+| URL validation | `validateTrustedUrl()` MUST be called right before EVERY `fetch()` call — defense-in-depth, even if already validated at input layer |
+| Loop bounding | EVERY loop/filter over entries MUST be bounded by `MAX_ENTRIES_PER_EXEC` or `MAX_RESULTS` — NEVER iterate unbounded arrays from user input or external sources |
+| Response entries | ALWAYS `.slice(0, MAX)` on entry arrays before including in response JSON — prevents DoS via large payloads |
 | Swagger content | ASCII only — accented characters cause encoding issues and data exposure risk |
 | Auth errors | NEVER silence with `|| true` — log first, then decide |
+
+## Checkmarx Vulnerability Prevention (Mapped Patterns)
+
+| Vulnerability | CWE | Files Affected | Fix Pattern | Date Mapped |
+|---|---|---|---|---|
+| Reflected XSS | CWE-79 | `oas-sre-controller.controller.ts` | `sanitizeForOutput()` on `image` field before response; bound `entries` with `MAX_SYNC_ENTRIES` | 2026-03-30 |
+| SSRF | CWE-918 | `execute.controller.ts`, `oas-execute.controller.ts`, `oas-sre-controller.controller.ts` | `validateTrustedUrl()` inside `postJson`/`callAgent` AND right before every `fetch()` call | 2026-03-30 |
+| DoS by Loop | CWE-834 | `agents-execute-logs.controller.ts`, `cronjob-result.controller.ts` | Bound incoming entries with `.slice(0, MAX_ENTRIES_PER_EXEC)`, bound snapshot entries, bound filter input with `MAX_RESULTS` | 2026-03-30 |
 
 ## Compliance Scanner
 

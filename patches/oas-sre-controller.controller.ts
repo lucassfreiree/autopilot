@@ -346,10 +346,12 @@ function summarizeDispatches(dispatches: AgentCallResult[]) {
 }
 
 function buildSyncResponsePayload(context: SyncResponseContext) {
+  const MAX_SYNC_ENTRIES = 500;
+  const boundedEntries = context.snapshot.entries.slice(0, MAX_SYNC_ENTRIES);
   return {
     mode: "sync" as const,
     execId: context.execId,
-    image: context.image,
+    image: sanitizeForOutput(context.image),
     clustersNames: context.clustersNames,
     authMode: context.authMode,
     dispatches: summarizeDispatches(context.dispatches),
@@ -358,8 +360,8 @@ function buildSyncResponsePayload(context: SyncResponseContext) {
     statusLabel: context.snapshot.statusLabel,
     finished: context.snapshot.finished,
     lastUpdate: context.snapshot.lastUpdate,
-    count: context.snapshot.count,
-    entries: context.snapshot.entries,
+    count: boundedEntries.length,
+    entries: boundedEntries,
   };
 }
 
@@ -539,7 +541,7 @@ export async function postOasSreController(
       execId,
       status: "RUNNING",
       startedAt: timestampSP(),
-      image: validation.image,
+      image: sanitizeForOutput(validation.image),
       clustersNames: validation.clustersNames,
       authMode: authDecision?.mode || "jwt",
       dispatches: summarizeDispatches(dispatches),
