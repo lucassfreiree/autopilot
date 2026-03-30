@@ -24,9 +24,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "MEMORY=$(cat contracts/claude-session-memory.json | jq -c '{schemaVersion,contractId,lastUpdated,lastOptimized,currentState,versioningRules,deployFlow,gitPatterns,ciPatterns,commonPatterns,optimizations,contextSeparation:{goldenRules:.contextSeparation.goldenRules},multiCompanyModel:{description:.multiCompanyModel.description,goldenRules:.multiCompanyModel.goldenRules,companies:{getronics:{workspaceId:.multiCompanyModel.companies.getronics.workspaceId,status:.multiCompanyModel.companies.getronics.status,tokenSecret:.multiCompanyModel.companies.getronics.tokenSecret,repos:.multiCompanyModel.companies.getronics.repos,repoDetails:(.multiCompanyModel.companies.getronics.repoDetails|map_values({role,currentVersion,ci}))},cit:{workspaceId:.multiCompanyModel.companies.cit.workspaceId,status:.multiCompanyModel.companies.cit.status}}},workspaceSeparationAudit:.multiCompanyModel.workspaceSeparationAudit}' 2>/dev/null || echo '{}'); PENDING=$(cat contracts/pending-tasks.json 2>/dev/null || echo '[]'); echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"'\"$MEMORY\"'\",\"pendingTasks\":\"'\"$PENDING\"'\"}}'",
+            "command": "MEMORY=$(cat contracts/claude-session-memory.json | jq -c '{schemaVersion,contractId,lastUpdated,lastOptimized,currentState,versioningRules,deployFlow,gitPatterns,ciPatterns,commonPatterns,optimizations,contextSeparation:{goldenRules:.contextSeparation.goldenRules},multiCompanyModel:{description:.multiCompanyModel.description,goldenRules:.multiCompanyModel.goldenRules,companies:{getronics:{workspaceId:.multiCompanyModel.companies.getronics.workspaceId,status:.multiCompanyModel.companies.getronics.status,tokenSecret:.multiCompanyModel.companies.getronics.tokenSecret,repos:.multiCompanyModel.companies.getronics.repos,repoDetails:(.multiCompanyModel.companies.getronics.repoDetails|map_values({role,currentVersion,ci}))},cit:{workspaceId:.multiCompanyModel.companies.cit.workspaceId,status:.multiCompanyModel.companies.cit.status}}},workspaceSeparationAudit:.multiCompanyModel.workspaceSeparationAudit}' 2>/dev/null || echo '{}'); PENDING=$(cat contracts/pending-tasks.json 2>/dev/null || echo '[]'); SYNC=$(cat state/community-resources-sync.json 2>/dev/null | jq -c '{lastSync:.lastSync,sources:.sources|map({name:.name,lastCommit:.lastCommit})}' 2>/dev/null || echo '{}'); echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"'\"$MEMORY\"'\",\"pendingTasks\":\"'\"$PENDING\"'\",\"communitySync\":\"'\"$SYNC\"'\"}}'",
             "timeout": 10,
-            "statusMessage": "Loading memory + pending tasks..."
+            "statusMessage": "Loading memory + pending tasks + community sync status..."
           }
         ]
       }
@@ -52,6 +52,19 @@
             "command": "echo '{\"systemMessage\":\"SESSION END REMINDER: Update contracts/claude-session-memory.json with new learnings, commit, and push before closing.\"}'",
             "timeout": 5,
             "statusMessage": "Session memory reminder..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command // \"\"' 2>/dev/null || echo \"\"); DANGEROUS=$(echo \"$CMD\" | grep -cE '(rm -rf|DROP TABLE|DELETE FROM|format [A-Z]:|mkfs|dd if=|chmod 777|curl.*\\| *sh|wget.*\\| *sh)' 2>/dev/null || echo 0); if [ \"$DANGEROUS\" -gt 0 ]; then echo '{\"decision\":\"block\",\"reason\":\"Potentially destructive command detected. Review required.\"}'; else echo '{\"decision\":\"approve\"}'; fi",
+            "timeout": 3,
+            "statusMessage": "Security check..."
           }
         ]
       }
