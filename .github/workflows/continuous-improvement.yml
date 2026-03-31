@@ -156,6 +156,10 @@ jobs:
                   add_issue "medium" "$F" "Silent error suppression (|| true without logging): $((SILENT_COUNT - LOGGED_COUNT)) occurrences" "true"
                 fi
               fi
+              # Check for heredoc in run blocks (causes exit 127 in GHA)
+              if grep -qE 'cat <<|<<EOF|<<BODY|<<ISSUE' "$F" 2>/dev/null; then
+                add_issue "critical" "$F" "Heredoc (cat <<EOF) in run: block causes exit 127 in GHA" "false"
+              fi
               # Check for missing set -e
               if grep -q 'run: |' "$F" && ! grep -q 'set -e' "$F"; then
                 add_issue "low" "$F" "Missing 'set -e' in shell scripts" "false"
@@ -545,48 +549,22 @@ jobs:
           [ "$CRIT" != "0" ] && TITLE="[CI Alert] ${CRIT} critical issues found (score: ${SCORE})"
           [ "$TREND" = "degrading" ] && TITLE="[CI Alert] Project health degrading (score: ${SCORE})"
 
-          BODY=$(cat <<ISSUE_EOF
-          ## Continuous Improvement Alert
-
-          | Metric | Value |
-          |--------|-------|
-          | Health Score | **${SCORE}/100** |
-          | Trend | ${TREND} |
-          | Total Issues | ${TOTAL} |
-          | Critical | ${CRIT} |
-          | High | ${HIGH} |
-
-          Run: ${RUN_URL}
-
-          ### Action Required
-          - Review the workflow run for detailed issue list
-          - Fix critical issues immediately
-          - Schedule high-severity fixes for next sprint
-          ISSUE_EOF
-          )
+          BODY="## Continuous Improvement Alert\n\n| Metric | Value |\n|--------|-------|\n| Health Score | ${SCORE}/100 |\n| Trend | ${TREND} |\n| Total Issues | ${TOTAL} |\n| Critical | ${CRIT} |\n| High | ${HIGH} |\n\nRun: ${RUN_URL}\n\n### Action Required\n- Review the workflow run for detailed issue list\n- Fix critical issues immediately\n- Schedule high-severity fixes for next sprint"
 
           # Check if similar issue already exists
           EXISTING=$(gh api "repos/$AUTOPILOT_REPO/issues?state=open&labels=continuous-improvement&per_page=1" \
             --jq '.[0].number' 2>/dev/null || echo "")
 
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
-            # Update existing issue
-            gh api "repos/$AUTOPILOT_REPO/issues/$EXISTING/comments" \
-              --method POST \
-              -f "body=$BODY" > /dev/null 2>&1
+            printf '%b' "$BODY" | gh api "repos/$AUTOPILOT_REPO/issues/$EXISTING/comments" \
+              --method POST -F body=@- > /dev/null 2>&1
             echo "Updated existing issue #$EXISTING"
           else
-            # Create new issue
-            gh api "repos/$AUTOPILOT_REPO/issues" \
-              --method POST \
-              -f "title=$TITLE" \
-              -f "body=$BODY" \
+            printf '%b' "$BODY" | gh api "repos/$AUTOPILOT_REPO/issues" \
+              --method POST -f "title=$TITLE" -F body=@- \
               -f "labels=[\"continuous-improvement\",\"automated\"]" > /dev/null 2>&1 || {
-              # Labels might not exist, try without
-              gh api "repos/$AUTOPILOT_REPO/issues" \
-                --method POST \
-                -f "title=$TITLE" \
-                -f "body=$BODY" > /dev/null 2>&1
+              printf '%b' "$BODY" | gh api "repos/$AUTOPILOT_REPO/issues" \
+                --method POST -f "title=$TITLE" -F body=@- > /dev/null 2>&1
             }
             echo "Created new alert issue"
           fi
