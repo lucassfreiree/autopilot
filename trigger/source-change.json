@@ -3,63 +3,23 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.7.4",
+  "version": "3.7.5",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.7.3\"",
-      "replace": "\"version\": \"3.7.4\""
+      "search": "\"version\": \"3.7.4\"",
+      "replace": "\"version\": \"3.7.5\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.3\"",
-      "replace": "\"version\": \"3.7.4\""
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/swagger/swagger.json",
-      "content_ref": "patches/controller-swagger.json"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/oas-sre-controller.controller.ts",
-      "content_ref": "patches/oas-sre-controller.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/oas-execute.controller.ts",
-      "content_ref": "patches/oas-execute.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/execute.controller.ts",
-      "content_ref": "patches/execute.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/agents-execute-logs.controller.ts",
-      "content_ref": "patches/agents-execute-logs.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/cronjob-result.controller.ts",
-      "content_ref": "patches/cronjob-result.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/unit/cronjob-result.controller.test.ts",
-      "content_ref": "patches/cronjob-result.controller.test.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/controllers/cronjob-result.controller.test.ts",
-      "content_ref": "patches/cronjob-result.controller.test.ts"
+      "search": "\"version\": \"3.7.4\"",
+      "replace": "\"version\": \"3.7.5\""
     }
   ],
-  "commit_message": "fix(security): bound pickPreferredSnapshot loop to prevent Checkmarx Server_DoS_by_Loop",
+  "commit_message": "chore(release): bump controller version to 3.7.5",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 82
+  "run": 83
 }
