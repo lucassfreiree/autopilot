@@ -20,6 +20,38 @@
       "requiresPR": true,
       "autoMerge": true,
       "notes": "Primary agent. Has full filesystem access. Operates via CLI."
+    },
+    "devin": {
+      "name": "Devin",
+      "status": "active",
+      "role": "specialist",
+      "branchPrefix": "devin/",
+      "capabilities": [
+        "deploy-execution",
+        "ci-monitoring",
+        "release-orchestration",
+        "code-implementation",
+        "code-review",
+        "infrastructure-as-code",
+        "kubernetes-operations",
+        "cloud-diagnostics",
+        "observability",
+        "pipeline-troubleshooting",
+        "terraform-operations",
+        "monitoring-setup",
+        "incident-response",
+        "security-analysis",
+        "workflow-authoring",
+        "memory-management"
+      ],
+      "tools": "VM + browser + shell + GitHub API + MCP",
+      "memoryFile": "contracts/devin-session-memory.json",
+      "liveStatusFile": null,
+      "instructionsFile": null,
+      "canPushToMain": false,
+      "requiresPR": true,
+      "autoMerge": true,
+      "notes": "Autonomous DevOps/SRE/Cloud specialist. Full VM with browser, shell, and persistent environment. Can monitor workflows, diagnose CI, operate triggers, and manage infrastructure."
     }
   },
 
@@ -64,8 +96,8 @@
     "notes": ""
   },
 
-  "branchPrefixes": ["claude/"],
-  "allKnownPrefixes": ["claude/", "copilot/", "codex/", "agent/"],
+  "branchPrefixes": ["claude/", "devin/"],
+  "allKnownPrefixes": ["claude/", "copilot/", "codex/", "agent/", "devin/"],
 
   "rules": {
     "registration": "Add agent to 'agents' object + add branchPrefix to 'branchPrefixes' array",
