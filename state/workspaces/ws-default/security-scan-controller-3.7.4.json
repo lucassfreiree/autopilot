@@ -1,14 +1,14 @@
 {
   "component": "controller",
   "version": "3.7.4",
-  "scannedAt": "2026-03-31T18:02:46Z",
+  "scannedAt": "2026-03-31T18:06:33Z",
   "ciRunId": "23810579473",
   "summary": {
     "total": 64,
-    "critical": 7,
-    "high": 17,
-    "medium": 23,
-    "low": 17,
+    "critical": 2,
+    "high": 10,
+    "medium": 7,
+    "low": 1,
     "npmFixable": 0
   },
   "vulnerabilities": [
@@ -16,7 +16,7 @@
       "cve": "CVE-2005-2541",
       "ghsa": "GHSA-vwpx-f983-qg79",
       "severity": "high",
-      "summary": "Tar 1.15.1 does not properly warn the user when extracting setuid or setgid files, which may allo...",
+      "summary": "Tar 1.15.1 does not properly warn the user when extracting setuid or setgid files, which may...",
       "fixVersion": "",
       "package": ""
     },
@@ -40,7 +40,7 @@
       "cve": "CVE-2022-41409",
       "ghsa": "GHSA-4qfx-v7wh-3q4j",
       "severity": "high",
-      "summary": "Integer overflow vulnerability in pcre2test before 10.41 allows attackers to cause a denial of se...",
+      "summary": "Integer overflow vulnerability in pcre2test before 10.41 allows attackers to cause a denial of...",
       "fixVersion": "",
       "package": ""
     },
@@ -56,7 +56,7 @@
       "cve": "CVE-2023-2953",
       "ghsa": "GHSA-26fx-c7cw-5jh4",
       "severity": "high",
-      "summary": "A vulnerability was found in openldap. This security flaw causes a null pointer dereference in be...",
+      "summary": "A vulnerability was found in openldap. This security flaw causes a null pointer dereference in...",
       "fixVersion": "",
       "package": ""
     },
@@ -64,7 +64,7 @@
       "cve": "CVE-2023-29827",
       "ghsa": "GHSA-j5pp-6f4w-r5r6",
       "severity": "critical",
-      "summary": "ejs v3.1.9 is vulnerable to server-side template injection. If the ejs file is controllable, temp...",
+      "summary": "ejs v3.1.9 is vulnerable to server-side template injection. If the ejs file is controllable,...",
       "fixVersion": "",
       "package": ""
     },
@@ -72,7 +72,7 @@
       "cve": "CVE-2023-30571",
       "ghsa": "GHSA-cw7x-3mv7-w6xm",
       "severity": "medium",
-      "summary": "Libarchive through 3.6.2 can cause directories to have world-writable permissions. The umask() ca...",
+      "summary": "Libarchive through 3.6.2 can cause directories to have world-writable permissions. The umask()...",
       "fixVersion": "",
       "package": ""
     },
@@ -80,7 +80,7 @@
       "cve": "CVE-2023-32636",
       "ghsa": "GHSA-79g9-vx8c-xfmq",
       "severity": "high",
-      "summary": "A flaw was found in glib, where the gvariant deserialization code is vulnerable to a denial of se...",
+      "summary": "A flaw was found in glib, where the gvariant deserialization code is vulnerable to a denial of...",
       "fixVersion": "",
       "package": ""
     },
@@ -88,7 +88,7 @@
       "cve": "CVE-2023-39804",
       "ghsa": "GHSA-5pvw-wf9w-xx8v",
       "severity": "medium",
-      "summary": "In GNU tar before 1.35, mishandled extension attributes in a PAX archive can lead to an applicati...",
+      "summary": "In GNU tar before 1.35, mishandled extension attributes in a PAX archive can lead to an...",
       "fixVersion": "",
       "package": ""
     },
@@ -104,7 +104,7 @@
       "cve": "CVE-2023-45322",
       "ghsa": "GHSA-vqpg-m25j-7558",
       "severity": "medium",
-      "summary": "** DISPUTED ** libxml2 through 2.11.5 has a use-after-free that can only occur after a certain me...",
+      "summary": "** DISPUTED ** libxml2 through 2.11.5 has a use-after-free that can only occur after a certain...",
       "fixVersion": "",
       "package": ""
     },
@@ -112,7 +112,7 @@
       "cve": "CVE-2024-12133",
       "ghsa": "GHSA-j3qr-8f3v-fgjj",
       "severity": "medium",
-      "summary": "A flaw in libtasn1 causes inefficient handling of specific certificate data. When processing a la...",
+      "summary": "A flaw in libtasn1 causes inefficient handling of specific certificate data. When processing a...",
       "fixVersion": "",
       "package": ""
     },
@@ -120,7 +120,7 @@
       "cve": "CVE-2024-12243",
       "ghsa": "GHSA-cqj4-fp95-jqxq",
       "severity": "medium",
-      "summary": "A flaw was found in GnuTLS, which relies on libtasn1 for ASN.1 data processing. Due to an ineffic...",
+      "summary": "A flaw was found in GnuTLS, which relies on libtasn1 for ASN.1 data processing. Due to an...",
       "fixVersion": "",
       "package": ""
     },
@@ -128,7 +128,7 @@
       "cve": "CVE-2024-13176",
       "ghsa": "GHSA-r9fv-h47r-823f",
       "severity": "medium",
-      "summary": "Issue summary: A timing side-channel which could potentially allow recovering\nthe private key exi...",
+      "summary": "Issue summary: A timing side-channel which could potentially allow recovering\nthe private key...",
       "fixVersion": "",
       "package": ""
     },
@@ -136,7 +136,7 @@
       "cve": "CVE-2024-34459",
       "ghsa": "GHSA-vv62-jfwq-693v",
       "severity": "high",
-      "summary": "An issue was discovered in xmllint (from libxml2) before 2.11.8 and 2.12.x before 2.12.7. Formatt...",
+      "summary": "An issue was discovered in xmllint (from libxml2) before 2.11.8 and 2.12.x before 2.12.7....",
       "fixVersion": "",
       "package": ""
     },
@@ -152,7 +152,7 @@
       "cve": "CVE-2024-41996",
       "ghsa": "GHSA-h964-f4gx-gw3x",
       "severity": "high",
-      "summary": "Validating the order of the public keys in the Diffie-Hellman Key Agreement Protocol, when an app...",
+      "summary": "Validating the order of the public keys in the Diffie-Hellman Key Agreement Protocol, when an...",
       "fixVersion": "",
       "package": ""
     },
@@ -160,7 +160,7 @@
       "cve": "CVE-2024-52533",
       "ghsa": "GHSA-5rq6-q8gw-qqpr",
       "severity": "critical",
-      "summary": "gio/gsocks4aproxy.c in GNOME GLib before 2.82.1 has an off-by-one error and resultant buffer over...",
+      "summary": "gio/gsocks4aproxy.c in GNOME GLib before 2.82.1 has an off-by-one error and resultant buffer...",
       "fixVersion": "",
       "package": ""
     },
@@ -168,359 +168,7 @@
       "cve": "CVE-2024-56433",
       "ghsa": "GHSA-7683-vm2j-m4cc",
       "severity": "low",
-      "summary": "shadow-utils (aka shadow) 4.4 through 4.17.0 establishes a default /etc/subuid behavior (e.g., ui...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-0395",
-      "ghsa": "GHSA-4xpw-6594-8f5m",
-      "severity": "high",
-      "summary": "When the assert() function in the GNU C Library versions 2.13 to 2.40 fails, it does not allocate...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-1632",
-      "ghsa": "GHSA-cw9m-pj72-3cj5",
-      "severity": "medium",
-      "summary": "A vulnerability was found in libarchive up to 3.7.7. It has been classified as problematic. This ...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-23165",
-      "ghsa": "GHSA-gcf6-vgcr-474f",
-      "severity": "low",
-      "summary": "In Node.js, the `ReadFileUtf8` internal binding leaks memory due to a corrupted pointer in `uv_fs...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-23166",
-      "ghsa": "GHSA-rrjv-57mm-j6cm",
-      "severity": "high",
-      "summary": "The C++ method SignTraits::DeriveBits() may incorrectly call ThrowException() based on user-suppl...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-25724",
-      "ghsa": "GHSA-722w-734r-qg74",
-      "severity": "medium",
-      "summary": "list_item_verbose in tar/util.c in libarchive through 3.7.7 does not check an strftime return val...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-27113",
-      "ghsa": "GHSA-m9m6-wcr9-hh75",
-      "severity": "low",
-      "summary": "libxml2 before 2.12.10 and 2.13.x before 2.13.6 has a NULL pointer dereference in xmlPatMatch in ...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-29087",
-      "ghsa": "GHSA-6j35-rq42-fv6v",
-      "severity": "critical",
-      "summary": "Sqlite 3.49.0 is susceptible to integer overflow through the concat function.",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-30258",
-      "ghsa": "GHSA-5rjg-pf4q-hgcr",
-      "severity": "low",
-      "summary": "In GnuPG before 2.5.5, if a user chooses to import a certificate with certain crafted subkey data...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-31498",
-      "ghsa": "",
-      "severity": "unknown",
-      "summary": "",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-32414",
-      "ghsa": "GHSA-mfrm-w63c-3x58",
-      "severity": "medium",
-      "summary": "In libxml2 before 2.13.8 and 2.14.x before 2.14.2, out-of-bounds memory access can occur in the P...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-32415",
-      "ghsa": "GHSA-w8fw-fj9q-vcjj",
-      "severity": "low",
-      "summary": "In libxml2 before 2.13.8 and 2.14.x before 2.14.2, xmlSchemaIDCFillNodeTables in xmlschemas.c has...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-3277",
-      "ghsa": "GHSA-g2ph-wvc2-ph4v",
-      "severity": "medium",
-      "summary": "An integer overflow can be triggered in SQLite’s `concat_ws()` function. The resulting, truncated...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-32988",
-      "ghsa": "GHSA-fv5h-vqpf-6fqj",
-      "severity": "medium",
-      "summary": "A flaw was found in GnuTLS. A double-free vulnerability exists in GnuTLS due to incorrect ownersh...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-32989",
-      "ghsa": "GHSA-f7q5-qg45-7vm8",
-      "severity": "medium",
-      "summary": "A heap-buffer-overread vulnerability was found in GnuTLS in how it handles the Certificate Transp...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-32990",
-      "ghsa": "GHSA-v8v5-8mm8-3j8p",
-      "severity": "medium",
-      "summary": "A heap-buffer-overflow (off-by-one) flaw was found in the GnuTLS software in the template parsing...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-3360",
-      "ghsa": "GHSA-3435-f6h9-64p7",
-      "severity": "low",
-      "summary": "A flaw was found in GLib. An integer overflow and buffer under-read occur when parsing a long inv...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-4373",
-      "ghsa": "GHSA-cfv9-2rgf-f55c",
-      "severity": "medium",
-      "summary": "A flaw was found in GLib, which is vulnerable to an integer overflow in the g_string_insert_unich...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-45582",
-      "ghsa": "GHSA-f93m-9mq4-2fjj",
-      "severity": "medium",
-      "summary": "GNU Tar through 1.35 allows file overwrite via directory traversal in crafted TAR archives, with ...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-4638",
-      "ghsa": "GHSA-hg9g-m8wg-jv2x",
-      "severity": "critical",
-      "summary": "A vulnerability exists in the inftrees.c component of the zlib library, which is bundled within t...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-47279",
-      "ghsa": "GHSA-cxrh-j4jr-qwg3",
-      "severity": "low",
-      "summary": "undici Denial of Service attack via bad certificate data",
-      "fixVersion": "",
-      "package": "undici"
-    },
-    {
-      "cve": "CVE-2025-4802",
-      "ghsa": "GHSA-8mm9-c4mg-vfjh",
-      "severity": "critical",
-      "summary": "Untrusted LD_LIBRARY_PATH environment variable vulnerability in the GNU C Library version 2.27 to...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-49794",
-      "ghsa": "GHSA-qg4c-8pj4-qgw2",
-      "severity": "critical",
-      "summary": "A use-after-free vulnerability was found in libxml2. This issue occurs when parsing XPath element...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-49795",
-      "ghsa": "GHSA-gg7j-w83p-fxr9",
-      "severity": "high",
-      "summary": "A NULL pointer dereference vulnerability was found in libxml2 when processing XPath XML expressio...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-49796",
-      "ghsa": "GHSA-83xx-9f6p-vwfj",
-      "severity": "critical",
-      "summary": "A vulnerability was found in libxml2. Processing certain sch:name elements from the input XML fil...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-52099",
-      "ghsa": "GHSA-chjr-9v3v-pr2f",
-      "severity": "high",
-      "summary": "Integer Overflow vulnerability in SQLite SQLite3 v.3.50.0 allows a remote attacker to cause a den...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-57319",
-      "ghsa": "GHSA-ffrw-9mx8-89p8",
-      "severity": "low",
-      "summary": "Withdrawn Advisory: fast-redact vulnerable to prototype pollution",
-      "fixVersion": "",
-      "package": "fast-redact"
-    },
-    {
-      "cve": "CVE-2025-5889",
-      "ghsa": "GHSA-v6h2-p8h4-qcjw",
-      "severity": "low",
-      "summary": "brace-expansion Regular Expression Denial of Service vulnerability",
-      "fixVersion": "",
-      "package": "brace-expansion"
-    },
-    {
-      "cve": "CVE-2025-5914",
-      "ghsa": "GHSA-7376-x4rm-3v8x",
-      "severity": "low",
-      "summary": "A vulnerability has been identified in the libarchive library, specifically within the archive_re...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-5915",
-      "ghsa": "GHSA-rfq2-xjgr-h957",
-      "severity": "low",
-      "summary": "A vulnerability has been identified in the libarchive library. This flaw can lead to a heap buffe...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-5916",
-      "ghsa": "GHSA-fg6q-2hc3-4h9c",
-      "severity": "low",
-      "summary": "A vulnerability has been identified in the libarchive library. This flaw involves an integer over...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-5917",
-      "ghsa": "GHSA-29vm-vjqm-q2mx",
-      "severity": "low",
-      "summary": "A vulnerability has been identified in the libarchive library. This flaw involves an 'off-by-one'...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-5918",
-      "ghsa": "GHSA-3hqh-8h99-q2cf",
-      "severity": "low",
-      "summary": "A vulnerability has been identified in the libarchive library. This flaw can be triggered when fi...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-6021",
-      "ghsa": "GHSA-32vr-5hxf-x93f",
-      "severity": "high",
-      "summary": "A flaw was found in libxml2's xmlBuildQName function, where integer overflows in buffer size calc...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-6170",
-      "ghsa": "GHSA-6qrf-r65h-2r77",
-      "severity": "low",
-      "summary": "A flaw was found in the interactive shell of the xmllint command-line tool, used for parsing XML ...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-62813",
-      "ghsa": "GHSA-r7j2-9m2h-fq95",
-      "severity": "medium",
-      "summary": "LZ4 through 1.10.0 allows attackers to cause a denial of service (application crash) or possibly ...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-6395",
-      "ghsa": "GHSA-prf7-7jvx-hxj5",
-      "severity": "medium",
-      "summary": "A NULL pointer dereference flaw was found in the GnuTLS software in _gnutls_figure_common_ciphers...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-6965",
-      "ghsa": "GHSA-2m69-gcr7-jv3q",
-      "severity": "high",
-      "summary": "There exists a vulnerability in SQLite versions before 3.50.2 where the number of aggregate terms...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-7458",
-      "ghsa": "GHSA-h2g7-95mc-8g48",
-      "severity": "medium",
-      "summary": "An integer overflow in the sqlite3KeyInfoFromExprList function in SQLite versions 3.39.2 through ...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-8058",
-      "ghsa": "GHSA-8xjp-c72j-67q8",
-      "severity": "medium",
-      "summary": "The regcomp function in the GNU C library version from 2.4 to 2.41 is \nsubject to a double free i...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-9086",
-      "ghsa": "GHSA-v676-f8gm-92r9",
-      "severity": "high",
-      "summary": "1. A cookie is set using the `secure` keyword for `https://target`\n2. curl is redirected to or ot...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-9230",
-      "ghsa": "",
-      "severity": "unknown",
-      "summary": "",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-9231",
-      "ghsa": "GHSA-9mrx-mqmg-gwj9",
-      "severity": "medium",
-      "summary": "Issue summary: A timing side-channel which could potentially allow remote\nrecovery of the private...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-9232",
-      "ghsa": "GHSA-76r2-c3cg-f5r9",
-      "severity": "medium",
-      "summary": "Issue summary: An application using the OpenSSL HTTP client API functions may\ntrigger an out-of-b...",
-      "fixVersion": "",
-      "package": ""
-    },
-    {
-      "cve": "CVE-2025-9714",
-      "ghsa": "GHSA-fmj5-rvmp-845r",
-      "severity": "medium",
-      "summary": "Uncontrolled recursion in XPath evaluation in libxml2 up to and including version 2.9.14 allows a...",
+      "summary": "shadow-utils (aka shadow) 4.4 through 4.17.0 establishes a default /etc/subuid behavior (e.g.,...",
       "fixVersion": "",
       "package": ""
     }
@@ -592,17 +240,17 @@
       "type": "rpm"
     },
     {
+      "package": "glibc",
+      "version": "0",
+      "type": "rpm"
+    },
+    {
       "package": "glibc-common",
       "version": "0",
       "type": "rpm"
     },
     {
       "package": "glibc-minimal-langpack",
-      "version": "0",
-      "type": "rpm"
-    },
-    {
-      "package": "glibc",
       "version": "0",
       "type": "rpm"
     },
@@ -652,12 +300,12 @@
       "type": "rpm"
     },
     {
-      "package": "openssl-libs",
+      "package": "openssl",
       "version": "1",
       "type": "rpm"
     },
     {
-      "package": "openssl",
+      "package": "openssl-libs",
       "version": "1",
       "type": "rpm"
     },
