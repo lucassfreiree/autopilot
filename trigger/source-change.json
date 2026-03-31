@@ -16,6 +16,12 @@
       "target_path": "package-lock.json",
       "search": "\"version\": \"3.7.4\"",
       "replace": "\"version\": \"3.7.5\""
+    },
+    {
+      "action": "search-replace",
+      "target_path": "src/swagger/swagger.json",
+      "search": "\"version\": \"3.7.4\"",
+      "replace": "\"version\": \"3.7.5\""
     }
   ],
   "commit_message": "chore(release): bump controller version to 3.7.5",
