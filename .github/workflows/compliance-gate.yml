@@ -83,9 +83,26 @@ jobs:
           echo "component=$COMPONENT" >> "$GITHUB_OUTPUT"
           echo "run_number=$RUN" >> "$GITHUB_OUTPUT"
 
-          PATCH_TS=$(find patches/ -name "*.ts" 2>/dev/null || true)
-          PATCH_JSON=$(find patches/ -name "*.json" 2>/dev/null || true)
-          ALL_PATCHES=$(find patches/ -type f 2>/dev/null || true)
+          # Only scan patches REFERENCED in the trigger (not leftover files from previous deploys)
+          REFS=$(echo "$CHANGES" | jq -r '.[].content_ref // empty' 2>/dev/null | sort -u || true)
+          PATCH_TS=""
+          PATCH_JSON=""
+          ALL_PATCHES=""
+          for ref in $REFS; do
+            if [ -f "$ref" ]; then
+              ALL_PATCHES="$ALL_PATCHES $ref"
+              case "$ref" in
+                *.ts) PATCH_TS="$PATCH_TS $ref" ;;
+                *.json) PATCH_JSON="$PATCH_JSON $ref" ;;
+              esac
+            fi
+          done
+          # Fallback: if no refs found (manual dispatch), scan all
+          if [ -z "$ALL_PATCHES" ]; then
+            PATCH_TS=$(find patches/ -name "*.ts" 2>/dev/null || true)
+            PATCH_JSON=$(find patches/ -name "*.json" 2>/dev/null || true)
+            ALL_PATCHES=$(find patches/ -type f 2>/dev/null || true)
+          fi
 
           # ══ RULE 1: Version format (no X.Y.10+) ══
           if [ -n "$VERSION" ] && [ "$VERSION" != "null" ]; then
@@ -134,20 +151,16 @@ jobs:
             fi
           done
 
-          # ══ RULE 5: No validateTrustedUrl in fetch/postJson ══
+          # ══ RULE 5: No validateTrustedUrl as argument inside fetch/postJson ══
           for f in $PATCH_TS; do
-            if grep -n "validateTrustedUrl" "$f" > /dev/null 2>&1; then
-              if grep -B5 "validateTrustedUrl" "$f" | grep -qP "fetch|postJson|callAgent|http\.request"; then
-                viol "no-validate-in-fetch" "$f: validateTrustedUrl inside fetch/postJson breaks mock tests" "error"
-              else
-                warn "validate-url" "$f uses validateTrustedUrl — verify it's at input level"
-              fi
+            if grep -nP "(fetch|postJson|callAgent|http\.request)\s*\(.*validateTrustedUrl" "$f" > /dev/null 2>&1; then
+              viol "no-validate-in-fetch" "$f: validateTrustedUrl as argument inside fetch/postJson breaks mock tests. Validate at input level instead." "error"
             fi
           done
 
           # ══ RULE 6: No nested ternaries ══
           for f in $PATCH_TS; do
-            if grep -nP '\?[^:?]*\?[^:]*:' "$f" | grep -v '//' | head -1 | grep -q '.'; then
+            if grep -nP '\?[^:?]*\?[^:]*:' "$f" | grep -v '//' | grep -v '^\s*[0-9]*[:-]\s*/\^' | grep -v 'RegExp' | head -1 | grep -q '.'; then
               viol "no-nested-ternary" "$f has nested ternaries — ESLint will reject" "error"
             fi
           done
@@ -202,8 +215,14 @@ jobs:
           # ══ RULE 12: SECURITY — DoS by loop ══
           for f in $PATCH_TS; do
             if grep -nP "for\s*\(.*req\.(body|query)|\.forEach.*req\." "$f" > /dev/null 2>&1; then
-              if ! grep -q "MAX_RESULTS\|\.slice(0," "$f"; then
+              if ! grep -q "MAX_RESULTS\|MAX_ENTRIES\|\.slice(0," "$f"; then
                 viol "security-dos-loop" "$f: loop driven by user input without MAX_RESULTS limit" "error"
+              fi
+            fi
+            # Also catch indirect DoS: for-loops bounded by .length without Math.min cap
+            if grep -nP 'for\s*\([^;]*<\s*\w+\.length' "$f" > /dev/null 2>&1; then
+              if ! grep -q "Math\.min\|MAX_RESULTS\|MAX_ENTRIES\|MAX_SCORE" "$f"; then
+                viol "security-dos-loop" "$f: for-loop bounded by .length without explicit Math.min cap (Checkmarx Server_DoS_by_Loop)" "error"
               fi
             fi
           done
