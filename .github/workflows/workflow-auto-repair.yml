@@ -240,10 +240,13 @@ jobs:
         run: |
           REPAIRS="$REPAIRS_JSON"
           echo "$REPAIRS" | jq empty 2>/dev/null || REPAIRS='[]'
+          REPAIR_LEN=$(echo "$REPAIRS" | jq 'length' 2>/dev/null || echo 0)
+          echo "Processing $REPAIR_LEN repairs..."
           APPLIED=0
           FAILED=0
 
-          for REPAIR in $(echo "$REPAIRS" | jq -c '.[]' 2>/dev/null); do
+          while IFS= read -r REPAIR; do
+            [ -z "$REPAIR" ] && continue
             TYPE=$(echo "$REPAIR" | jq -r '.type')
             WF_NAME=$(echo "$REPAIR" | jq -r '.workflow_name')
             echo "::group::Repairing: $WF_NAME ($TYPE)"
@@ -278,9 +281,8 @@ jobs:
                 echo "Clearing expired lock at $LOCK_PATH..."
                 LOCK_SHA=$(gh api "repos/$REPO/contents/$LOCK_PATH?ref=$STATE_BRANCH" --jq '.sha' 2>/dev/null || echo "")
                 if [ -n "$LOCK_SHA" ]; then
-                  PAYLOAD=$(jq -n --arg sha "$LOCK_SHA" --arg msg "chore: auto-clear expired lock [auto-repair]" --arg branch "$STATE_BRANCH" \
-                    '{message: $msg, sha: $sha, branch: $branch}')
-                  if gh api "repos/$REPO/contents/$LOCK_PATH" --method DELETE --input - <<< "$PAYLOAD" 2>/dev/null; then
+                  echo "{\"message\":\"chore: auto-clear expired lock [auto-repair]\",\"sha\":\"$LOCK_SHA\",\"branch\":\"$STATE_BRANCH\"}" > /tmp/lock-payload.json
+                  if gh api "repos/$REPO/contents/$LOCK_PATH" --method DELETE --input /tmp/lock-payload.json 2>/dev/null; then
                     echo "::notice ::Cleared expired lock"
                     APPLIED=$((APPLIED + 1))
                   else
@@ -322,7 +324,7 @@ jobs:
             esac
 
             echo "::endgroup::"
-          done
+          done < <(echo "$REPAIRS" | jq -c '.[]' 2>/dev/null)
 
           echo "## Repair Results" >> "$GITHUB_STEP_SUMMARY"
           echo "- Applied: $APPLIED" >> "$GITHUB_STEP_SUMMARY"
