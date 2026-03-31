@@ -1,0 +1,185 @@
+name: "[Core] PR Auto-Review"
+run-name: "${{ github.workflow }} • PR #${{ github.event.pull_request.number }}"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-auto-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: "Auto-Review PR"
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "1. Analyze changed files"
+        id: analyze
+        run: |
+          set -e
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # Get list of changed files
+          CHANGED=$(git diff --name-only "$BASE".."$HEAD" 2>/dev/null || echo "")
+          CHANGED_COUNT=$(echo "$CHANGED" | grep -c '.' || echo "0")
+          echo "Changed files: $CHANGED_COUNT"
+          echo "$CHANGED"
+
+          # Categorize changes
+          WF_COUNT=$(echo "$CHANGED" | grep -c '\.github/workflows/' || echo "0")
+          PATCH_COUNT=$(echo "$CHANGED" | grep -c '^patches/' || echo "0")
+          TRIGGER_COUNT=$(echo "$CHANGED" | grep -c '^trigger/' || echo "0")
+          SKILL_COUNT=$(echo "$CHANGED" | grep -c '\.claude/' || echo "0")
+
+          echo "changed_count=$CHANGED_COUNT" >> "$GITHUB_OUTPUT"
+          echo "wf_count=$WF_COUNT" >> "$GITHUB_OUTPUT"
+          echo "patch_count=$PATCH_COUNT" >> "$GITHUB_OUTPUT"
+          echo "trigger_count=$TRIGGER_COUNT" >> "$GITHUB_OUTPUT"
+          echo "changed_b64=$(echo "$CHANGED" | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+      - name: "2. Security checks"
+        id: security
+        run: |
+          set -e
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          ISSUES=""
+          FAIL=false
+
+          # Check for hardcoded secrets patterns
+          DIFF=$(git diff "$BASE".."$HEAD" -- . ':!*.md' 2>/dev/null || echo "")
+
+          # Internal domain leak
+          if echo "$DIFF" | grep -qE '^\+.*intranet\.' 2>/dev/null; then
+            ISSUES="${ISSUES}\n- SECURITY: Internal domain reference detected in diff"
+            FAIL=true
+          fi
+
+          # Hardcoded tokens/secrets
+          if echo "$DIFF" | grep -qiE '^\+.*(password|secret|token|api_key)\s*[:=]\s*["\x27][A-Za-z0-9]' 2>/dev/null; then
+            ISSUES="${ISSUES}\n- SECURITY: Possible hardcoded secret detected"
+            FAIL=true
+          fi
+
+          # Reflected XSS (user input in response without sanitize)
+          if echo "$DIFF" | grep -qE '^\+.*res\.(json|send).*req\.(body|query|params)' 2>/dev/null; then
+            if ! echo "$DIFF" | grep -q 'sanitizeForOutput' 2>/dev/null; then
+              ISSUES="${ISSUES}\n- WARNING: User input may be reflected in response without sanitization"
+            fi
+          fi
+
+          # SSRF (user input in fetch URL)
+          if echo "$DIFF" | grep -qE '^\+.*fetch\(.*req\.(body|query)' 2>/dev/null; then
+            if ! echo "$DIFF" | grep -q 'validateTrustedUrl' 2>/dev/null; then
+              ISSUES="${ISSUES}\n- WARNING: User-controlled URL in fetch without validation"
+            fi
+          fi
+
+          echo "security_fail=$FAIL" >> "$GITHUB_OUTPUT"
+          if [ -n "$ISSUES" ]; then
+            echo "security_issues_b64=$(printf '%b' "$ISSUES" | base64 -w0)" >> "$GITHUB_OUTPUT"
+          else
+            echo "security_issues_b64=$(echo 'None' | base64 -w0)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "3. Workflow quality checks"
+        id: quality
+        run: |
+          set -e
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          CHANGED=$(echo "${{ steps.analyze.outputs.changed_b64 }}" | base64 -d)
+          ISSUES=""
+          WARN_COUNT=0
+
+          # Check changed workflow files
+          echo "$CHANGED" | grep '\.github/workflows/.*\.yml$' | while read -r F; do
+            [ ! -f "$F" ] && continue
+
+            # YAML validity
+            python3 -c "import yaml; yaml.safe_load(open('$F'))" 2>/dev/null || {
+              ISSUES="${ISSUES}\n- ERROR: Invalid YAML in $F"
+              continue
+            }
+
+            # Heredoc in run blocks
+            if grep -qE '\$\(cat <<' "$F" 2>/dev/null; then
+              ISSUES="${ISSUES}\n- ERROR: Dangerous heredoc pattern in $F (causes exit 127)"
+            fi
+
+            # Missing concurrency for scheduled workflows
+            if grep -q 'schedule:' "$F" && ! grep -q 'concurrency:' "$F"; then
+              ISSUES="${ISSUES}\n- WARNING: Scheduled workflow $F has no concurrency group"
+              WARN_COUNT=$((WARN_COUNT + 1))
+            fi
+          done
+
+          # Check changed JSON files
+          echo "$CHANGED" | grep '\.json$' | while read -r F; do
+            [ ! -f "$F" ] && continue
+            python3 -c "import json; json.load(open('$F'))" 2>/dev/null || {
+              ISSUES="${ISSUES}\n- ERROR: Invalid JSON in $F"
+            }
+          done
+
+          echo "quality_warnings=$WARN_COUNT" >> "$GITHUB_OUTPUT"
+          if [ -n "$ISSUES" ]; then
+            echo "quality_issues_b64=$(printf '%b' "$ISSUES" | base64 -w0)" >> "$GITHUB_OUTPUT"
+          else
+            echo "quality_issues_b64=$(echo 'None' | base64 -w0)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "4. Post review comment"
+        if: always()
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
+          SEC_FAIL: ${{ steps.security.outputs.security_fail }}
+          CHANGED: ${{ steps.analyze.outputs.changed_count }}
+          WF: ${{ steps.analyze.outputs.wf_count }}
+          PATCHES: ${{ steps.analyze.outputs.patch_count }}
+          TRIGGERS: ${{ steps.analyze.outputs.trigger_count }}
+          WARNINGS: ${{ steps.quality.outputs.quality_warnings }}
+        run: |
+          set -e
+          SEC_ISSUES=$(echo "${{ steps.security.outputs.security_issues_b64 }}" | base64 -d 2>/dev/null || echo "None")
+          QUAL_ISSUES=$(echo "${{ steps.quality.outputs.quality_issues_b64 }}" | base64 -d 2>/dev/null || echo "None")
+
+          if [ "$SEC_FAIL" = "true" ]; then
+            VERDICT="REQUEST CHANGES"
+            ICON="X"
+          elif [ "${WARNINGS:-0}" -gt 0 ]; then
+            VERDICT="APPROVE (with warnings)"
+            ICON="!"
+          else
+            VERDICT="APPROVE"
+            ICON="ok"
+          fi
+
+          BODY="## Auto-Review: ${VERDICT}\n\n### Changes\n| Category | Count |\n|----------|-------|\n| Files changed | $CHANGED |\n| Workflows | $WF |\n| Patches | $PATCHES |\n| Triggers | $TRIGGERS |\n\n### Security\n${SEC_ISSUES}\n\n### Quality\n${QUAL_ISSUES}\n\n---\n*Automated review by PR Auto-Review workflow*"
+
+          # Check if we already commented on this PR (avoid duplicates)
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues/$PR_NUM/comments?per_page=10" \
+            --jq '[.[] | select(.body | contains("Auto-Review"))] | last | .id' 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            printf '%b' "$BODY" | gh api "repos/${{ github.repository }}/issues/comments/$EXISTING" \
+              --method PATCH -F body=@- > /dev/null 2>&1
+            echo "Updated existing review comment"
+          else
+            printf '%b' "$BODY" | gh api "repos/${{ github.repository }}/issues/$PR_NUM/comments" \
+              --method POST -F body=@- > /dev/null 2>&1
+            echo "Posted new review comment"
+          fi
