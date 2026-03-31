@@ -390,7 +390,7 @@
     const sync=state.lastSync;
 
     // Stale sync (adaptive: 3min business hours, 12min off-hours)
-    if(sync){const age=(Date.now()-new Date(sync).getTime())/60000;const thresh=getStaleThreshold();if(age>thresh)alerts.push({type:'warn',msg:`Sync is ${Math.floor(age)}min old (threshold: ${thresh}min${isBusinessHours()?' — business hours':''})`,icon:'clock'})}
+    if(sync){const age=(Date.now()-new Date(sync).getTime())/60000;const thresh=getStaleThreshold();if(age>thresh){const h=Math.floor(age/60);const m=Math.floor(age%60);const friendly=h>=24?Math.floor(h/24)+'d ago':h>=1?h+'h'+( m>0?' '+m+'m':'')+' ago':Math.floor(age)+'min ago';alerts.push({type:'warn',msg:`Last sync: ${friendly}`,icon:'clock'})}}
 
     // Pipeline running
     if(p.status==='running'||p.status==='in_progress')alerts.push({type:'info',msg:`Pipeline running: ${p.component} v${p.version} (run #${p.lastRun})`,icon:'play'});
