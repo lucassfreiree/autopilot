@@ -2,7 +2,12 @@ name: "[Core] Deploy Auto-Learn"
 run-name: "${{ github.workflow }} • learn from ${{ inputs.source || 'auto' }}"
 
 # Runs after ANY deploy-related workflow completes — learns from results
+# Also runs on push to its own file (ensures GitHub indexes the workflow)
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-auto-learn.yml'
   workflow_run:
     workflows:
       - "[Corp] Deploy: Apply Source Change"
