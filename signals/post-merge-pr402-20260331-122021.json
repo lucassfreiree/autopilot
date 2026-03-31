@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 402,
+  "branch": "claude/automate-task-autonomy-v3NLB",
+  "timestamp": "2026-03-31T12:20:21Z",
+  "runId": "23796936411",
+  "healthStatus": "degraded"
+}
