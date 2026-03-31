@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-03-30T19:50:00Z",
+  "lastUpdated": "2026-03-31T12:30:00Z",
   "lastSessionId": "session_01N6wTVvkGd7Hs1zMtus8i5i",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -571,7 +571,7 @@
     "triggerFile": "trigger/source-change.json",
     "lastTriggerRun": 73,
     "lastSuccessfulRun": 73,
-    "lastDeployPR": 371,
+    "lastDeployPR": 406,
     "pipelineStatus": "CI_MONITORING — agent 2.3.3 (run #73). ci-diagnose run #27 triggered. deploy-pipeline-monitor active.",
     "multiFilePayload": {
       "change_type": "multi-file",
@@ -1362,7 +1362,11 @@
       "health_json_false_positive_lock": "health.json degraded from released lock file existing. Resolves on next health-check or lock-gc run.",
       "orchestrator_re_enables_disabled_workflows": "Fixed: exclusion filter for .disabled + known codex/copilot patterns in orchestrator + auto-repair.",
       "sk_false_positive_in_validation_gate": "Fixed: sk-[A-Za-z0-9]{20,} requires 20+ chars after prefix.",
-      "gha_yml_disabled_not_scanned": "Renaming to .yml.disabled doesnt trigger path filter. Include a real .yml change to trigger gate."
+      "gha_yml_disabled_not_scanned": "Renaming to .yml.disabled doesnt trigger path filter. Include a real .yml change to trigger gate.",
+      "deploy_auto_learn_zero_runs": "deploy-auto-learn.yml tinha 0 runs porque GitHub nao indexou (so tinha workflow_run + workflow_dispatch triggers). FIX: adicionar push trigger no proprio arquivo para forcar indexacao. PR #405.",
+      "heredoc_exit_127_systematic": "CRITICO: $(cat <<EOF) dentro de run: | blocks em GHA causa exit 127. O GHA parser interpreta como YAML antes de avaliar como shell. Workflows corrigidos: compliance-gate (#403), continuous-improvement (#405), post-deploy-validation (#406), alert-notify (#406). FIX: usar inline string + printf. continuous-improvement agora detecta este pattern automaticamente.",
+      "continuous_improvement_shallow": "continuous-improvement.yml faz analise ESTRUTURAL (YAML valido, schemas, locks expirados) mas NAO analisa falhas de RUNTIME. deploy-auto-learn.yml e o mecanismo que aprende de falhas de runtime. Ambos sao complementares.",
+      "cronjob_result_test_count_mismatch": "Mock tinha count:1 com entries:[] mas controller computa count = boundedEntries.length = 0. FIX: alinhar mock count com entries.length. PR #402."
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
     "gha_no_heredoc_in_run": "CRITICO: NUNCA usar heredoc (cat <<EOF / cat <<'EOF') dentro de blocos run: | em GitHub Actions. O GHA parser le TODO o bloco run: como YAML literal ANTES de avaliar como shell. Qualquer linha com dois-pontos (ex: 'Workspace: $WS') e interpretada como YAML key-value e quebra. FIX: usar variavel simples com string inline. Ex: BODY='texto sem colon' e depois gh issue comment --body \"$BODY\". NUNCA heredoc.",
