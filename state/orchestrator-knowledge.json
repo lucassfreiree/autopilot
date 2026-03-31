@@ -16,6 +16,11 @@
       "count": 3
     },
     {
+      "workflow": "[Core] Intelligent Orchestrator",
+      "consecutiveAt": "2026-03-31T01:25:03Z",
+      "count": 3
+    },
+    {
       "workflow": "[Core] Workflow Auto-Repair",
       "consecutiveAt": "2026-03-30T21:02:32Z",
       "count": 3
@@ -35,14 +40,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-03-30T23:32:50Z",
+  "lastRun": "2026-03-31T01:25:03Z",
   "lastHealth": "critical",
-  "runCount": 22,
+  "runCount": 23,
   "healthHistory": [
-    {
-      "ts": "2026-03-30T08:08:19Z",
-      "health": "critical"
-    },
     {
       "ts": "2026-03-30T09:04:04Z",
       "health": "critical"
@@ -117,6 +118,10 @@
     },
     {
       "ts": "2026-03-30T23:32:50Z",
+      "health": "critical"
+    },
+    {
+      "ts": "2026-03-31T01:25:03Z",
       "health": "critical"
     }
   ]
