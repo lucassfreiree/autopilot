@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Evaluate eligibility and auto-ready draft PRs
         id: policy
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -84,7 +84,7 @@ jobs:
       - name: Wait for check suites to complete
         id: checks
         if: steps.policy.outputs.eligible == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -173,7 +173,7 @@ jobs:
       - name: Merge PR (squash) via REST API
         id: merge
         if: steps.policy.outputs.eligible == 'true' && steps.checks.outputs.checks_ok == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           # RELEASE_TOKEN is preferred when available because GITHUB_TOKEN may lack
           # push permission when branch protection is enabled. Falls back to GITHUB_TOKEN
@@ -204,7 +204,7 @@ jobs:
 
       - name: Cleanup head branch after merge
         if: steps.merge.outputs.merged == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -222,7 +222,7 @@ jobs:
 
       - name: Fallback — enable auto-merge if direct merge failed
         if: steps.policy.outputs.eligible == 'true' && steps.merge.outputs.merged == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -247,7 +247,7 @@ jobs:
 
       - name: Write step summary
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
