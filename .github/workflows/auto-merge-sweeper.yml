@@ -59,7 +59,7 @@ jobs:
 
               // Agent branches from registry + dependabot
               // Reads prefixes from contracts/agent-registry.json (allKnownPrefixes)
-              const knownPrefixes = ['claude/', 'copilot/', 'codex/', 'agent/', 'dependabot/'];
+              const knownPrefixes = ['claude/', 'copilot/', 'codex/', 'agent/', 'devin/', 'dependabot/'];
               const isAgent = knownPrefixes.some(p => branch.startsWith(p));
               if (!isAgent) {
                 skippedPRs.push(`#${prNumber}: not agent branch`);

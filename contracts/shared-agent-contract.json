@@ -63,7 +63,7 @@
       "If expired or no lock, acquire new lock",
       "Always release lock in the audit/cleanup stage"
     ],
-    "agentIdentifiers": ["claude-code", "codex", "chatgpt", "copilot", "manual"],
+    "agentIdentifiers": ["claude-code", "codex", "chatgpt", "copilot", "devin", "manual"],
     "protectedOperations": [
       "push-to-corporate-repo",
       "modify-state-branch",

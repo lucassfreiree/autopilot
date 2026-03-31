@@ -325,7 +325,7 @@ jq -n \
     executionHistory: ($claude_mem.executionHistory.sessions // []) | [.[] | {id, date, summary}] | .[-10:],
 
     knownErrors: [
-      {code: "403_push", desc: "Branch nao comeca com claude/copilot/codex/", fix: "Renomear branch"},
+      {code: "403_push", desc: "Branch nao comeca com claude/copilot/codex/devin/", fix: "Renomear branch"},
       {code: "trigger_not_firing", desc: "Campo run nao incrementado", fix: "Incrementar run +1"},
       {code: "duplicate_tag", desc: "Versao ja existe no registry", fix: "Incrementar patch"},
       {code: "eslint_no_use_before_define", desc: "Funcao usada antes de definir", fix: "Mover funcao para cima"},
@@ -399,7 +399,7 @@ jq -n \
     metadata: {
       autopilotRepo: "lucassfreiree/autopilot",
       sparkRepo: "lucassfreiree/spark-dashboard",
-      totalAgents: 1,
+      totalAgents: 2,
       totalWorkspaces: 2,
       syncInterval: "5min business hours (8-17 BRT Mon-Fri) / 15min off-hours",
       stateVersion: 5
