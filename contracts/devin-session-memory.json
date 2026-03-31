@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 2,
+  "contractId": "devin-session-memory",
+  "description": "Cumulative memory for Devin agent. Each session MUST read this and apply automatically. Goal: reduce execution time and improve quality each session.",
+  "lastUpdated": "2026-03-31T21:50:00Z",
+  "lastSessionId": "devin-8102b1c494da48158fbc550b1139579f",
+  "currentState": {
+    "controller": {
+      "currentVersion": "3.7.5",
+      "previousVersion": "3.7.4",
+      "lastDeployRun": 83,
+      "lastDeployStatus": "success",
+      "lastDeployDate": "2026-03-31"
+    },
+    "agent": {
+      "currentVersion": "2.3.3",
+      "previousVersion": "2.3.2",
+      "lastDeployRun": null,
+      "lastDeployStatus": null,
+      "lastDeployDate": null
+    }
+  },
+  "versioningRules": {
+    "pattern": "X.Y.Z where Z goes 0-9 then Y increments (X.Y.9 -> X.(Y+1).0, NEVER X.Y.10)",
+    "fourFileBump": ["package.json", "package-lock.json", "src/swagger/swagger.json", "references/<component>-cap/values.yaml"],
+    "swaggerRule": "ASCII only, NO accented characters"
+  },
+  "deployFlow": {
+    "triggerFile": "trigger/source-change.json",
+    "workflow": "apply-source-change.yml",
+    "stages": [
+      "1. Setup (read workspace config)",
+      "1.5 Session Guard (acquire lock)",
+      "2. Apply & Push (clone corporate repo, apply changes, push)",
+      "3. CI Gate (wait for corporate CI - Esteira de Build NPM)",
+      "4. Promote (update CAP values.yaml image tag)",
+      "5. Save State (record on autopilot-state branch)",
+      "6. Audit & Release Lock (audit trail + release session lock)",
+      "7. CI Monitor (activate monitoring loop)"
+    ],
+    "lastTriggerRun": 83,
+    "lastSuccessfulRun": 83
+  },
+  "executionHistory": {
+    "sessions": [
+      {
+        "id": "devin-8102b1c494da48158fbc550b1139579f",
+        "date": "2026-03-31",
+        "summary": "First Devin session. Analyzed entire autopilot project. Executed controller version bump 3.7.4 -> 3.7.5 (run #83). All 7 pipeline stages completed successfully.",
+        "stepsExecuted": [
+          {
+            "action": "Full project analysis",
+            "result": "Mapped all 78 workflows, 16 triggers, 4 workspaces, contracts, schemas"
+          },
+          {
+            "action": "Controller version bump 3.7.4 -> 3.7.5",
+            "how": "Updated trigger/source-change.json (version, run 82->83, added swagger.json bump) + references/controller-cap/values.yaml",
+            "pr": "PR #426",
+            "result": "Merged. apply-source-change.yml ran all 7 stages successfully."
+          },
+          {
+            "action": "Devin full agent integration",
+            "how": "Registered Devin in agent-registry, auto-merge workflows, session guard, created agent contract and session memory",
+            "result": "In progress"
+          }
+        ],
+        "lessonsLearned": [
+          "Branch prefix devin/ was NOT in auto-merge workflows - had to add manually",
+          "Compliance gate check is non-required but flags pre-existing security issues in old patches",
+          "Corporate CI (Esteira de Build NPM) typically takes 10-15 minutes in CI Gate stage",
+          "version-4-files compliance rule requires bumping swagger.json alongside package.json, package-lock.json, and CAP",
+          "Cannot push directly to main or merge PRs via gh CLI - need auto-merge workflows or manual merge"
+        ]
+      }
+    ]
+  },
+  "knownPatterns": {
+    "ciGateDuration": "10-15 minutes typical for corporate CI",
+    "autoMergeDelay": "Auto-merge sweeper runs every 5 minutes",
+    "complianceGateNonRequired": "4. Compliance Report check is NOT required for merge",
+    "preExistingSecurityIssues": "Old patches have security-xss and security-ssrf violations that are pre-existing"
+  },
+  "workspaceContext": {
+    "primary": "ws-default (Getronics)",
+    "secondary": "ws-cit (CIT - DevOps)",
+    "blocked": ["ws-socnew", "ws-corp-1"],
+    "contextClues": {
+      "ws-default": ["controller", "agent", "NestJS", "bbvinet", "psc-sre", "swagger", "Jest", "ESLint", "esteira", "build NPM", "Getronics"],
+      "ws-cit": ["DevOps", "Terraform", "Kubernetes", "K8s", "Docker", "cloud", "AWS", "Azure", "GCP", "pipeline", "monitoring", "Datadog", "Grafana", "Prometheus", "infrastructure", "IaC", "CIT"]
+    }
+  }
+}
