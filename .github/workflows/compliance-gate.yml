@@ -189,40 +189,67 @@ jobs:
             viol "blocked-workspace" "Workspace $WS_ID is LOCKED (third-party)" "error"
           fi
 
-          # ══ RULE 10: SECURITY — XSS (Reflected) ══
+          # ══ RULE 10: SECURITY — XSS (Reflected) [Checkmarx Reflected_XSS] ══
+          # Checkmarx traces: req.body → ... → res.json(). Even indirect flows trigger.
+          # Fix: every file with res.json AND req.body/query/params MUST import sanitizeForOutput
           for f in $PATCH_TS; do
-            # Check if req.body/req.query flows to res.json without sanitization
-            if grep -n "res\.json.*req\.\(body\|query\|params\)" "$f" > /dev/null 2>&1; then
+            HAS_REQ_INPUT=$(grep -c "req\.\(body\|query\|params\)" "$f" 2>/dev/null || echo "0")
+            HAS_RES_JSON=$(grep -c "res\.\(json\|send\|status\)" "$f" 2>/dev/null || echo "0")
+            if [ "$HAS_REQ_INPUT" -gt 0 ] && [ "$HAS_RES_JSON" -gt 0 ]; then
               if ! grep -q "sanitizeForOutput" "$f"; then
-                viol "security-xss" "$f: req input flows to res.json without sanitizeForOutput()" "error"
+                viol "security-xss" "$f: file reads req input AND writes response — MUST import sanitizeForOutput (Checkmarx Reflected_XSS)" "error"
               fi
             fi
-            # Check error messages reflecting input
+            # Check error messages reflecting unsanitized details
             if grep -nP "res\.(status|json).*error.*\b(message|detail|desc)" "$f" | grep -v "sanitize" > /dev/null 2>&1; then
               warn "security-error-leak" "$f: error response may leak details — use sanitizeForOutput()"
             fi
           done
 
-          # ══ RULE 11: SECURITY — SSRF ══
+          # ══ RULE 11: SECURITY — SSRF [Checkmarx SSRF] ══
+          # Checkmarx traces: req.body → body.cluster/namespace → URL resolve → fetch()
+          # Fix: every file with fetch() MUST have validateTrustedUrl before the call
           for f in $PATCH_TS; do
-            if grep -nP "fetch\(.*req\.|http\.request\(.*req\." "$f" > /dev/null 2>&1; then
-              if ! grep -q "parseSafeIdentifier\|validateTrustedUrl" "$f"; then
-                viol "security-ssrf" "$f: user input used in fetch/http without validation" "error"
+            HAS_FETCH=$(grep -cP "fetch\(|http\.request\(|postJson\(|callAgent\(" "$f" 2>/dev/null || echo "0")
+            if [ "$HAS_FETCH" -gt 0 ]; then
+              if ! grep -q "validateTrustedUrl" "$f"; then
+                viol "security-ssrf" "$f: uses fetch/http/postJson/callAgent without validateTrustedUrl (Checkmarx SSRF)" "error"
+              fi
+              # Also verify URL is NOT built directly from req.body
+              if grep -nP "fetch\(\s*req\.|fetch\(\s*body\." "$f" > /dev/null 2>&1; then
+                viol "security-ssrf" "$f: req/body input used DIRECTLY in fetch URL — use resolveTrustedRegisteredAgentExecuteUrl + validateTrustedUrl" "error"
+              fi
+            fi
+            # Files that resolve URLs from user input MUST validate
+            if grep -q "resolveTrustedRegisteredAgentExecuteUrl\|resolveTrustedRegisteredAgentExecuteUrlByCluster" "$f"; then
+              if ! grep -q "validateTrustedUrl" "$f"; then
+                viol "security-ssrf" "$f: resolves agent URL from input but missing validateTrustedUrl guard (Checkmarx SSRF)" "error"
               fi
             fi
           done
 
-          # ══ RULE 12: SECURITY — DoS by loop ══
+          # ══ RULE 12: SECURITY — DoS by loop [Checkmarx Server_DoS_by_Loop] ══
+          # Checkmarx traces: req.query/params → function arg → array.length → for-loop bound
+          # Fix: ANY for-loop bounded by .length MUST use Math.min(x, MAX_CONSTANT)
           for f in $PATCH_TS; do
+            # Direct: loop driven by req input
             if grep -nP "for\s*\(.*req\.(body|query)|\.forEach.*req\." "$f" > /dev/null 2>&1; then
               if ! grep -q "MAX_RESULTS\|MAX_ENTRIES\|\.slice(0," "$f"; then
                 viol "security-dos-loop" "$f: loop driven by user input without MAX_RESULTS limit" "error"
               fi
             fi
-            # Also catch indirect DoS: for-loops bounded by .length without Math.min cap
+            # Indirect: ANY for-loop bounded by .length (Checkmarx can trace user input to .length)
             if grep -nP 'for\s*\([^;]*<\s*\w+\.length' "$f" > /dev/null 2>&1; then
-              if ! grep -q "Math\.min\|MAX_RESULTS\|MAX_ENTRIES\|MAX_SCORE" "$f"; then
+              if ! grep -q "Math\.min\|MAX_RESULTS\|MAX_ENTRIES\|MAX_SCORE\|MAX_STATUS\|MAX_SYNC\|MAX_LOG" "$f"; then
                 viol "security-dos-loop" "$f: for-loop bounded by .length without explicit Math.min cap (Checkmarx Server_DoS_by_Loop)" "error"
+              fi
+            fi
+            # Array iteration without bounds (forEach/map on unbounded arrays)
+            if grep -nP "\.\(forEach\|map\|reduce\)\(" "$f" > /dev/null 2>&1; then
+              if grep -q "req\.\(body\|query\|params\)" "$f"; then
+                if ! grep -q "\.slice(0,\|MAX_RESULTS\|MAX_ENTRIES\|boundedEntries" "$f"; then
+                  warn "security-dos-iteration" "$f: iterates array from request without .slice() bound"
+                fi
               fi
             fi
           done

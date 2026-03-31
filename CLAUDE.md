@@ -67,6 +67,7 @@ Zero local dependencies. 100% GitHub-native.
 | `release-freeze.schema.json` | Release freeze state |
 | `release-state.schema.json` | Release state (agent/controller) |
 | `workspace.schema.json` | Workspace configuration |
+| `checkmarx-patterns.json` | Checkmarx SAST finding patterns → compliance gate rules + fix patterns |
 
 ## Integrations (all zero-cost, open-source)
 
