@@ -121,12 +121,16 @@ COMMENT_EOF
             echo "::warning ::Failed to post comment on issue/PR #$ISSUE_NUMBER"
 
       - name: Write step summary
+        env:
+          STEP_TITLE: ${{ steps.context.outputs.title }}
+          STEP_ISSUE: ${{ steps.context.outputs.issue_number }}
+          STEP_CMD: ${{ steps.context.outputs.command }}
         run: |
           {
             echo "## Devin Assistant Response"
             echo "| Field | Value |"
             echo "|---|---|"
-            echo "| Issue/PR | #${{ steps.context.outputs.issue_number }} |"
-            echo "| Command | \`${{ steps.context.outputs.command }}\` |"
-            echo "| Title | ${{ steps.context.outputs.title }} |"
+            echo "| Issue/PR | #${STEP_ISSUE} |"
+            echo "| Command | \`${STEP_CMD}\` |"
+            echo "| Title | ${STEP_TITLE} |"
           } >> "$GITHUB_STEP_SUMMARY"
