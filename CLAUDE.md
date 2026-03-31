@@ -595,6 +595,9 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | sync-spark-dashboard.yml | Sync workflows + HTML from autopilot references to spark-dashboard repo |
 | sync-community-resources.yml | Weekly auto-sync intelligence from anthropics/skills, awesome-claude-code, a-list-of-agents |
 | emergency-watchdog.yml | Emergency watchdog — detects critical failures, stuck states, and auto-escalates |
+| stale-issue-cleanup.yml | Weekly cleanup of stale issues (14+ days inactive → close, 7+ days → warn) |
+| workflow-cost-tracker.yml | Weekly workflow usage & cost tracking (runs, success rate, wasteful workflows) |
+| pr-auto-review.yml | Automated PR review (security, quality, compliance checks on every PR) |
 
 ### Disabled Workflows (Codex/Copilot/Agent-Bridge — centralized in Claude Code)
 All Codex, Copilot, Gemini, and multi-agent bridge workflows have been **disabled** (renamed to `.yml.disabled`).
@@ -951,6 +954,7 @@ Specialized agents that Claude Code can delegate to for focused tasks:
 | **ci-debugger** | `.claude/agents/ci-debugger.md` | Sonnet | CI failure diagnosis and auto-fix |
 | **dashboard-monitor** | `.claude/agents/dashboard-monitor.md` | Sonnet | Dashboard sync validation and repair |
 | **workspace-ops** | `.claude/agents/workspace-ops.md` | Sonnet | Health checks, locks, state management |
+| **pr-reviewer** | `.claude/agents/pr-reviewer.md` | Sonnet | Automated PR review (security, quality, compliance) |
 
 ### Custom Skills (`.claude/skills/`)
 | Skill | File | Purpose |
@@ -960,6 +964,7 @@ Specialized agents that Claude Code can delegate to for focused tasks:
 | Security Expert | `.claude/skills/security-expert.md` | OWASP, container security, secrets |
 | Deploy Monitor | `.claude/skills/deploy-monitor.md` | Monitor active deploy pipeline status |
 | CI Fix | `.claude/skills/ci-fix.md` | Auto-diagnose and repair CI failures |
+| Daily Digest | `.claude/skills/daily-digest.md` | Daily operational status report (health, deploys, CI, issues) |
 
 ### GitHub `@claude` Integration
 Workflow `claude-assistant.yml` responds to `@claude` mentions in Issues and PRs.

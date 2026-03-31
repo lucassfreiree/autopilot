@@ -1,0 +1,200 @@
+name: "[Core] Workflow Cost Tracker"
+run-name: "${{ github.workflow }} • track workflow usage"
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # Every Monday at 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: workflow-cost-tracker
+  cancel-in-progress: true
+
+jobs:
+  track:
+    name: "Track Workflow Usage & Cost"
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "1. Collect workflow run data (last 7 days)"
+        id: collect
+        run: |
+          set -e
+          SINCE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          echo "=== Collecting workflow runs since $SINCE ==="
+
+          # Get all workflow runs from last 7 days (paginate up to 300)
+          ALL_RUNS='[]'
+          for PAGE in 1 2 3; do
+            BATCH=$(gh api "repos/$REPO/actions/runs?per_page=100&page=$PAGE&created=>$SINCE" \
+              --jq '[.workflow_runs[] | {id: .id, name: .name, status: .status, conclusion: .conclusion, run_started_at: .run_started_at, updated_at: .updated_at, event: .event}]' 2>/dev/null || echo '[]')
+            COUNT=$(echo "$BATCH" | jq 'length')
+            ALL_RUNS=$(echo "$ALL_RUNS" | jq --argjson b "$BATCH" '. + $b')
+            [ "$COUNT" -lt 100 ] && break
+          done
+
+          TOTAL=$(echo "$ALL_RUNS" | jq 'length')
+          echo "Total runs in last 7 days: $TOTAL"
+
+          # Group by workflow name and calculate stats
+          STATS=$(echo "$ALL_RUNS" | jq '
+            group_by(.name) |
+            map({
+              name: .[0].name,
+              total: length,
+              success: [.[] | select(.conclusion == "success")] | length,
+              failure: [.[] | select(.conclusion == "failure")] | length,
+              cancelled: [.[] | select(.conclusion == "cancelled")] | length,
+              skipped: [.[] | select(.conclusion == "skipped")] | length
+            }) |
+            sort_by(-.total)')
+
+          # Top consumers
+          TOP5=$(echo "$STATS" | jq '.[0:5]')
+          echo "Top 5 workflow consumers:"
+          echo "$TOP5" | jq -r '.[] | "  \(.name): \(.total) runs (\(.success) ok, \(.failure) fail)"'
+
+          # Calculate totals
+          TOTAL_SUCCESS=$(echo "$ALL_RUNS" | jq '[.[] | select(.conclusion == "success")] | length')
+          TOTAL_FAILURE=$(echo "$ALL_RUNS" | jq '[.[] | select(.conclusion == "failure")] | length')
+          TOTAL_CANCELLED=$(echo "$ALL_RUNS" | jq '[.[] | select(.conclusion == "cancelled")] | length')
+
+          SUCCESS_RATE=0
+          if [ "$TOTAL" -gt 0 ]; then
+            SUCCESS_RATE=$(( (TOTAL_SUCCESS * 100) / TOTAL ))
+          fi
+
+          # Estimate cost (GitHub Actions free tier: 2000 min/month for private, unlimited for public)
+          # Average ~2 min per run for light workflows
+          EST_MINUTES=$((TOTAL * 2))
+
+          # Identify wasteful workflows (>10 runs with >50% failure)
+          WASTEFUL=$(echo "$STATS" | jq '[.[] | select(.total > 10 and (.failure / .total > 0.5))]')
+          WASTEFUL_COUNT=$(echo "$WASTEFUL" | jq 'length')
+
+          echo "stats_b64=$(echo "$STATS" | base64 -w0)" >> "$GITHUB_OUTPUT"
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "success=$TOTAL_SUCCESS" >> "$GITHUB_OUTPUT"
+          echo "failure=$TOTAL_FAILURE" >> "$GITHUB_OUTPUT"
+          echo "cancelled=$TOTAL_CANCELLED" >> "$GITHUB_OUTPUT"
+          echo "success_rate=$SUCCESS_RATE" >> "$GITHUB_OUTPUT"
+          echo "est_minutes=$EST_MINUTES" >> "$GITHUB_OUTPUT"
+          echo "wasteful=$WASTEFUL_COUNT" >> "$GITHUB_OUTPUT"
+          echo "period_start=$SINCE" >> "$GITHUB_OUTPUT"
+          echo "period_end=$NOW" >> "$GITHUB_OUTPUT"
+
+      - name: "2. Generate cost report"
+        run: |
+          set -e
+          STATS=$(echo "${{ steps.collect.outputs.stats_b64 }}" | base64 -d 2>/dev/null || echo '[]')
+          TOTAL="${{ steps.collect.outputs.total }}"
+          SUCCESS="${{ steps.collect.outputs.success }}"
+          FAILURE="${{ steps.collect.outputs.failure }}"
+          CANCELLED="${{ steps.collect.outputs.cancelled }}"
+          SUCCESS_RATE="${{ steps.collect.outputs.success_rate }}"
+          EST_MIN="${{ steps.collect.outputs.est_minutes }}"
+          WASTEFUL="${{ steps.collect.outputs.wasteful }}"
+          PERIOD_START="${{ steps.collect.outputs.period_start }}"
+          PERIOD_END="${{ steps.collect.outputs.period_end }}"
+
+          # Build summary
+          echo "# Workflow Cost Tracker Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Period: ${PERIOD_START} to ${PERIOD_END}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "## Overview" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Total Runs | $TOTAL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Success | $SUCCESS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Failure | $FAILURE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Cancelled | $CANCELLED |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Success Rate | ${SUCCESS_RATE}% |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Est. Minutes Used | ~${EST_MIN} min |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Wasteful Workflows | $WASTEFUL |" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Top Workflows by Usage" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Workflow | Runs | Success | Failure | Rate |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|------|---------|---------|------|" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "$STATS" | jq -r '.[0:15] | .[] |
+            "| \(.name) | \(.total) | \(.success) | \(.failure) | \(if .total > 0 then (.success * 100 / .total) else 0 end)% |"' >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$WASTEFUL" -gt 0 ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "## Wasteful Workflows (>10 runs, >50% failure)" >> "$GITHUB_STEP_SUMMARY"
+            echo "$STATS" | jq -r '.[] | select(.total > 10 and (.failure / .total > 0.5)) |
+              "- **\(.name)**: \(.total) runs, \(.failure) failures (\(.failure * 100 / .total)%)"' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Recommendations" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$WASTEFUL" -gt 0 ]; then
+            echo "- Investigate and fix wasteful workflows to reduce wasted compute" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$TOTAL" -gt 700 ]; then
+            echo "- High run volume ($TOTAL/week). Consider reducing schedule frequency for low-value workflows" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$SUCCESS_RATE" -lt 80 ]; then
+            echo "- Overall success rate below 80%. Review failing workflows" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$TOTAL" -le 700 ] && [ "$SUCCESS_RATE" -ge 80 ] && [ "$WASTEFUL" = "0" ]; then
+            echo "- All metrics healthy. No action needed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: "3. Save report to state"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -e
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          STATS=$(echo "${{ steps.collect.outputs.stats_b64 }}" | base64 -d 2>/dev/null || echo '[]')
+
+          REPORT=$(jq -n \
+            --arg ts "$NOW" \
+            --arg start "${{ steps.collect.outputs.period_start }}" \
+            --arg end "${{ steps.collect.outputs.period_end }}" \
+            --argjson total "${{ steps.collect.outputs.total }}" \
+            --argjson success "${{ steps.collect.outputs.success }}" \
+            --argjson failure "${{ steps.collect.outputs.failure }}" \
+            --argjson rate "${{ steps.collect.outputs.success_rate }}" \
+            --argjson estMin "${{ steps.collect.outputs.est_minutes }}" \
+            --argjson wasteful "${{ steps.collect.outputs.wasteful }}" \
+            --argjson stats "$STATS" \
+            '{
+              generatedAt: $ts,
+              period: {start: $start, end: $end},
+              totals: {runs: $total, success: $success, failure: $failure, successRate: $rate, estMinutes: $estMin},
+              wastefulWorkflows: $wasteful,
+              byWorkflow: $stats
+            }')
+
+          # Save to state branch
+          REPORT_PATH="state/workspaces/ws-default/metrics/workflow-cost-$(echo "$NOW" | tr ':' '-').json"
+          LATEST_PATH="state/workspaces/ws-default/metrics/workflow-cost-latest.json"
+
+          # Save historical
+          gh api "repos/${{ github.repository }}/contents/${REPORT_PATH}" --method PUT \
+            -f "branch=autopilot-state" \
+            -f "message=metrics: workflow cost report $NOW [skip ci]" \
+            -f "content=$(echo "$REPORT" | base64 -w0)" > /dev/null 2>&1
+
+          # Save/update latest
+          LATEST_SHA=$(gh api "repos/${{ github.repository }}/contents/${LATEST_PATH}?ref=autopilot-state" \
+            --jq '.sha' 2>/dev/null || echo "")
+          ARGS=(-f "branch=autopilot-state" -f "message=metrics: workflow cost latest [skip ci]" -f "content=$(echo "$REPORT" | base64 -w0)")
+          [ -n "$LATEST_SHA" ] && [ "$LATEST_SHA" != "null" ] && ARGS+=(-f "sha=$LATEST_SHA")
+          gh api "repos/${{ github.repository }}/contents/${LATEST_PATH}" --method PUT "${ARGS[@]}" > /dev/null 2>&1
+
+          echo "::notice ::Cost report saved to autopilot-state"
