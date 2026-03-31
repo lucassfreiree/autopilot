@@ -328,7 +328,8 @@ function pickPreferredSnapshot(
   const currentScore = snapshotScore(current);
   const candidateScore = snapshotScore(candidate);
 
-  for (let i = 0; i < currentScore.length; i += 1) {
+  const MAX_SCORE_FIELDS = 4;
+  for (let i = 0; i < Math.min(currentScore.length, MAX_SCORE_FIELDS); i += 1) {
     if (candidateScore[i] > currentScore[i]) {
       return candidate;
     }

@@ -202,8 +202,14 @@ jobs:
           # ══ RULE 12: SECURITY — DoS by loop ══
           for f in $PATCH_TS; do
             if grep -nP "for\s*\(.*req\.(body|query)|\.forEach.*req\." "$f" > /dev/null 2>&1; then
-              if ! grep -q "MAX_RESULTS\|\.slice(0," "$f"; then
+              if ! grep -q "MAX_RESULTS\|MAX_ENTRIES\|\.slice(0," "$f"; then
                 viol "security-dos-loop" "$f: loop driven by user input without MAX_RESULTS limit" "error"
+              fi
+            fi
+            # Also catch indirect DoS: for-loops bounded by .length without Math.min cap
+            if grep -nP 'for\s*\([^;]*<\s*\w+\.length' "$f" > /dev/null 2>&1; then
+              if ! grep -q "Math\.min\|MAX_RESULTS\|MAX_ENTRIES\|MAX_SCORE" "$f"; then
+                viol "security-dos-loop" "$f: for-loop bounded by .length without explicit Math.min cap (Checkmarx Server_DoS_by_Loop)" "error"
               fi
             fi
           done
