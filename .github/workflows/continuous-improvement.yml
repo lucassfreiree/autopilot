@@ -119,6 +119,7 @@ jobs:
 
       - name: "Scan project"
         id: scan
+        shell: bash {0}
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
@@ -336,6 +337,7 @@ jobs:
 
       - name: "Apply auto-fixes"
         id: fix
+        shell: bash {0}
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           REPORT_B64: ${{ needs.analyze.outputs.report_b64 }}
@@ -434,6 +436,7 @@ jobs:
     steps:
       - name: "Record improvement report"
         id: record
+        shell: bash {0}
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           REPORT_B64: ${{ needs.analyze.outputs.report_b64 }}
@@ -536,6 +539,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Create alert issue"
+        shell: bash {0}
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
