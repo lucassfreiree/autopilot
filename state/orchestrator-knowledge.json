@@ -28,6 +28,12 @@
   ],
   "fixes": [
     {
+      "workflow": "[Core] Backup: State Snapshot",
+      "action": "re-run",
+      "fixedAt": "2026-03-31T07:51:20Z",
+      "method": "re-run"
+    },
+    {
       "workflow": "[Core] Intelligent Orchestrator",
       "action": "re-run",
       "fixedAt": "2026-03-30T21:40:01Z",
@@ -40,14 +46,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-03-31T06:18:15Z",
+  "lastRun": "2026-03-31T07:51:20Z",
   "lastHealth": "degraded",
-  "runCount": 27,
+  "runCount": 28,
   "healthHistory": [
-    {
-      "ts": "2026-03-30T12:56:32Z",
-      "health": "critical"
-    },
     {
       "ts": "2026-03-30T13:14:52Z",
       "health": "healthy"
@@ -122,6 +124,10 @@
     },
     {
       "ts": "2026-03-31T06:18:15Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-03-31T07:51:20Z",
       "health": "degraded"
     }
   ]
