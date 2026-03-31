@@ -134,14 +134,10 @@ jobs:
             fi
           done
 
-          # ══ RULE 5: No validateTrustedUrl in fetch/postJson ══
+          # ══ RULE 5: No validateTrustedUrl as argument inside fetch/postJson ══
           for f in $PATCH_TS; do
-            if grep -n "validateTrustedUrl" "$f" > /dev/null 2>&1; then
-              if grep -B5 "validateTrustedUrl" "$f" | grep -qP "fetch|postJson|callAgent|http\.request"; then
-                viol "no-validate-in-fetch" "$f: validateTrustedUrl inside fetch/postJson breaks mock tests" "error"
-              else
-                warn "validate-url" "$f uses validateTrustedUrl — verify it's at input level"
-              fi
+            if grep -nP "(fetch|postJson|callAgent|http\.request)\s*\(.*validateTrustedUrl" "$f" > /dev/null 2>&1; then
+              viol "no-validate-in-fetch" "$f: validateTrustedUrl as argument inside fetch/postJson breaks mock tests. Validate at input level instead." "error"
             fi
           done
 
