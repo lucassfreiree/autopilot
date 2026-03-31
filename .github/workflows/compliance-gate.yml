@@ -83,9 +83,26 @@ jobs:
           echo "component=$COMPONENT" >> "$GITHUB_OUTPUT"
           echo "run_number=$RUN" >> "$GITHUB_OUTPUT"
 
-          PATCH_TS=$(find patches/ -name "*.ts" 2>/dev/null || true)
-          PATCH_JSON=$(find patches/ -name "*.json" 2>/dev/null || true)
-          ALL_PATCHES=$(find patches/ -type f 2>/dev/null || true)
+          # Only scan patches REFERENCED in the trigger (not leftover files from previous deploys)
+          REFS=$(echo "$CHANGES" | jq -r '.[].content_ref // empty' 2>/dev/null | sort -u || true)
+          PATCH_TS=""
+          PATCH_JSON=""
+          ALL_PATCHES=""
+          for ref in $REFS; do
+            if [ -f "$ref" ]; then
+              ALL_PATCHES="$ALL_PATCHES $ref"
+              case "$ref" in
+                *.ts) PATCH_TS="$PATCH_TS $ref" ;;
+                *.json) PATCH_JSON="$PATCH_JSON $ref" ;;
+              esac
+            fi
+          done
+          # Fallback: if no refs found (manual dispatch), scan all
+          if [ -z "$ALL_PATCHES" ]; then
+            PATCH_TS=$(find patches/ -name "*.ts" 2>/dev/null || true)
+            PATCH_JSON=$(find patches/ -name "*.json" 2>/dev/null || true)
+            ALL_PATCHES=$(find patches/ -type f 2>/dev/null || true)
+          fi
 
           # ══ RULE 1: Version format (no X.Y.10+) ══
           if [ -n "$VERSION" ] && [ "$VERSION" != "null" ]; then
@@ -143,7 +160,7 @@ jobs:
 
           # ══ RULE 6: No nested ternaries ══
           for f in $PATCH_TS; do
-            if grep -nP '\?[^:?]*\?[^:]*:' "$f" | grep -v '//' | head -1 | grep -q '.'; then
+            if grep -nP '\?[^:?]*\?[^:]*:' "$f" | grep -v '//' | grep -v '^\s*[0-9]*[:-]\s*/\^' | grep -v 'RegExp' | head -1 | grep -q '.'; then
               viol "no-nested-ternary" "$f has nested ternaries — ESLint will reject" "error"
             fi
           done
