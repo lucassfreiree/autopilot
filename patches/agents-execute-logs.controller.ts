@@ -104,6 +104,14 @@ function safe(v: unknown): string {
   return String(v).replace(/[\r\n\t]+/g, " ").trim().slice(0, 300);
 }
 
+function sanitizeForOutput(value: unknown): string {
+  return String(value ?? "")
+    .replace(/[<>"'&]/g, "")
+    .replace(/[\r\n\t]+/g, " ")
+    .trim()
+    .slice(0, 256);
+}
+
 function traceMsg(parts: string[]): string {
   return parts.join(" ");
 }
@@ -695,7 +703,7 @@ export async function pushAgentExecutionLogs(
 
   res
     .status(202)
-    .json({ ok: true, received: entries.length, execId, from, source });
+    .json({ ok: true, received: entries.length, execId: sanitizeForOutput(execId), from: sanitizeForOutput(from), source: sanitizeForOutput(source) });
 }
 
 export async function getAgentExecutionLogs(

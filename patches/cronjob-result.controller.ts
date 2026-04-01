@@ -111,8 +111,8 @@ function validateCronjobResult(body: unknown): ValidationResult {
   }
 
   const execId = safeString(body.execId);
-  if (!execId) {
-    errors.push("Field 'execId' is required (non-empty string).");
+  if (!execId || !SAFE_EXEC_ID_PATTERN.test(execId)) {
+    errors.push("Field 'execId' is required and must match safe pattern (A-Z, a-z, 0-9, dot, underscore, hyphen, max 128 chars).");
   }
 
   if (errors.length > 0) {
@@ -312,6 +312,15 @@ export async function receiveCronjobResult(
     } as unknown as ExpressResponse;
 
     await pushAgentExecutionLogs(syntheticReq, syntheticRes);
+
+    if (captured.statusCode >= 400) {
+      res.status(500).json({
+        ok: false,
+        error: "Failed to store execution log entries",
+        detail: sanitizeForOutput(JSON.stringify(captured.body)),
+      });
+      return;
+    }
 
     // Index by namespace + execId
     indexCronjobResult(namespace, execId);
