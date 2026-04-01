@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 436,
+  "branch": "codex/security-intake-web-upstream",
+  "timestamp": "2026-04-01T16:32:30Z",
+  "runId": "23859464190",
+  "healthStatus": "degraded"
+}
