@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-01T12:01:38Z",
+  "runId": "23846956951",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23846956951",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(security): sanitize clustersNames, authMode and missingTargets to prevent Checkmarx Reflected_XSS (Similarity ID -1420982817)",
+  "commitSha": "635bbc08c91f9aa3593a9864a5b661540b5914f3",
+  "ciResult": "success",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
