@@ -16,6 +16,11 @@
       "count": 5
     },
     {
+      "workflow": "[Agent] Claude Code Assistant",
+      "consecutiveAt": "2026-04-01T16:05:42Z",
+      "count": 3
+    },
+    {
       "workflow": "[Core] Autonomous Direct Merge",
       "consecutiveAt": "2026-03-30T20:05:34Z",
       "count": 3
@@ -83,14 +88,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-01T14:49:18Z",
+  "lastRun": "2026-04-01T16:05:42Z",
   "lastHealth": "degraded",
-  "runCount": 51,
+  "runCount": 52,
   "healthHistory": [
-    {
-      "ts": "2026-03-31T11:47:36Z",
-      "health": "degraded"
-    },
     {
       "ts": "2026-03-31T13:14:22Z",
       "health": "degraded"
@@ -165,6 +166,10 @@
     },
     {
       "ts": "2026-04-01T14:49:18Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T16:05:42Z",
       "health": "degraded"
     }
   ]
