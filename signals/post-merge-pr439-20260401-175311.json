@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 439,
+  "branch": "codex/fix-spark-state-collector-upstream",
+  "timestamp": "2026-04-01T17:53:11Z",
+  "runId": "23862854222",
+  "healthStatus": "degraded"
+}
