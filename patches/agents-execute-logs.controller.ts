@@ -326,6 +326,16 @@ function snapshotScore(
   ];
 }
 
+function compareScoreTuple(
+  a: [number, number, number, number],
+  b: [number, number, number, number],
+): number {
+  if (a[0] !== b[0]) return a[0] - b[0];
+  if (a[1] !== b[1]) return a[1] - b[1];
+  if (a[2] !== b[2]) return a[2] - b[2];
+  return a[3] - b[3];
+}
+
 function pickPreferredSnapshot(
   current: ExecutionSnapshot,
   candidate: ExecutionSnapshot | null,
@@ -334,20 +344,11 @@ function pickPreferredSnapshot(
     return current;
   }
 
-  const currentScore = snapshotScore(current);
-  const candidateScore = snapshotScore(candidate);
-
-  const MAX_SCORE_FIELDS = 4;
-  for (let i = 0; i < Math.min(currentScore.length, MAX_SCORE_FIELDS); i += 1) {
-    if (candidateScore[i] > currentScore[i]) {
-      return candidate;
-    }
-    if (candidateScore[i] < currentScore[i]) {
-      return current;
-    }
-  }
-
-  return current;
+  const cmp = compareScoreTuple(
+    snapshotScore(candidate),
+    snapshotScore(current),
+  );
+  return cmp > 0 ? candidate : current;
 }
 
 function hydrateStateFromSnapshot(

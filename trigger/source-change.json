@@ -3,19 +3,19 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.7.7",
+  "version": "3.7.8",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.7.6\"",
-      "replace": "\"version\": \"3.7.7\""
+      "search": "\"version\": \"3.7.7\"",
+      "replace": "\"version\": \"3.7.8\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.6\"",
-      "replace": "\"version\": \"3.7.7\""
+      "search": "\"version\": \"3.7.7\"",
+      "replace": "\"version\": \"3.7.8\""
     },
     {
       "action": "replace-file",
@@ -41,10 +41,15 @@
       "action": "replace-file",
       "target_path": "src/controllers/cronjob-result.controller.ts",
       "content_ref": "patches/cronjob-result.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/execute.controller.ts",
+      "content_ref": "patches/execute.controller.ts"
     }
   ],
-  "commit_message": "fix(security): address Checkmarx vulnerabilities — XSS sanitize output, SSRF block metadata hosts, DoS validate execId, silent log drop (v3.7.7)",
+  "commit_message": "fix(security): Checkmarx XSS/SSRF/DoS — encodeURIComponent on output, ALLOWED_AGENT_DOMAINS allowlist, eliminate for-loop (v3.7.8)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 85
+  "run": 86
 }
