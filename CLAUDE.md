@@ -363,7 +363,7 @@ All 4 repos below are on GitHub under `bbvinet` org. Access via `BBVINET_TOKEN`.
 
 | Repo | Role | Current Version | Stack | CI |
 |------|------|-----------------|-------|----|
-| [`bbvinet/psc-sre-automacao-controller`](https://github.com/bbvinet/psc-sre-automacao-controller) | Controller — orchestrates automations, dispatches to agents, manages execution logs | 3.7.4 | Node 22, TypeScript, Express, Jest | Esteira de Build NPM (corporate runner) |
+| [`bbvinet/psc-sre-automacao-controller`](https://github.com/bbvinet/psc-sre-automacao-controller) | Controller — orchestrates automations, dispatches to agents, manages execution logs | 3.7.6 | Node 22, TypeScript, Express, Jest | Esteira de Build NPM (corporate runner) |
 | [`bbvinet/psc-sre-automacao-agent`](https://github.com/bbvinet/psc-sre-automacao-agent) | Agent — executes automations on clusters, receives cronjob callbacks, pushes logs to controller | 2.3.3 | Node 22, TypeScript, Express, Jest, K8s client | Esteira de Build NPM (corporate runner) |
 
 **How to work with source repos:**
@@ -635,7 +635,7 @@ Disabled files (preserved for reference in `.github/workflows/*.yml.disabled`):
 ## Deploy Flow — Complete Guide (Claude Code only)
 
 This is the **official, tested, end-to-end deploy flow** for pushing code changes to corporate repos.
-Centralized in Claude Code. Last successful run: **#81 (controller 3.7.4)**. Agent 2.3.3 deployed.
+Centralized in Claude Code. Last successful run: **#83 (controller 3.7.6)**. Agent 2.3.3 deployed.
 
 ### Phase 1: Prepare
 ```
