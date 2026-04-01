@@ -1,0 +1,36 @@
+{
+  "updatedAt": "2026-04-01T01:12:46Z",
+  "workspaceId": "ws-default",
+  "overallHealth": "ok",
+  "monitorRunId": "23827063286",
+  "triggerEvent": "schedule",
+  "autoDispatched": "",
+  "components": {
+    "agent": {
+      "version": "source-change",
+      "deployedAt": "2026-03-30T16:42:43Z",
+      "deployRunId": "23755765756",
+      "ciGateResult": "success",
+      "gateDecision": "pass",
+      "ciMonitorResult": "success",
+      "ciMonitorAt": "2026-03-30T16:43:07Z",
+      "stage": "idle",
+      "health": "ok",
+      "actionTaken": "none",
+      "deployAge": "1950min"
+    },
+    "controller": {
+      "version": "3.7.5",
+      "deployedAt": "2026-03-31T21:47:20Z",
+      "deployRunId": "23820428738",
+      "ciGateResult": "success",
+      "gateDecision": "pass",
+      "ciMonitorResult": "success",
+      "ciMonitorAt": "2026-03-31T21:47:43Z",
+      "stage": "idle",
+      "health": "ok",
+      "actionTaken": "none",
+      "deployAge": "205min"
+    }
+  }
+}
