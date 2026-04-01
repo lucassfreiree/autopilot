@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-03-31T23:54:01Z",
+  "updatedAt": "2026-04-01T01:12:46Z",
   "workspaceId": "ws-default",
   "overallHealth": "ok",
-  "monitorRunId": "23824934205",
+  "monitorRunId": "23827063286",
   "triggerEvent": "schedule",
   "autoDispatched": "",
   "components": {
@@ -17,7 +17,7 @@
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "1871min"
+      "deployAge": "1950min"
     },
     "controller": {
       "version": "3.7.5",
@@ -27,10 +27,10 @@
       "gateDecision": "pass",
       "ciMonitorResult": "success",
       "ciMonitorAt": "2026-03-31T21:47:43Z",
-      "stage": "complete",
+      "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "126min"
+      "deployAge": "205min"
     }
   }
 }
