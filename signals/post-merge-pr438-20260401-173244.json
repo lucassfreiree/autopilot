@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 438,
+  "branch": "codex/fix-spark-sync-empty-state-upstream",
+  "timestamp": "2026-04-01T17:32:44Z",
+  "runId": "23861977629",
+  "healthStatus": "degraded"
+}
