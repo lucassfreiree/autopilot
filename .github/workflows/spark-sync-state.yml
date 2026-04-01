@@ -166,26 +166,45 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           STATE_FILE="${{ steps.state_artifact.outputs.state_file }}"
-          if [ ! -s "$STATE_FILE" ]; then
-            echo "::error ::Validated state file missing before panel update"
+          STATE_B64_FILE="${{ steps.state_artifact.outputs.state_b64_file }}"
+          CURRENT_B64_FILE="/tmp/current-panel-state.json.b64"
+          PAYLOAD_FILE="/tmp/panel-state-payload.json"
+
+          if [ ! -s "$STATE_FILE" ] || [ ! -s "$STATE_B64_FILE" ]; then
+            echo "::error ::Validated state artifact missing before panel update"
             exit 1
           fi
           if ! jq empty "$STATE_FILE" > /dev/null 2>&1; then
             echo "::error ::Validated state file became invalid before panel update"
             exit 1
           fi
-          cp "$STATE_FILE" panel/dashboard/state.json
-          if git diff --quiet panel/dashboard/state.json 2>/dev/null; then
-            echo "::notice ::state.json unchanged — skip push"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add panel/dashboard/state.json
-          git commit -m "chore: sync dashboard state [skip ci]"
-          if git push origin HEAD:main; then
-            gh workflow run deploy-panel.yml --repo "$GITHUB_REPOSITORY" --ref main
-            echo "::notice ::Triggered deploy-panel.yml after dashboard state sync"
-          else
-            echo "::warning ::Push to main failed — branch protection may block workflow token"
-          fi
+
+          for attempt in 1 2 3; do
+            gh api "repos/$GITHUB_REPOSITORY/contents/panel/dashboard/state.json?ref=main" --jq '.content' | tr -d '\n' > "$CURRENT_B64_FILE"
+            if cmp -s "$STATE_B64_FILE" "$CURRENT_B64_FILE"; then
+              echo "::notice ::state.json unchanged -- skip publish"
+              exit 0
+            fi
+
+            CURRENT_SHA=$(gh api "repos/$GITHUB_REPOSITORY/contents/panel/dashboard/state.json?ref=main" --jq '.sha')
+            jq -n \
+              --rawfile content "$STATE_B64_FILE" \
+              --arg sha "$CURRENT_SHA" \
+              --arg message "chore: sync dashboard state [skip ci]" \
+              '{message: $message, content: $content, sha: $sha, branch: "main"}' \
+              > "$PAYLOAD_FILE"
+
+            if gh api "repos/$GITHUB_REPOSITORY/contents/panel/dashboard/state.json" \
+              --method PUT \
+              --input "$PAYLOAD_FILE" > /dev/null 2>&1; then
+              gh workflow run deploy-panel.yml --repo "$GITHUB_REPOSITORY" --ref main
+              echo "::notice ::Updated panel/dashboard/state.json on main and triggered deploy-panel.yml"
+              exit 0
+            fi
+
+            echo "::warning ::Attempt $attempt to update panel/dashboard/state.json failed; retrying"
+            sleep 2
+          done
+
+          echo "::error ::Failed to update panel/dashboard/state.json on main after retries"
+          exit 1
