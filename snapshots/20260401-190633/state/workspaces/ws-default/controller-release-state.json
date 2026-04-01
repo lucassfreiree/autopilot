@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "lastReleasedSha": "5683c88c10b33a41910be6d41e5a0713010f23e5",
+  "lastTag": "3.7.7",
+  "updatedAt": "2026-04-01T13:52:42Z",
+  "runId": "23851391714",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23851391714",
+  "ciResult": "success",
+  "status": "promoted",
+  "changeType": "source-code",
+  "commitMessage": "fix(security): address Checkmarx vulnerabilities — XSS sanitize output, SSRF block metadata hosts, DoS validate execId, silent log drop (v3.7.7)",
+  "promoted": true,
+  "preExistingFailure": false,
+  "gateDecision": "pass"
+}
