@@ -33,18 +33,21 @@ jobs:
         run: |
           # Push auto-merge-dependabot.yml
           FILE="references/spark-dashboard/.github/workflows/auto-merge-dependabot.yml"
+          CONTENT_B64_FILE="/tmp/spark-auto-merge-dependabot.b64"
+          PAYLOAD_FILE="/tmp/spark-auto-merge-dependabot-payload.json"
           if [ -f "$FILE" ]; then
-            CONTENT_B64=$(base64 -w0 < "$FILE")
+            base64 -w0 "$FILE" > "$CONTENT_B64_FILE"
             EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/.github/workflows/auto-merge-dependabot.yml" --jq '.sha' 2>/dev/null || echo "")
 
-            PAYLOAD=$(jq -n \
-              --arg content "$CONTENT_B64" \
+            jq -n \
+              --rawfile content "$CONTENT_B64_FILE" \
               --arg sha "$EXISTING_SHA" \
               --arg message "chore: sync auto-merge-dependabot.yml from autopilot [auto]" \
-              '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)')
+              '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)' \
+              > "$PAYLOAD_FILE"
 
             gh api "repos/$SPARK_REPO/contents/.github/workflows/auto-merge-dependabot.yml" \
-              --method PUT --input - <<< "$PAYLOAD" > /dev/null 2>&1 && \
+              --method PUT --input "$PAYLOAD_FILE" > /dev/null 2>&1 && \
               echo "::notice ::auto-merge-dependabot.yml synced" || \
               echo "::warning ::Failed to sync auto-merge-dependabot.yml"
           fi
@@ -52,18 +55,21 @@ jobs:
       - name: Sync dashboard HTML
         run: |
           FILE="references/spark-dashboard/public/index.html"
+          CONTENT_B64_FILE="/tmp/spark-dashboard-html.b64"
+          PAYLOAD_FILE="/tmp/spark-dashboard-html-payload.json"
           if [ -f "$FILE" ]; then
-            CONTENT_B64=$(base64 -w0 < "$FILE")
+            base64 -w0 "$FILE" > "$CONTENT_B64_FILE"
             EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/public/index.html" --jq '.sha' 2>/dev/null || echo "")
 
-            PAYLOAD=$(jq -n \
-              --arg content "$CONTENT_B64" \
+            jq -n \
+              --rawfile content "$CONTENT_B64_FILE" \
               --arg sha "$EXISTING_SHA" \
               --arg message "chore: sync dashboard HTML from autopilot [auto]" \
-              '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)')
+              '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)' \
+              > "$PAYLOAD_FILE"
 
             gh api "repos/$SPARK_REPO/contents/public/index.html" \
-              --method PUT --input - <<< "$PAYLOAD" > /dev/null 2>&1 && \
+              --method PUT --input "$PAYLOAD_FILE" > /dev/null 2>&1 && \
               echo "::notice ::index.html synced" || \
               echo "::warning ::Failed to sync index.html"
           fi

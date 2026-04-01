@@ -62,28 +62,69 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: bash scripts/dashboard/collect-state.sh
 
+      - name: Validate collected state artifact
+        id: state_artifact
+        run: |
+          STATE_FILE="/tmp/state.json"
+          STATE_B64_FILE="/tmp/state.json.b64"
+
+          if [ ! -s "$STATE_FILE" ]; then
+            echo "::error ::Collected state file missing or empty: $STATE_FILE"
+            exit 1
+          fi
+
+          if ! jq empty "$STATE_FILE" > /dev/null 2>&1; then
+            echo "::error ::Collected state file is not valid JSON: $STATE_FILE"
+            exit 1
+          fi
+
+          STATE_SIZE=$(wc -c < "$STATE_FILE")
+          if [ "$STATE_SIZE" -lt 200 ]; then
+            echo "::error ::Collected state file is unexpectedly small (${STATE_SIZE} bytes)"
+            exit 1
+          fi
+
+          base64 -w0 "$STATE_FILE" > "$STATE_B64_FILE"
+          if [ ! -s "$STATE_B64_FILE" ]; then
+            echo "::error ::Failed to base64-encode collected state"
+            exit 1
+          fi
+
+          echo "state_file=$STATE_FILE" >> "$GITHUB_OUTPUT"
+          echo "state_b64_file=$STATE_B64_FILE" >> "$GITHUB_OUTPUT"
+          echo "::notice ::Validated state artifact (${STATE_SIZE} bytes)"
+
       - name: Push state to Spark repo
         if: steps.config.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           SPARK_REPO="${{ steps.config.outputs.repo }}"
-          STATE_B64="${{ steps.state.outputs.state_b64 }}"
+          STATE_FILE="${{ steps.state_artifact.outputs.state_file }}"
+          STATE_B64_FILE="${{ steps.state_artifact.outputs.state_b64_file }}"
+          PAYLOAD_FILE="/tmp/spark-state-payload.json"
+
+          if [ ! -s "$STATE_FILE" ] || [ ! -s "$STATE_B64_FILE" ]; then
+            echo "::error ::Validated state artifact missing before Spark push"
+            exit 1
+          fi
 
           EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/public/state.json" --jq '.sha' 2>/dev/null || echo "")
 
-          PAYLOAD=$(jq -n \
-            --arg content "$STATE_B64" \
+          jq -n \
+            --rawfile content "$STATE_B64_FILE" \
             --arg sha "$EXISTING_SHA" \
             --arg message "chore: sync autopilot state [automated]" \
-            '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)')
+            '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)' \
+            > "$PAYLOAD_FILE"
 
           if gh api "repos/$SPARK_REPO/contents/public/state.json" \
             --method PUT \
-            --input - <<< "$PAYLOAD" > /dev/null 2>&1; then
+            --input "$PAYLOAD_FILE" > /dev/null 2>&1; then
             echo "::notice ::State synced to $SPARK_REPO"
           else
-            echo "::warning ::Failed to push state to $SPARK_REPO"
+            echo "::error ::Failed to push state to $SPARK_REPO"
+            exit 1
           fi
 
       - name: Push dashboard HTML to Spark repo
@@ -94,38 +135,45 @@ jobs:
         run: |
           SPARK_REPO="${{ steps.config.outputs.repo }}"
           HTML_FILE="references/spark-dashboard/public/index.html"
+          HTML_B64_FILE="/tmp/spark-dashboard-index.html.b64"
+          PAYLOAD_FILE="/tmp/spark-dashboard-index-payload.json"
 
           if [ ! -f "$HTML_FILE" ]; then
             echo "::notice ::Dashboard HTML not found at $HTML_FILE — skipping"
             exit 0
           fi
 
-          HTML_B64=$(base64 < "$HTML_FILE" | tr -d '\n')
+          base64 -w0 "$HTML_FILE" > "$HTML_B64_FILE"
           EXISTING_SHA=$(gh api "repos/$SPARK_REPO/contents/public/index.html" --jq '.sha' 2>/dev/null || echo "")
 
-          PAYLOAD=$(jq -n \
-            --arg content "$HTML_B64" \
+          jq -n \
+            --rawfile content "$HTML_B64_FILE" \
             --arg sha "$EXISTING_SHA" \
             --arg message "chore: sync dashboard UI [automated]" \
-            '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)')
+            '{message: $message, content: $content} + (if $sha != "" then {sha: $sha} else {} end)' \
+            > "$PAYLOAD_FILE"
 
           gh api "repos/$SPARK_REPO/contents/public/index.html" \
             --method PUT \
-            --input - <<< "$PAYLOAD" > /dev/null 2>&1 && \
+            --input "$PAYLOAD_FILE" > /dev/null 2>&1 && \
             echo "::notice ::Dashboard HTML synced to $SPARK_REPO" || \
             echo "::warning ::Failed to push dashboard HTML to $SPARK_REPO (non-critical)"
 
       - name: Update panel/dashboard/state.json on main
-        if: steps.state.outputs.state_ready == 'true'
+        if: steps.state_artifact.outputs.state_file != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          STATE_B64="${{ steps.state.outputs.state_b64 }}"
-          if [ -z "$STATE_B64" ] || [ ${#STATE_B64} -lt 100 ]; then
-            echo "::warning ::state_b64 empty — skipping panel update"
-            exit 0
+          STATE_FILE="${{ steps.state_artifact.outputs.state_file }}"
+          if [ ! -s "$STATE_FILE" ]; then
+            echo "::error ::Validated state file missing before panel update"
+            exit 1
           fi
-          echo "$STATE_B64" | base64 -d > panel/dashboard/state.json
+          if ! jq empty "$STATE_FILE" > /dev/null 2>&1; then
+            echo "::error ::Validated state file became invalid before panel update"
+            exit 1
+          fi
+          cp "$STATE_FILE" panel/dashboard/state.json
           if git diff --quiet panel/dashboard/state.json 2>/dev/null; then
             echo "::notice ::state.json unchanged — skip push"
             exit 0
