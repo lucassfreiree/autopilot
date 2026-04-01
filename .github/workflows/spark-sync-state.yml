@@ -27,6 +27,7 @@ on:
   # v2: script extracted to scripts/dashboard/collect-state.sh (fix 21000 char limit)
 
 permissions:
+  actions: write
   contents: write
   pages: write
   id-token: write
@@ -182,4 +183,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add panel/dashboard/state.json
           git commit -m "chore: sync dashboard state [skip ci]"
-          git push origin HEAD:main || echo "::warning ::Push to main failed — branch protection may block workflow token"
+          if git push origin HEAD:main; then
+            gh workflow run deploy-panel.yml --repo "$GITHUB_REPOSITORY" --ref main
+            echo "::notice ::Dispatched deploy-panel.yml after dashboard state sync"
+          else
+            echo "::warning ::Push to main failed — branch protection may block workflow token"
+          fi
