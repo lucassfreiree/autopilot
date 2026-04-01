@@ -37,13 +37,36 @@ const BLOCKED_SSRF_HOSTS = [
   "0.0.0.0",
 ];
 
+function isBlockedSsrfHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (BLOCKED_SSRF_HOSTS.includes(host)) return true;
+  if (host.startsWith("169.254.")) return true;
+  return false;
+}
+
+function parseAllowedAgentDomains(): string[] {
+  return (process.env.ALLOWED_AGENT_DOMAINS || "")
+    .split(",")
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isAllowedAgentHost(hostname: string): boolean {
+  const allowedDomains = parseAllowedAgentDomains();
+  if (allowedDomains.length === 0) return true;
+  const host = hostname.toLowerCase();
+  return allowedDomains.some(
+    (domain) => host === domain || host.endsWith(`.${domain}`),
+  );
+}
+
 function validateTrustedUrl(url: string): boolean {
   if (!url || !TRUSTED_AGENT_URL_PATTERN.test(url)) return false;
   try {
     const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    if (BLOCKED_SSRF_HOSTS.includes(host)) return false;
-    if (host.startsWith("169.254.")) return false;
+    if (isBlockedSsrfHost(parsed.hostname)) return false;
+    if (!isAllowedAgentHost(parsed.hostname)) return false;
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
     return true;
   } catch {
     return false;
@@ -291,9 +314,9 @@ export async function postOasAutomation(
 
     const forwardBody: AgentForwardBody = {
       execId,
-      cluster,
-      namespace,
-      function: normalizedName,
+      cluster: encodeURIComponent(cluster),
+      namespace: encodeURIComponent(namespace),
+      function: encodeURIComponent(normalizedName),
     };
 
     console.log(
