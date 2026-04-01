@@ -172,6 +172,10 @@ echo "$IMPROVEMENTS" | jq empty 2>/dev/null || IMPROVEMENTS='null'
 
 # ── Build comprehensive state.json ──
 # All --argjson vars have been pre-validated as valid JSON above.
+STATE_FILE="/tmp/state.json"
+TMP_STATE_FILE="/tmp/state.json.tmp"
+rm -f "$STATE_FILE" "$TMP_STATE_FILE"
+
 jq -n \
   --argjson ctrl "$CTRL_STATE" \
   --argjson agent "$AGENT_STATE" \
@@ -299,7 +303,7 @@ jq -n \
         agentVersion: null,
         pipelineStatus: "not-configured",
         repos: []
-      },
+      }
     ],
 
     recentWorkflows: $runs,
@@ -404,25 +408,50 @@ jq -n \
       syncInterval: "5min business hours (8-17 BRT Mon-Fri) / 15min off-hours",
       stateVersion: 5
     }
-  }' > /tmp/state.json 2>/dev/null
+  }' > "$TMP_STATE_FILE" 2>/dev/null || true
 
-# Validate the generated JSON — if jq assembly failed, create minimal state
-if ! jq empty /tmp/state.json 2>/dev/null; then
+# Validate the generated JSON — empty files are not valid artifacts here.
+if [ ! -s "$TMP_STATE_FILE" ] || ! jq empty "$TMP_STATE_FILE" 2>/dev/null; then
   echo "::warning ::Full state assembly failed — producing minimal state"
   jq -n '{
     lastSync: now | strftime("%Y-%m-%dT%H:%M:%SZ"),
     syncSource: "autopilot/spark-sync-state.yml",
     error: "State assembly failed — data collection issue",
-    controller: {version: "?", status: "unknown"},
-    agent: {version: "?", status: "unknown"},
-    metadata: {stateVersion: 5, degraded: true}
-  }' > /tmp/state.json
+    controller: {
+      version: "?",
+      status: "unknown",
+      repo: "bbvinet/psc-sre-automacao-controller"
+    },
+    agent: {
+      version: "?",
+      status: "unknown",
+      repo: "bbvinet/psc-sre-automacao-agent"
+    },
+    pipeline: {
+      status: "degraded",
+      workspace: "ws-default"
+    },
+    metadata: {
+      stateVersion: 5,
+      degraded: true,
+      reason: "collect-state fallback"
+    }
+  }' > "$TMP_STATE_FILE"
 fi
 
-jq -r '.lastSync' /tmp/state.json 2>/dev/null || echo "unknown"
-STATE_B64=$(base64 -w0 /tmp/state.json)
-echo "state_b64=$STATE_B64" >> "$GITHUB_OUTPUT"
-echo "state_ready=true" >> "$GITHUB_OUTPUT"
+if [ ! -s "$TMP_STATE_FILE" ] || ! jq empty "$TMP_STATE_FILE" 2>/dev/null; then
+  echo "::error ::Failed to build dashboard state artifact"
+  exit 1
+fi
+
+mv "$TMP_STATE_FILE" "$STATE_FILE"
+
+jq -r '.lastSync' "$STATE_FILE" 2>/dev/null || echo "unknown"
+STATE_B64=$(base64 -w0 "$STATE_FILE")
+if [ -n "${GITHUB_OUTPUT:-}" ]; then
+  echo "state_b64=$STATE_B64" >> "$GITHUB_OUTPUT"
+  echo "state_ready=true" >> "$GITHUB_OUTPUT"
+fi
 
 # ── panel/dashboard/state.json is now updated by a separate workflow step ──
 # Uses GITHUB_TOKEN (workflow token) via git push instead of gh api PUT (which
