@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr439-20260401-175310",
+  "event": "post-merge-monitor",
+  "prNumber": 439,
+  "branch": "codex/fix-spark-state-collector-upstream",
+  "mergeSha": "5161cca8c5c4378e68d0876b62d295b372e22c00",
+  "timestamp": "2026-04-01T17:53:10Z",
+  "runId": "23862854222",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
