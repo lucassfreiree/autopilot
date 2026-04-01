@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-04-01T21:39:44Z",
-  "lookbackSince": "2026-04-01T15:39:39Z",
+  "timestamp": "2026-04-01T22:35:22Z",
+  "lookbackSince": "2026-04-01T16:35:17Z",
   "summary": {
     "totalWorkflows": 72,
     "totalRuns": 100,
@@ -18,15 +18,15 @@
       "path": ".github/workflows/health-check.yml",
       "workflow_id": 249551864,
       "status": "healthy",
-      "runs": 4,
-      "successes": 4,
+      "runs": 5,
+      "successes": 5,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23870565911"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23872739789"
     },
     {
       "name": "[Core] Backup: State Snapshot",
@@ -48,6 +48,21 @@
       "path": ".github/workflows/deploy-panel.yml",
       "workflow_id": 249579507,
       "status": "healthy",
+      "runs": 8,
+      "successes": 8,
+      "failures": 0,
+      "cancelled": 0,
+      "in_progress": 0,
+      "failRate": 0,
+      "consecutiveFailures": 0,
+      "lastConclusion": "success",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23873735071"
+    },
+    {
+      "name": "[Core] Lock GC",
+      "path": ".github/workflows/workspace-lock-gc.yml",
+      "workflow_id": 249579514,
+      "status": "healthy",
       "runs": 6,
       "successes": 6,
       "failures": 0,
@@ -56,22 +71,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23870144108"
-    },
-    {
-      "name": "[Core] Lock GC",
-      "path": ".github/workflows/workspace-lock-gc.yml",
-      "workflow_id": 249579514,
-      "status": "healthy",
-      "runs": 5,
-      "successes": 5,
-      "failures": 0,
-      "cancelled": 0,
-      "in_progress": 0,
-      "failRate": 0,
-      "consecutiveFailures": 0,
-      "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23870910335"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23872815146"
     },
     {
       "name": "[Infra] Cleanup: Stale Branches",
@@ -93,8 +93,8 @@
       "path": ".github/workflows/drift-correction.yml",
       "workflow_id": 249785167,
       "status": "healthy",
-      "runs": 2,
-      "successes": 2,
+      "runs": 1,
+      "successes": 1,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
@@ -168,12 +168,12 @@
       "path": ".github/workflows/autonomous-merge-direct.yml",
       "workflow_id": 252407274,
       "status": "healthy",
-      "runs": 6,
-      "successes": 4,
+      "runs": 5,
+      "successes": 3,
       "failures": 2,
       "cancelled": 0,
       "in_progress": 0,
-      "failRate": 33,
+      "failRate": 40,
       "consecutiveFailures": 2,
       "lastConclusion": "failure",
       "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23869633962"
@@ -183,15 +183,15 @@
       "path": ".github/workflows/spark-sync-state.yml",
       "workflow_id": 252939431,
       "status": "healthy",
-      "runs": 11,
-      "successes": 10,
+      "runs": 12,
+      "successes": 11,
       "failures": 1,
       "cancelled": 0,
       "in_progress": 0,
-      "failRate": 9,
-      "consecutiveFailures": 1,
+      "failRate": 8,
+      "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23870129668"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23873722407"
     },
     {
       "name": "[Core] Auto-Merge Sweeper",
@@ -206,7 +206,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23871066569"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23872905359"
     },
     {
       "name": "[Core] Compliance Gate",
@@ -243,8 +243,8 @@
       "path": ".github/workflows/builds-validation-gate.yml",
       "workflow_id": 253550336,
       "status": "healthy",
-      "runs": 6,
-      "successes": 6,
+      "runs": 4,
+      "successes": 4,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
@@ -258,15 +258,15 @@
       "path": ".github/workflows/workflow-health-monitor.yml",
       "workflow_id": 253550349,
       "status": "healthy",
-      "runs": 5,
-      "successes": 4,
+      "runs": 6,
+      "successes": 5,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 1,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "unknown",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23872165360"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23874195042"
     },
     {
       "name": "[Core] Workflow Sentinel",
@@ -288,15 +288,15 @@
       "path": ".github/workflows/intelligent-orchestrator.yml",
       "workflow_id": 253555059,
       "status": "healthy",
-      "runs": 5,
-      "successes": 5,
+      "runs": 6,
+      "successes": 6,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23872146713"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23874178361"
     },
     {
       "name": "[Infra] Sync Spark Dashboard Repo",
@@ -326,14 +326,14 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23871822202"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23873774929"
     },
     {
       "name": "[Agent] Claude Code Assistant",
       "path": ".github/workflows/claude-assistant.yml",
       "workflow_id": 254310728,
       "status": "healthy",
-      "runs": 10,
+      "runs": 8,
       "successes": 0,
       "failures": 0,
       "cancelled": 0,
@@ -348,8 +348,8 @@
       "path": ".github/workflows/pr-auto-review.yml",
       "workflow_id": 254330198,
       "status": "healthy",
-      "runs": 6,
-      "successes": 6,
+      "runs": 5,
+      "successes": 5,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
