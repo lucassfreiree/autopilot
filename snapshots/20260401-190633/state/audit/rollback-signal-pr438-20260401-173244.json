@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 438,
+  "branch": "codex/fix-spark-sync-empty-state-upstream",
+  "mergeSha": "8e81085a41bda41fee399b6c70b3e79158f488bb",
+  "timestamp": "2026-04-01T17:32:44Z",
+  "runId": "23861977629",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
