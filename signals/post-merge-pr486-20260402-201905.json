@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 486,
+  "branch": "claude/fix-wrapper-integers",
+  "timestamp": "2026-04-02T20:19:05Z",
+  "runId": "23920117709",
+  "healthStatus": "degraded"
+}
