@@ -3,39 +3,12 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.7.8",
+  "version": "3.7.9",
   "changes": [
     {
-      "action": "search-replace",
-      "target_path": "package.json",
-      "search": "\"version\": \"3.7.7\"",
-      "replace": "\"version\": \"3.7.8\""
-    },
-    {
-      "action": "search-replace",
-      "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.7\"",
-      "replace": "\"version\": \"3.7.8\""
-    },
-    {
       "action": "replace-file",
-      "target_path": "src/swagger/swagger.json",
-      "content_ref": "patches/controller-swagger.json"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/oas-sre-controller.controller.ts",
-      "content_ref": "patches/oas-sre-controller.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/oas-execute.controller.ts",
-      "content_ref": "patches/oas-execute.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/agents-execute-logs.controller.ts",
-      "content_ref": "patches/agents-execute-logs.controller.ts"
+      "target_path": "src/routes/agentsRouter.ts",
+      "content_ref": "patches/agentsRouter.ts"
     },
     {
       "action": "replace-file",
@@ -44,12 +17,29 @@
     },
     {
       "action": "replace-file",
-      "target_path": "src/controllers/execute.controller.ts",
-      "content_ref": "patches/execute.controller.ts"
+      "target_path": "src/__tests__/unit/cronjob-result.controller.test.ts",
+      "content_ref": "patches/cronjob-result.controller.test.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/swagger/swagger.json",
+      "content_ref": "patches/controller-swagger.json"
+    },
+    {
+      "action": "search-replace",
+      "target_path": "package.json",
+      "search": "\"version\": \"3.7.8\"",
+      "replace": "\"version\": \"3.7.9\""
+    },
+    {
+      "action": "search-replace",
+      "target_path": "package-lock.json",
+      "search": "\"version\": \"3.7.8\"",
+      "replace": "\"version\": \"3.7.9\""
     }
   ],
-  "commit_message": "fix(security): Checkmarx XSS/SSRF/DoS — encodeURIComponent on output, ALLOWED_AGENT_DOMAINS allowlist, eliminate for-loop (v3.7.8)",
+  "commit_message": "refactor(controller): padroniza rotas cronjob para /agent/cronjob/* + version 3.7.9",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 86
+  "run": 87
 }
