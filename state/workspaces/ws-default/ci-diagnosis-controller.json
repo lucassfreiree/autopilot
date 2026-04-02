@@ -5,9 +5,9 @@
   "commitSha": "39236c40914c6d773ad9a96b8f6c92987917eb10",
   "commitMessage": "fix(controller): tsconfig types node TS2591 + rotas cronjob /agent/* (v3.7.9)",
   "commitAuthor": "github-actions",
-  "diagnosedAt": "2026-04-02T12:37:27Z",
-  "runId": "23900647500",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23900647500",
+  "diagnosedAt": "2026-04-02T13:19:32Z",
+  "runId": "23902359268",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23902359268",
   "reproduction": {
     "scripts": "  build: tsc -p ./tsconfig.json\n  debug: tsc && node --inspect=9229 dist/server.js\n  lint: tsc --noEmit && eslint . --quiet --fix --resolve-plugins-relative-to .\n  start: node dist/server.js\n  prestart: npm run build\n  dev: nodemon --watch src --exec ts-node-dev src/server.ts\n  test: jest\n  unitTest: jest --testPathPattern=ut.test\\.ts$\n  integrationTest: jest --testPathPattern=it.test\\.ts$ --detectOpenHandles --passWithNoTests --forceExit\n",
     "lintErrors": [],
