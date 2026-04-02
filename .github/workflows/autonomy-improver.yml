@@ -221,7 +221,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: "5. Escalate if autonomy degrading"
-        if: steps.read.outputs.global_rate != '100' && steps.read.outputs.total_runs > 10
+        if: steps.read.outputs.global_rate != '100' && fromJSON(steps.read.outputs.total_runs) > 10
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |

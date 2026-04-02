@@ -45,7 +45,18 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "title=$ISSUE_TITLE" >> "$GITHUB_OUTPUT"
 
+      - name: "Check API key availability"
+        id: check_key
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning ::ANTHROPIC_API_KEY secret is not configured"
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: anthropics/claude-code-action@v1
+        if: steps.check_key.outputs.has_key == 'true'
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.RELEASE_TOKEN || github.token }}
@@ -62,3 +73,17 @@ jobs:
         env:
           BBVINET_TOKEN: ${{ secrets.BBVINET_TOKEN }}
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: "Fallback comment if no API key"
+        if: steps.check_key.outputs.has_key == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: |
+          ISSUE_NUM="${{ github.event.issue.number || github.event.pull_request.number }}"
+          if [ -n "$ISSUE_NUM" ]; then
+            gh api "repos/${{ github.repository }}/issues/$ISSUE_NUM/comments" \
+              --method POST \
+              -f "body=⚠️ **Claude Code Assistant**: \`ANTHROPIC_API_KEY\` secret is not configured. Please add it in Settings → Secrets → Actions to enable @claude responses.
+
+          _This is an automated message from \`claude-assistant.yml\`._" 2>/dev/null || true
+          fi
