@@ -109,30 +109,30 @@ for f in "${PATCH_FILES[@]}"; do
   fi
 
   # Rule 10: XSS
-  HAS_REQ=$(grep -cE 'req\.(body|query|params)' "$f" 2>/dev/null || echo 0)
-  HAS_RES=$(grep -cE 'res\.(json|send)\(' "$f" 2>/dev/null || echo 0)
-  HAS_SANITIZE=$(grep -cE 'sanitizeForOutput' "$f" 2>/dev/null || echo 0)
-  if [ "$HAS_REQ" -gt 0 ] && [ "$HAS_RES" -gt 0 ] && [ "$HAS_SANITIZE" -eq 0 ]; then
+  HAS_REQ=0; grep -qE 'req\.(body|query|params)' "$f" 2>/dev/null && HAS_REQ=1
+  HAS_RES=0; grep -qE 'res\.(json|send)\(' "$f" 2>/dev/null && HAS_RES=1
+  HAS_SANITIZE=0; grep -qE 'sanitizeForOutput' "$f" 2>/dev/null && HAS_SANITIZE=1
+  if [ "$HAS_REQ" -eq 1 ] && [ "$HAS_RES" -eq 1 ] && [ "$HAS_SANITIZE" -eq 0 ]; then
     fail "Rule 10 XSS: $BN reads input + writes response without sanitizeForOutput"
-  elif [ "$HAS_REQ" -gt 0 ] && [ "$HAS_RES" -gt 0 ]; then
+  elif [ "$HAS_REQ" -eq 1 ] && [ "$HAS_RES" -eq 1 ]; then
     pass "Rule 10 XSS: $BN"
   fi
 
   # Rule 11: SSRF
-  HAS_FETCH=$(grep -cE 'fetch\(|postJson\(|callAgent\(' "$f" 2>/dev/null || echo 0)
-  HAS_VALIDATE=$(grep -cE 'validateTrustedUrl' "$f" 2>/dev/null || echo 0)
-  if [ "$HAS_FETCH" -gt 0 ] && [ "$HAS_VALIDATE" -eq 0 ]; then
+  HAS_FETCH=0; grep -qE 'fetch\(|postJson\(|callAgent\(' "$f" 2>/dev/null && HAS_FETCH=1
+  HAS_VALIDATE=0; grep -qE 'validateTrustedUrl' "$f" 2>/dev/null && HAS_VALIDATE=1
+  if [ "$HAS_FETCH" -eq 1 ] && [ "$HAS_VALIDATE" -eq 0 ]; then
     fail "Rule 11 SSRF: $BN uses fetch/postJson without validateTrustedUrl"
-  elif [ "$HAS_FETCH" -gt 0 ]; then
+  elif [ "$HAS_FETCH" -eq 1 ]; then
     pass "Rule 11 SSRF: $BN"
   fi
 
   # Rule 12: DoS loop bounds
-  HAS_LOOP=$(grep -cE 'for\s*\(.*\.length' "$f" 2>/dev/null || echo 0)
-  HAS_BOUND=$(grep -cE 'Math\.min' "$f" 2>/dev/null || echo 0)
-  if [ "$HAS_LOOP" -gt 0 ] && [ "$HAS_BOUND" -eq 0 ]; then
+  HAS_LOOP=0; grep -qE 'for\s*\(.*\.length' "$f" 2>/dev/null && HAS_LOOP=1
+  HAS_BOUND=0; grep -qE 'Math\.min' "$f" 2>/dev/null && HAS_BOUND=1
+  if [ "$HAS_LOOP" -eq 1 ] && [ "$HAS_BOUND" -eq 0 ]; then
     fail "Rule 12 DoS: $BN has for-loop .length without Math.min"
-  elif [ "$HAS_LOOP" -gt 0 ]; then
+  elif [ "$HAS_LOOP" -eq 1 ]; then
     pass "Rule 12 DoS: $BN"
   fi
 
