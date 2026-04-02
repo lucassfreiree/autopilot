@@ -304,6 +304,12 @@ jobs:
               --jq '[.[] | select(.title | contains("'"$COMPONENT"'"))] | length' 2>/dev/null || echo "0")
 
             if [ "$EXISTING" -eq 0 ]; then
+              # Ensure labels exist
+              for LABEL in ci-diagnosis ci-failure automated; do
+                GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/labels" \
+                  --method POST -f "name=$LABEL" -f "color=d73a4a" 2>/dev/null || true
+              done
+
               # Include actual error excerpts in the escalation issue
               BUILD_EXCERPT=$(echo "$BUILD_OUTPUT" | grep -E "error |ERR!" | head -10 | jq -Rs '.' 2>/dev/null || echo '""')
               TEST_EXCERPT=$(echo "$TEST_OUTPUT" | grep -E "FAIL |● |Expected|Received" | head -15 | jq -Rs '.' 2>/dev/null || echo '""')
@@ -330,10 +336,12 @@ jobs:
           @claude Read diagnosis at \`${DIAG_FILE}\`, analyze errors, create fix patch, deploy via apply-source-change.
           Reference: \`contracts/claude-session-memory.json\`, \`.claude/skills/ci-fix.md\`"
 
-              GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/issues" --method POST \
-                -f "title=CI Diagnosis: $COMPONENT failures — @claude fix needed" \
-                -f "body=$ESC_BODY" \
-                -f "labels=[\"needs-claude\",\"ci-diagnosis\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create issue"
+              GH_TOKEN="$RELEASE_TOKEN" gh issue create \
+                --repo "$AUTOPILOT_REPO" \
+                --title "CI Diagnosis: $COMPONENT failures — @claude fix needed" \
+                --label "needs-claude" --label "ci-diagnosis" --label "auto-generated" \
+                --body "$ESC_BODY" \
+                2>/dev/null || echo "::warning ::Failed to create escalation issue"
             fi
           fi
 

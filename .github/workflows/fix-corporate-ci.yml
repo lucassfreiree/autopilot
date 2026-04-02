@@ -351,16 +351,22 @@ jobs:
 
             # Dedup: check if escalation issue already exists
             EXISTING_ESC=$(GH_TOKEN="$RELEASE_TOKEN" gh api \
-              "repos/$AUTOPILOT_REPO/issues?labels=needs-claude,ci-failure&state=open&per_page=5" \
-              --jq "[.[] | select(.title | contains(\"$COMPONENT\"))] | length" 2>/dev/null || echo "0")
+              "repos/$AUTOPILOT_REPO/issues?labels=needs-claude&state=open&per_page=5" \
+              --jq "[.[] | select(.title | contains(\"$COMPONENT\") and contains(\"CI fix needed\"))] | length" 2>/dev/null || echo "0")
 
             if [ "$EXISTING_ESC" -gt 0 ]; then
               echo "::notice ::Escalation issue already exists for $COMPONENT — skipping duplicate"
             else
+              # Ensure labels exist before creating issue
+              for LABEL in ci-failure automated ci-diagnosis; do
+                GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/labels" \
+                  --method POST -f "name=$LABEL" -f "color=d73a4a" 2>/dev/null || true
+              done
+
               ESCALATION_URL=$(GH_TOKEN="$RELEASE_TOKEN" gh issue create \
                 --repo "$AUTOPILOT_REPO" \
                 --title "[AutoPilot] @claude CI fix needed: $COMPONENT — auto-fix insufficient" \
-                --label "automated,needs-claude,ci-failure" \
+                --label "needs-claude" --label "ci-failure" --label "auto-generated" \
                 --body "$ESCALATION_BODY" \
                 2>/dev/null) && \
                 echo "::notice ::Claude Code escalation issue created: $ESCALATION_URL" || \
