@@ -17,6 +17,7 @@ permissions:
   contents: write
   pull-requests: read
   checks: read
+  issues: write
 
 concurrency:
   group: ci-self-heal-${{ github.event.check_run.pull_requests[0].number || github.event.inputs.pr_number || github.run_id }}
@@ -285,6 +286,31 @@ jobs:
             -f "message=handoff: ci-self-heal exhausted PR #$PR_NUMBER [skip ci]" \
             -f "content=$(echo "$HANDOFF" | base64 -w0)" > /dev/null
           echo "::warning::Handoff written — self-heal exhausted for PR #$PR_NUMBER."
+
+          # Create @claude escalation issue
+          EXISTING=$(gh api "repos/$REPO/issues?labels=needs-claude,ci-self-heal&state=open&per_page=3" \
+            --jq '[.[] | select(.title | contains("#'"$PR_NUMBER"'"))] | length' 2>/dev/null || echo "0")
+          if [ "$EXISTING" -eq 0 ]; then
+            gh api "repos/$REPO/issues" --method POST \
+              -f "title=🔧 CI self-heal exhausted PR #$PR_NUMBER — @claude fix needed" \
+              -f "body=## CI Self-Heal Exhausted
+
+          **PR**: #$PR_NUMBER
+          **Branch**: \`$BRANCH\`
+          **Attempts**: ${{ env.MAX_HEAL_ATTEMPTS }}/${{ env.MAX_HEAL_ATTEMPTS }}
+
+          Auto-fixes (lockfile-drift, lint-autofix, formatter) were unable to resolve CI failures.
+
+          ### Action Required
+          @claude Please:
+          1. Check the PR CI failures on branch \`$BRANCH\`
+          2. Analyze the failing checks and fix the root cause
+          3. Push the fix to the PR branch
+          4. Verify CI passes
+
+          **Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
+              -f "labels=[\"needs-claude\",\"ci-self-heal\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create issue"
+          fi
 
       - name: Write step summary
         if: always()

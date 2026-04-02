@@ -24,6 +24,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: ci-diagnose-${{ github.event.pull_request.number || github.sha }}
@@ -286,3 +287,43 @@ jobs:
           echo "| Tests | $TEST_SUCCESS |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Lint Errors | $(echo "$LINT_ERRORS" | jq 'length' 2>/dev/null || echo '?') files |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Diagnosed | $NOW |" >> "$GITHUB_STEP_SUMMARY"
+
+          # ── 9. Escalate to @claude if build or tests failed ──
+          if [ "$BUILD_SUCCESS" = "false" ] || [ "$TEST_SUCCESS" = "false" ]; then
+            echo "::warning ::CI diagnosis found failures — escalating to @claude"
+
+            LINT_COUNT=$(echo "$LINT_ERRORS" | jq 'length' 2>/dev/null || echo "0")
+            FAIL_DETAIL=""
+            [ "$BUILD_SUCCESS" = "false" ] && FAIL_DETAIL="Build FAILED. "
+            [ "$TEST_SUCCESS" = "false" ] && FAIL_DETAIL="${FAIL_DETAIL}Tests FAILED. "
+            [ "$LINT_COUNT" -gt 0 ] && FAIL_DETAIL="${FAIL_DETAIL}Lint errors in $LINT_COUNT files."
+
+            # Check for existing issue
+            EXISTING=$(GH_TOKEN="$RELEASE_TOKEN" gh api \
+              "repos/$AUTOPILOT_REPO/issues?labels=needs-claude,ci-diagnosis&state=open&per_page=3" \
+              --jq '[.[] | select(.title | contains("'"$COMPONENT"'"))] | length' 2>/dev/null || echo "0")
+
+            if [ "$EXISTING" -eq 0 ]; then
+              GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/issues" --method POST \
+                -f "title=🔍 CI Diagnosis: $COMPONENT failures — @claude fix needed" \
+                -f "body=## CI Diagnosis Escalation
+
+          **Component**: $COMPONENT
+          **Repo**: \`$SOURCE_REPO\`
+          **Commit**: \`${SHA:0:12}\` — $COMMIT_MSG
+          **Failures**: $FAIL_DETAIL
+
+          **Diagnosis saved to**: \`${DIAG_FILE}\` on autopilot-state
+          **Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          ### Action Required
+          @claude Please:
+          1. Read the diagnosis at \`${DIAG_FILE}\` on autopilot-state
+          2. Analyze the build/test/lint failures
+          3. Create a fix patch and deploy via apply-source-change
+          4. Monitor until corporate CI passes
+
+          Reference: \`contracts/claude-session-memory.json\`, \`.claude/skills/ci-fix.md\`" \
+                -f "labels=[\"needs-claude\",\"ci-diagnosis\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create issue"
+            fi
+          fi

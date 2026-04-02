@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: read
+  issues: write
 
 concurrency:
   group: post-merge-monitor-${{ github.event.pull_request.number }}
@@ -205,6 +206,36 @@ jobs:
             -f "message=rollback-signal: degraded after PR #$PR_NUMBER [skip ci]" \
             -f "content=$(echo "$ROLLBACK" | base64 -w0)" > /dev/null
           echo "::warning::Rollback signal emitted for PR #$PR_NUMBER (health: degraded)"
+
+      - name: "Escalate to @claude on regression"
+        if: needs.health-check.outputs.health_status == 'degraded'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+          BRANCH="${{ needs.check-merged.outputs.branch }}"
+          DETAILS="${{ needs.health-check.outputs.health_details }}"
+
+          gh api "repos/$REPO/issues" --method POST \
+            -f "title=⚠️ Post-merge regression PR #$PR_NUMBER — @claude investigate" \
+            -f "body=## Post-Merge Regression Detected
+
+          **PR**: #$PR_NUMBER
+          **Branch**: \`$BRANCH\`
+          **Health**: degraded
+          **Details**: $DETAILS
+
+          A rollback signal has been emitted. Manual review required.
+
+          ### Action Required
+          @claude Please:
+          1. Check health details and identify which checks are failing
+          2. Determine if the merged PR caused the regression
+          3. If yes, create a fix or revert the change
+          4. Verify health returns to \`healthy\` after fix
+
+          **Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
+            -f "labels=[\"needs-claude\",\"regression\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create escalation issue"
 
       - name: Write step summary
         if: always()

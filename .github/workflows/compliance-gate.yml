@@ -33,6 +33,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 concurrency:
   group: compliance-gate-${{ github.event.pull_request.number || github.sha }}
@@ -715,3 +716,51 @@ jobs:
             printf '%b' "$BODY" | gh api "repos/${{ github.repository }}/issues/${PR}/comments" \
               --method POST -F body=@- 2>/dev/null || true
           fi
+
+      - name: "Escalate to @claude on compliance failure"
+        if: always() && steps.final.outputs.passed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMP: ${{ needs.static-analysis.outputs.component }}
+          VER: ${{ needs.static-analysis.outputs.version }}
+        run: |
+          VIOLATIONS='${{ steps.final.outputs.violations || '[]' }}'
+          VC=$(echo "$VIOLATIONS" | jq 'length' 2>/dev/null || echo "0")
+          VIOL_LIST=$(echo "$VIOLATIONS" | jq -r '.[] | "- **[\(.rule)]** \(.message)"' 2>/dev/null | head -10 || echo "- Unknown violations")
+          PR="${{ github.event.pull_request.number }}"
+
+          # Only escalate if this is a PR (not manual dispatch)
+          if [ -z "$PR" ]; then
+            echo "::notice ::Not a PR — skipping escalation"
+            exit 0
+          fi
+
+          # Check for existing escalation
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues?labels=needs-claude,compliance-blocked&state=open&per_page=3" \
+            --jq 'length' 2>/dev/null || echo "0")
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "::notice ::Existing compliance escalation found — skipping"
+            exit 0
+          fi
+
+          gh api "repos/${{ github.repository }}/issues" --method POST \
+            -f "title=🚫 Compliance gate blocked ${COMP} v${VER} — @claude fix needed" \
+            -f "body=## Compliance Gate Blocked Deploy
+
+          **Component**: $COMP
+          **Version**: $VER
+          **PR**: #$PR
+          **Violations**: $VC
+
+          ### Violations
+          $VIOL_LIST
+
+          ### Action Required
+          @claude Please fix the compliance violations in PR #$PR:
+          1. Review each violation above
+          2. Apply fixes to the patch files
+          3. Push fixes to the PR branch
+          4. Verify compliance gate passes
+
+          **Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
+            -f "labels=[\"needs-claude\",\"compliance-blocked\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create escalation"
