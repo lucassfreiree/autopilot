@@ -3,25 +3,25 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.8.1",
+  "version": "3.8.2",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.8.0\"",
-      "replace": "\"version\": \"3.8.1\""
+      "search": "\"version\": \"3.8.1\"",
+      "replace": "\"version\": \"3.8.2\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.8.0\"",
-      "replace": "\"version\": \"3.8.1\""
+      "search": "\"version\": \"3.8.1\"",
+      "replace": "\"version\": \"3.8.2\""
     },
     {
       "action": "search-replace",
       "target_path": "src/swagger/swagger.json",
-      "search": "\"version\": \"3.8.0\"",
-      "replace": "\"version\": \"3.8.1\""
+      "search": "\"version\": \"3.8.1\"",
+      "replace": "\"version\": \"3.8.2\""
     },
     {
       "action": "replace-file",
@@ -54,8 +54,8 @@
       "content_ref": "patches/execute.controller.ts"
     }
   ],
-  "commit_message": "fix(controller): generate outbound JWT for agent dispatch + bump to 3.8.1 (v3.8.1)",
+  "commit_message": "fix(controller): fix TS2769 expiresIn type — use numeric seconds for jwt.sign (v3.8.2)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 102
+  "run": 103
 }
