@@ -8,8 +8,8 @@
     {
       "action": "search-replace",
       "target_path": "tsconfig.json",
-      "search": "\"compilerOptions\": {",
-      "replace": "\"compilerOptions\": { \"ignoreDeprecations\": \"6.0\","
+      "search": "\"ignoreDeprecations\": \"6.0\",",
+      "replace": "\"ignoreDeprecations\": \"6.0\", \"types\": [\"node\"],"
     },
     {
       "action": "replace-file",
@@ -32,8 +32,8 @@
       "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "fix(controller): tsconfig ignoreDeprecations TS5107 + rotas cronjob /agent/* (v3.7.9)",
+  "commit_message": "fix(controller): tsconfig types node TS2591 + rotas cronjob /agent/* (v3.7.9)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 88
+  "run": 89
 }
