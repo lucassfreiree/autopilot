@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { randomUUID } from "node:crypto";
+import jwt from "jsonwebtoken";
 import { initExecution } from "./agents-execute-logs.controller";
 import { timestampSP } from "../util/time";
 import { resolveTrustedRegisteredAgentExecuteUrl } from "../util/trusted-agent";
@@ -162,9 +163,36 @@ async function postJson(
   return { ok: false, status: resp.status, text };
 }
 
-function getIncomingAuthorization(req: Request): string | undefined {
-  const auth = String(req.headers.authorization || "").trim();
-  return auth || undefined;
+function generateOutboundAgentJwt(execId: string): string | undefined {
+  const secret = safeString(process.env.JWT_SECRET);
+  if (!secret) {
+    const fromEnv = safeString(process.env.AGENT_EXECUTE_AUTHORIZATION);
+    return fromEnv || undefined;
+  }
+
+  const issuer =
+    safeString(process.env.JWT_ISSUER) || "psc-sre-automacao-controller";
+  const audience =
+    safeString(process.env.JWT_AUDIENCE) || "psc-sre-automacao-agent";
+  const subject =
+    safeString(process.env.JWT_DEFAULT_SUBJECT) || "execute-controller";
+  const expiresIn = safeString(process.env.JWT_EXPIRES_IN) || "5m";
+  const algorithm = (safeString(process.env.JWT_SIGN_ALG) ||
+    "HS256") as jwt.Algorithm;
+
+  const scopeExecute = safeString(process.env.SCOPE_EXECUTE_AUTOMATION);
+
+  const token = jwt.sign(
+    {
+      sub: subject,
+      scope: scopeExecute ? [scopeExecute] : [],
+      execId,
+    },
+    secret,
+    { algorithm, expiresIn, issuer, audience },
+  );
+
+  return `Bearer ${token}`;
 }
 
 function setLocals(res: Response, locals: LocalsExec): void {
@@ -226,8 +254,8 @@ export async function executeAgent(
       "x-exec-id": execId,
     };
 
-    const incomingAuth = getIncomingAuthorization(req);
-    if (incomingAuth) headers.authorization = incomingAuth;
+    const outboundAuth = generateOutboundAgentJwt(execId);
+    if (outboundAuth) headers.authorization = outboundAuth;
 
     const forwardBody: AgentForwardBody = {
       execId,
