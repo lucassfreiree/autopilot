@@ -1,6 +1,6 @@
 {
   "name": "psc-sre-automacao-controller",
-  "version": "3.6.4",
+  "version": "3.8.0",
   "private": true,
   "description": "psc-sre-automacao-controller in node with expressjs",
   "repository": {
