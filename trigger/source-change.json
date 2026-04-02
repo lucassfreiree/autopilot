@@ -6,20 +6,13 @@
   "version": "3.8.0",
   "changes": [
     {
-      "action": "search-replace",
+      "action": "replace-file",
       "target_path": "tsconfig.json",
-      "search": "\"types\": \\[\"node\"\\],",
-      "replace": ""
-    },
-    {
-      "action": "search-replace",
-      "target_path": "tsconfig.json",
-      "search": "\"ignoreDeprecations\": \"5.0\"",
-      "replace": "\"ignoreDeprecations\": \"6.0\""
+      "content_ref": "patches/tsconfig.json"
     }
   ],
-  "commit_message": "fix(controller): remove types restriction + ignoreDeprecations 6.0 (v3.8.0)",
+  "commit_message": "fix(controller): replace tsconfig — remove types restriction + add ignoreDeprecations 6.0 (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 95
+  "run": 96
 }
