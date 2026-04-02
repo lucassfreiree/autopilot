@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T16:10:00Z",
+  "lastUpdated": "2026-04-02T17:55:00Z",
   "lastSessionId": "session_01V1f8MvuyH6p1oRKp8QMsjp",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -22,7 +22,7 @@
           "bbvinet/psc-sre-automacao-controller": {
             "role": "Controller — orquestra automacoes, despacha para agents, gerencia logs de execucao",
             "type": "source-code",
-            "currentVersion": "3.7.8",
+            "currentVersion": "3.8.2",
             "stack": "Node 22, TypeScript, Express, Jest, SQLite, S3",
             "ci": "Esteira de Build NPM (corporate runner)",
             "actionsUrl": "https://github.com/bbvinet/psc-sre-automacao-controller/actions",
@@ -61,7 +61,7 @@
           }
         },
         "status": "active",
-        "lastDeploy": "controller 3.7.8 (security: XSS/SSRF/DoS encodeURIComponent, ALLOWED_AGENT_DOMAINS, eliminate for-loop), agent 2.3.3",
+        "lastDeploy": "controller 3.8.2 (fix: generateOutboundAgentJwt replaces forwarded JWT, parseExpiresIn numeric seconds, cronjob callback route), agent 2.3.3",
         "notes": "Pipeline completo e funcional. Controller CAP agora no GitHub (bbvinet/psc_releases_cap_sre-aut-controller) com auto-promote HABILITADO no Stage 4 do apply-source-change. Esteira de Build NPM. Controller v3.6.3 operacional no cluster k8shmlbb111b (HML). Security fixes: XSS sanitizeForOutput, DoS MAX_RESULTS=1000, error detail hardening. Pre-deploy validation workflow criado."
       },
       "cit": {
@@ -510,12 +510,35 @@
           "Unmapped workflows found: security-intake-dispatch.yml, claude-assistant.yml — added to CLAUDE.md",
           "Session memory updated: controller version 3.7.4→3.7.8, new error patterns added"
         ]
+      },
+      {
+        "sessionId": "session_01YC9RyjbGfw471NTB928HcA",
+        "date": "2026-04-02",
+        "actions": [
+          "Fixed 401 agent auth: generateOutboundAgentJwt replaces forwarded JWT in oas-sre-controller and execute controller",
+          "Added cronjob callback route: /api/cronjob/result POST + /api/cronjob/status/:execId GET",
+          "Fixed TS2769: parseExpiresIn() converts string to numeric seconds for jwt.sign",
+          "Deployed v3.8.0 (run 101) — FAILED duplicate tag",
+          "Deployed v3.8.1 (run 102) — FAILED TS2769 expiresIn type",
+          "Deployed v3.8.2 (run 103) — SUCCESS: all 7 stages passed, CAP promoted, OaaS test confirmed working"
+        ],
+        "prs": [
+          "#477 (v3.8.0)",
+          "#478 (v3.8.1)",
+          "#479 (v3.8.2)"
+        ],
+        "outcome": "success",
+        "lessons": [
+          "jwt.sign expiresIn requires number (seconds) not string — @types/jsonwebtoken is strict",
+          "Always monitor corporate CI proactively — user expects autonomous detection and fixing",
+          "parseExpiresIn pattern: parse env string to seconds, fallback to 300"
+        ]
       }
     ]
   },
   "versioningRules": {
-    "currentVersion": "3.8.0",
-    "previousVersion": "3.7.7",
+    "currentVersion": "3.8.2",
+    "previousVersion": "3.8.0",
     "rule": "Se a esteira ja gerou imagem para uma versao, a proxima DEVE incrementar o patch. CI rejeita tags duplicadas no registry.",
     "versioningPattern": "CRITICO: Apos X.Y.9, a proxima versao e X.(Y+1).0 — NUNCA X.Y.10. Exemplos: 3.5.9 → 3.6.0, 3.6.9 → 3.7.0, 3.9.9 → 3.10.0. O terceiro digito (patch) vai de 0 a 9 apenas.",
     "versionFiles": [
@@ -584,10 +607,10 @@
       "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "lastTriggerRun": 73,
-    "lastSuccessfulRun": 73,
-    "lastDeployPR": 406,
-    "pipelineStatus": "CI_MONITORING — agent 2.3.3 (run #73). ci-diagnose run #27 triggered. deploy-pipeline-monitor active.",
+    "lastTriggerRun": 103,
+    "lastSuccessfulRun": 103,
+    "lastDeployPR": "PR #479 (v3.8.2 — fix TS2769 expiresIn type + generateOutboundAgentJwt)",
+    "pipelineStatus": "idle",
     "multiFilePayload": {
       "change_type": "multi-file",
       "changesFormat": [
@@ -1432,6 +1455,32 @@
         "cause": "Cronjob routes were registered at /agent/cronjob/ but tests (in src/__tests__/routes/) expect /api/cronjob/ prefix. Controller statusEndpoint also used /agent/ prefix.",
         "fix": "Change route paths to /api/cronjob/result and /api/cronjob/status/:execId. Change controller statusEndpoint to /api/cronjob/status/. Tests exist in TWO locations: __tests__/unit/ (old) and __tests__/routes/ + __tests__/controllers/ (new).",
         "lesson": "Corporate repo has test files in multiple directories. Always check CI log file paths carefully — __tests__/unit/ vs __tests__/routes/ vs __tests__/controllers/ may have different test expectations."
+      },
+      "ts2769-expiresIn": {
+        "error": "TS2769: No overload matches this call - expiresIn type string vs number",
+        "cause": "@types/jsonwebtoken requires expiresIn as number (seconds) or StringValue (branded type from ms package), not plain string",
+        "fix": "parseExpiresIn() converts env string like \"5m\" to numeric 300. Use: const expiresIn = parseExpiresIn(raw) || 300",
+        "files": [
+          "execute.controller.ts",
+          "oas-sre-controller.controller.ts"
+        ],
+        "learned": "2026-04-02"
+      },
+      "agent-401-forwarded-jwt": {
+        "error": "Agent returns 401 when controller forwards OaaS callers JWT instead of its own",
+        "cause": "getAgentAuthorization(req) forwards the incoming JWT. Agent expects iss=psc-sre-automacao-controller, aud=psc-sre-automacao-agent",
+        "fix": "Replace with generateOutboundAgentJwt(execId) which signs new JWT with JWT_SECRET, correct iss/aud/sub/scope",
+        "files": [
+          "execute.controller.ts",
+          "oas-sre-controller.controller.ts"
+        ],
+        "learned": "2026-04-02"
+      },
+      "duplicate-tag-ci-rejection": {
+        "error": "Tag X.Y.Z ja existe, por favor evolua a versao",
+        "cause": "Corporate CI rejects duplicate image tags in Docker registry",
+        "fix": "Always check current version before bump. Increment patch. After X.Y.9 goes to X.(Y+1).0",
+        "learned": "2026-04-02"
       }
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
