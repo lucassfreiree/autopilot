@@ -312,6 +312,56 @@ jobs:
               -f "labels=[\"needs-claude\",\"ci-self-heal\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create issue"
           fi
 
+      - name: "Back-propagate fix pattern to resilience-patterns.json"
+        if: needs.heal.outputs.fixed == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.RELEASE_TOKEN }}
+          sparse-checkout: contracts/resilience-patterns.json
+
+      - name: "Update resilience patterns with successful fix"
+        if: needs.heal.outputs.fixed == 'true'
+        run: |
+          set -e
+          FIX_TYPE="${{ needs.heal.outputs.fix_type || 'none' }}"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          # Check if this fix type already exists in resilience-patterns
+          EXISTS=$(jq --arg id "ci-self-heal-$FIX_TYPE" '[.patterns[] | select(.id == $id)] | length' contracts/resilience-patterns.json 2>/dev/null || echo "0")
+
+          if [ "$EXISTS" -eq 0 ] && [ "$FIX_TYPE" != "none" ]; then
+            jq --arg id "ci-self-heal-$FIX_TYPE" \
+               --arg ts "$NOW" \
+               --arg ft "$FIX_TYPE" \
+               '.lastUpdated = $ts | .patterns += [{
+                  id: $id,
+                  trigger: $ft,
+                  category: "ci",
+                  severity: "medium",
+                  affectedWorkflows: ["ci-self-heal.yml"],
+                  workaround: {
+                    type: "auto-fix-and-retry",
+                    strategy: ("Automatically fixed by ci-self-heal: " + $ft),
+                    implementation: "ci-self-heal.yml heal job"
+                  },
+                  autoFix: true,
+                  status: "learned",
+                  learnedAt: $ts,
+                  learnedFrom: "ci-self-heal"
+                }]' contracts/resilience-patterns.json > /tmp/rp-wb.json && \
+                mv /tmp/rp-wb.json contracts/resilience-patterns.json
+
+            git config user.name "autopilot-bot"
+            git config user.email "autopilot@users.noreply.github.com"
+            git add contracts/resilience-patterns.json
+            git commit -m "chore(auto-learn): ci-self-heal learned pattern: $FIX_TYPE [skip ci]" || true
+            git push origin main 2>/dev/null || echo "::warning ::Could not push pattern write-back"
+            echo "::notice ::New pattern '$FIX_TYPE' added to resilience-patterns.json"
+          else
+            echo "::notice ::Pattern '$FIX_TYPE' already exists in resilience-patterns.json"
+          fi
+
       - name: Write step summary
         if: always()
         run: |
@@ -328,4 +378,5 @@ jobs:
             echo "| Attempt | $((ATTEMPT + 1)) / $MAX_HEAL_ATTEMPTS |"
             echo "| Fix applied | $FIXED |"
             echo "| Fix type | $FIX_TYPE |"
+            echo "| Pattern propagated | $([ '$FIXED' = 'true' ] && echo 'Yes' || echo 'No') |"
           } >> "$GITHUB_STEP_SUMMARY"
