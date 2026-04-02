@@ -4,7 +4,7 @@ run-name: "${{ github.workflow }} • sync state to Spark dashboard"
 on:
   schedule:
     # Business hours (8h-17h BRT = 11h-20h UTC) Mon-Fri: every 5 minutes
-    - cron: '*/5 11-19 * * 1-5'
+    - cron: '*/15 11-19 * * 1-5'  # Optimized: was */5. workflow_run trigger handles real-time sync.
     # Off-hours Mon-Fri: every 15 minutes
     - cron: '*/15 0-10,20-23 * * 1-5'
     # Weekends: every 15 minutes
@@ -197,8 +197,8 @@ jobs:
             if gh api "repos/$GITHUB_REPOSITORY/contents/panel/dashboard/state.json" \
               --method PUT \
               --input "$PAYLOAD_FILE" > /dev/null 2>&1; then
-              gh workflow run deploy-panel.yml --repo "$GITHUB_REPOSITORY" --ref main
-              echo "::notice ::Updated panel/dashboard/state.json on main and triggered deploy-panel.yml"
+              # deploy-panel.yml auto-triggers via push path filter on panel/** — no need for explicit dispatch
+              echo "::notice ::Updated panel/dashboard/state.json on main (deploy-panel auto-triggers via push path)"
               exit 0
             fi
 

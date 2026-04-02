@@ -17,7 +17,7 @@ run-name: "${{ github.workflow }} • ${{ github.event_name }} • ${{ github.ev
 on:
   schedule:
     # Every 10 minutes during business hours, every 30 min otherwise
-    - cron: '*/10 9-18 * * 1-5'
+    - cron: '*/30 9-18 * * 1-5'  # Optimized: was */10. ci-monitor-loop dispatched by Stage 7, this is backup.
     - cron: '*/30 0-8,19-23 * * 1-5'
     - cron: '*/30 * * * 0,6'
   workflow_run:
