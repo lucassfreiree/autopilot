@@ -54,6 +54,11 @@
       "workflow": "[Core] Workflow Auto-Repair",
       "consecutiveAt": "2026-03-30T21:02:32Z",
       "count": 3
+    },
+    {
+      "workflow": "[Corp] Fix: CI Lint Errors",
+      "consecutiveAt": "2026-04-02T14:09:03Z",
+      "count": 3
     }
   ],
   "fixes": [
@@ -86,16 +91,18 @@
       "action": "re-run",
       "fixedAt": "2026-03-30T21:02:32Z",
       "method": "re-run"
+    },
+    {
+      "workflow": "[Corp] Fix: CI Lint Errors",
+      "action": "re-run",
+      "fixedAt": "2026-04-02T14:09:03Z",
+      "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-02T12:39:00Z",
-  "lastHealth": "healthy",
-  "runCount": 69,
+  "lastRun": "2026-04-02T14:09:03Z",
+  "lastHealth": "degraded",
+  "runCount": 70,
   "healthHistory": [
-    {
-      "ts": "2026-04-01T13:17:38Z",
-      "health": "degraded"
-    },
     {
       "ts": "2026-04-01T14:49:18Z",
       "health": "degraded"
@@ -171,6 +178,10 @@
     {
       "ts": "2026-04-02T12:39:00Z",
       "health": "healthy"
+    },
+    {
+      "ts": "2026-04-02T14:09:03Z",
+      "health": "degraded"
     }
   ]
 }
