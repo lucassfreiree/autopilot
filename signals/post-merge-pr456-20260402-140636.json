@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 456,
+  "branch": "codex/fetch-controller-tsconfig-380",
+  "timestamp": "2026-04-02T14:06:36Z",
+  "runId": "23904478795",
+  "healthStatus": "degraded"
+}
