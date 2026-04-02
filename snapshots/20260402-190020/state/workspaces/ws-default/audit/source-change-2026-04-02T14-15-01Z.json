@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T14:15:01Z",
+  "runId": "23904852164",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23904852164",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): remove types restriction from tsconfig — restore jest type discovery (v3.8.0)",
+  "commitSha": "",
+  "ciResult": "",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "skipped",
+    "promote": "success",
+    "state": "skipped"
+  }
+}
