@@ -20,6 +20,12 @@ Read latest CI logs from autopilot-state branch or GitHub Actions.
 | `Reflected_XSS` | Add sanitizeForOutput() |
 | `SSRF` | Add validateTrustedUrl() |
 | `Server_DoS_by_Loop` | Add MAX_RESULTS bound |
+| `TS2769: No overload matches` | Type mismatch — e.g. parseExpiresIn() for jwt.sign numeric expiresIn |
+| `ENOMEM / heap out of memory` | Increase NODE_OPTIONS --max-old-space-size=4096 |
+| `ENOSPC: no space left` | Runner disk full — cleanup node_modules cache |
+| `npm ERR! 401` or `403` | Token expired — verify BBVINET_TOKEN validity |
+| `ERR_SOCKET_TIMEOUT` | Network/proxy issue in corporate environment |
+| `jest --forceExit timeout` | Use --runInBand or increase testTimeout in jest.config |
 
 ## Step 3: Create fix patch
 1. Read current corporate file via fetch-files

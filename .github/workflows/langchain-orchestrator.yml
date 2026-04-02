@@ -43,6 +43,10 @@ permissions:
   contents: read
   actions: write
 
+concurrency:
+  group: langchain-orchestrator-${{ inputs.workspace_id || 'default' }}
+  cancel-in-progress: true
+
 jobs:
   orchestrate:
     name: "LangChain Agent"

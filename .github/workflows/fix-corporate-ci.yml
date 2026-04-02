@@ -169,13 +169,44 @@ jobs:
           # ── 7. Commit and push ─────────────────────────────
           git add -A
           if git diff --cached --quiet; then
-            echo "::warning ::Auto-fix could not apply any changes — lint errors may need manual code fix"
-            # Create notification issue since auto-fix couldn't fix the problem
+            echo "::warning ::Auto-fix could not apply any changes — escalating to Claude Code"
+
+            # Create notification issue for tracking
             GH_TOKEN="$RELEASE_TOKEN" gh issue create \
               --repo "$AUTOPILOT_REPO" \
               --title "[AutoPilot] CI auto-fix blocked: $COMPONENT — no auto-fixable errors found" \
               --body "fix-corporate-ci ran for component \`$COMPONENT\` (workspace \`$WS_ID\`) but could not apply any automatic fixes. The ESLint error may require a code-level patch update in autopilot. Check the CI logs on autopilot-state branch (ci-logs-${COMPONENT}-*.txt) for the specific error." \
-              2>/dev/null || echo "::warning ::Could not create issue"
+              2>/dev/null || echo "::warning ::Could not create notification issue"
+
+            # ── Auto-escalation: trigger Claude Code via @claude issue ──
+            echo "=== Escalating to Claude Code for intelligent fix ==="
+            ESCALATION_BODY=$(cat <<ESCEOF
+            ## Auto-Escalation from fix-corporate-ci
+
+            Component: \`$COMPONENT\`
+            Workspace: \`$WS_ID\`
+            Error: ESLint/TypeScript auto-fix could not resolve the CI failure.
+
+            ### What to do
+            @claude Read the latest CI logs from \`state/workspaces/${WS_ID}/ci-logs-${COMPONENT}-*.txt\` on the autopilot-state branch. Diagnose the error, create a fix patch in \`patches/\`, bump the version, update \`trigger/source-change.json\`, and deploy autonomously. Use the ci-fix and incident-response skills.
+
+            ### Context
+            - Session memory: \`contracts/claude-session-memory.json\` has error patterns in corporateCIPipeline.knownErrors
+            - CI fix patterns: \`.claude/skills/ci-fix.md\`
+            - Incident response: \`.claude/skills/incident-response.md\`
+            - Deploy flow: CLAUDE.md Deploy Flow Complete Guide
+            ESCEOF
+            )
+
+            ESCALATION_URL=$(GH_TOKEN="$RELEASE_TOKEN" gh issue create \
+              --repo "$AUTOPILOT_REPO" \
+              --title "[AutoPilot] @claude CI fix needed: $COMPONENT — auto-fix insufficient" \
+              --label "automated,needs-claude,ci-failure" \
+              --body "$ESCALATION_BODY" \
+              2>/dev/null) && \
+              echo "::notice ::Claude Code escalation issue created: $ESCALATION_URL" || \
+              echo "::warning ::Could not create Claude escalation issue"
+
             exit 0
           fi
           git commit -m "fix: resolve CI errors (lint + build)"

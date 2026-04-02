@@ -47,9 +47,12 @@ concurrency:
 env:
   AUTOPILOT_REPO: lucassfreiree/autopilot
   STATE_BRANCH: autopilot-state
-  # Poll every 2 minutes, up to 15 times (30 min window)
-  POLL_INTERVAL_SECONDS: 120
-  MAX_ATTEMPTS: 15
+  # Two-phase polling: fast (30s x 10 = 5 min) then slow (120s x 12 = 24 min)
+  # Total window: ~29 min. Fast phase catches quick failures (<5 min).
+  POLL_INTERVAL_FAST: 30
+  FAST_ATTEMPTS: 10
+  POLL_INTERVAL_SLOW: 120
+  SLOW_ATTEMPTS: 12
 
 jobs:
   monitor:
@@ -160,9 +163,18 @@ jobs:
 
           OVERALL="unknown"
           FAILED_RUN_URL=""
+          TOTAL_ATTEMPTS=$(( FAST_ATTEMPTS + SLOW_ATTEMPTS ))
 
-          for ATTEMPT in $(seq 1 $MAX_ATTEMPTS); do
-            echo "=== Attempt $ATTEMPT / $MAX_ATTEMPTS ==="
+          for ATTEMPT in $(seq 1 $TOTAL_ATTEMPTS); do
+            # Two-phase polling: fast first (30s), then slow (120s)
+            if [ "$ATTEMPT" -le "$FAST_ATTEMPTS" ]; then
+              PHASE="fast"
+              INTERVAL="$POLL_INTERVAL_FAST"
+            else
+              PHASE="slow"
+              INTERVAL="$POLL_INTERVAL_SLOW"
+            fi
+            echo "=== Attempt $ATTEMPT / $TOTAL_ATTEMPTS (${PHASE} phase, ${INTERVAL}s interval) ==="
 
             if [ -n "$COMMIT_SHA" ] && [ "$COMMIT_SHA" != "null" ]; then
               RUNS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
@@ -192,21 +204,21 @@ jobs:
               break
             elif [ "$FAILED" -gt 0 ] && [ "$IN_PROG" -eq 0 ]; then
               OVERALL="failure"
-              echo "  CI FAILED ❌"
+              echo "  CI FAILED ❌ (detected in ${PHASE} phase at attempt $ATTEMPT)"
               break
             else
               OVERALL="in_progress"
               echo "  CI still running..."
             fi
 
-            if [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
-              echo "  Sleeping ${POLL_INTERVAL_SECONDS}s..."
-              sleep "$POLL_INTERVAL_SECONDS"
+            if [ "$ATTEMPT" -lt "$TOTAL_ATTEMPTS" ]; then
+              echo "  Sleeping ${INTERVAL}s..."
+              sleep "$INTERVAL"
             fi
           done
 
           if [ "$OVERALL" = "in_progress" ] || [ "$OVERALL" = "pending" ] || [ "$OVERALL" = "unknown" ]; then
-            echo "::warning ::CI did not complete within the polling window ($MAX_ATTEMPTS × ${POLL_INTERVAL_SECONDS}s). Marking as timeout."
+            echo "::warning ::CI did not complete within the polling window ($TOTAL_ATTEMPTS attempts, fast=${FAST_ATTEMPTS}x${POLL_INTERVAL_FAST}s + slow=${SLOW_ATTEMPTS}x${POLL_INTERVAL_SLOW}s). Marking as timeout."
             OVERALL="timeout"
           fi
 
@@ -276,6 +288,7 @@ jobs:
             --field component="$COMPONENT"
 
           echo "fix-corporate-ci dispatched for $COMPONENT."
+          echo "::notice ::Escalation chain: ci-diagnose → fix-corporate-ci → (if blocked) → claude-assistant via @claude issue"
 
       # ── 3c. Create failure notification issue ─────────────────────────────────
       - name: "Create CI failure notification issue"

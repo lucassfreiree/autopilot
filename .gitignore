@@ -27,3 +27,4 @@ Thumbs.db
 
 # Ops logs (auto-generated, not tracked)
 ops/logs/
+ops/scripts/ci/__pycache__/
