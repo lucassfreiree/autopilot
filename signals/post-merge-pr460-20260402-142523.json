@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 460,
+  "branch": "codex/fix-controller-3-8-1-tsconfig-memory",
+  "timestamp": "2026-04-02T14:25:23Z",
+  "runId": "23905333462",
+  "healthStatus": "degraded"
+}
