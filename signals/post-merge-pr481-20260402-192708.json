@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 481,
+  "branch": "claude/universal-escalation",
+  "timestamp": "2026-04-02T19:27:08Z",
+  "runId": "23918084086",
+  "healthStatus": "degraded"
+}
