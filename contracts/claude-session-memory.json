@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T17:55:00Z",
-  "lastSessionId": "session_01V1f8MvuyH6p1oRKp8QMsjp",
+  "lastUpdated": "2026-04-02T18:15:00Z",
+  "lastSessionId": "session_01YC9RyjbGfw471NTB928HcA",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
     "companies": {
@@ -1562,17 +1562,17 @@
     "_note": "Externalized by token-auto-optimize. Read on demand."
   },
   "currentState": {
-    "controllerVersion": "3.7.8",
+    "controllerVersion": "3.8.2",
     "agentVersion": "2.3.3",
-    "lastTriggerRun": 99,
-    "lastSuccessfulRun": 82,
+    "lastTriggerRun": 103,
+    "lastSuccessfulRun": 103,
     "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)",
     "historia930188": "COMPLETED — controller 3.7.2 CI PASSED (run #80, 2026-03-30T19:03Z). ciOutcome=success. CAP tag=3.7.2. Security fixes: XSS sanitizeForOutput, SSRF validateTrustedUrl, DoS boundedEntries, no for...of. 3 iterations: run78(for...of ESLint), run79(count:1 test), run80(PASS).",
     "pendingDeploy": null,
     "nextDeploy": {
-      "note": "No pending deploy. Controller 3.7.4 and Agent 2.3.3 both deployed and promoted. 3.7.4 = Checkmarx DoS fix + security-vuln-scanner.",
+      "note": "Controller 3.8.2 deployed and verified. JWT auth fix + cronjob callback route operational.",
       "nextVersion": {
-        "controller": "3.7.5",
+        "controller": "3.8.3",
         "agent": "2.3.4"
       }
     }
@@ -1682,5 +1682,215 @@
     "reason": "Owner directive: centralize in Claude Code + GitHub. No Codex/Copilot/Gemini.",
     "date": "2026-03-30",
     "safetyValidation": "Verified no downstream breakage: apply-source-change, deploy-auto-learn, post-deploy-validation, deploy-pipeline-monitor all independent"
+  },
+  "corporateCIPipeline": {
+    "description": "CONHECIMENTO CRITICO: Como a esteira corporativa (Esteira de Build NPM) funciona, como monitorar, e como corrigir falhas AUTOMATICAMENTE. NUNCA esquecer este processo.",
+    "esteiraOverview": {
+      "name": "Esteira de Build NPM (CI / workflow-npm)",
+      "runner": "Corporate self-hosted runner (bbvinet org)",
+      "trigger": "Push to main branch of bbvinet/psc-sre-automacao-controller or agent",
+      "technology": "Node 22, TypeScript, npm",
+      "steps": [
+        "1. Checkout código",
+        "2. Detectar gerenciador (npm/yarn)",
+        "3. Setup Node 22",
+        "4. Verificar tag duplicada (EXIST_TAG: true = FALHA)",
+        "5. npm ci (instalar dependências)",
+        "6. npm run lint (tsc --noEmit && eslint . --quiet --fix)",
+        "7. npm test (jest --ci)",
+        "8. Docker build + push imagem",
+        "9. Publicar tag no registry"
+      ],
+      "duration": {
+        "success": "~14 minutos (build + test + docker)",
+        "failFast": "< 5 minutos (falha no lint/test)",
+        "stuck": "> 30 minutos sem log = CI stuck, disparar ci-diagnose"
+      },
+      "checkRuns": [
+        "CI / workflow-npm",
+        "CI / sincronizacao",
+        "CI / checkmarx",
+        "CI / sonarQube",
+        "CI / xRay",
+        "CI / valida-workflow",
+        "CI / Análise Motor Liberação",
+        "CD (desenvolvimento) / autoDeploy"
+      ]
+    },
+    "monitoringProtocol": {
+      "description": "PROTOCOLO OBRIGATORIO: Monitorar TODA esteira PROATIVAMENTE. NUNCA esperar o usuario reportar falha.",
+      "atSessionStart": [
+        "1. Ler ci-logs mais recentes no autopilot-state: state/workspaces/ws-default/ci-logs-controller-*.txt e ci-logs-agent-*.txt",
+        "2. Ler controller-release-state.json e agent-release-state.json → status, ciResult",
+        "3. Ler ci-monitor-controller.json e ci-monitor-agent.json → ciOutcome",
+        "4. Se QUALQUER falha pendente → diagnosticar e corrigir IMEDIATAMENTE"
+      ],
+      "afterEveryDeploy": [
+        "1. Após PR merge: esperar 30s, verificar se apply-source-change.yml iniciou",
+        "2. A cada 2-3 min: verificar status do workflow run (WebFetch API)",
+        "3. Quando CI Gate completar: verificar se passou ou falhou",
+        "4. Se CI Gate passou com gateDecision=pass: esteira corporativa PASSOU",
+        "5. Se CI Gate passou com gateDecision=pass-preexisting: falha PRE-EXISTENTE (não causada por este deploy)",
+        "6. Se CI Gate FALHOU: LER O LOG IMEDIATAMENTE → diagnosticar → corrigir → re-deployar",
+        "7. Após todos os stages (1-7) passarem: verificar se novo ci-log apareceu no autopilot-state"
+      ],
+      "howToReadCILogs": {
+        "location": "autopilot-state branch → state/workspaces/ws-default/ci-logs-<component>-<jobId>.txt",
+        "sorting": "Job ID MAIOR = log MAIS RECENTE",
+        "keyPatterns": {
+          "VERSAO": "Versão sendo buildada (ex: VERSAO: 3.8.2)",
+          "EXIST_TAG: false": "Tag NÃO existe — OK para prosseguir",
+          "EXIST_TAG: true": "Tag DUPLICADA — CI vai rejeitar. BUMPAR versão!",
+          "added N packages": "npm ci sucesso",
+          "error TS": "Erro TypeScript — lint falhou",
+          "X problems (Y errors)": "ESLint falhou",
+          "Test Suites: X failed": "Testes falharam",
+          "Test Suites: X passed, 0 failed": "Todos testes passaram",
+          "Process completed with exit code 1": "Step falhou",
+          "N vulnerabilities": "npm audit — NÃO bloqueia build (informativo)"
+        }
+      }
+    },
+    "knownErrors": {
+      "ts2769_expiresIn": {
+        "pattern": "error TS2769: No overload matches this call.*Type 'string' is not assignable to type 'number | StringValue | undefined'",
+        "cause": "@types/jsonwebtoken exige expiresIn como number (segundos) ou StringValue (tipo branded do ms). String simples 'NÃO' funciona.",
+        "fix": "Usar parseExpiresIn() que converte '5m' → 300 (numerico). Fallback para 300 se vazio.",
+        "files": [
+          "execute.controller.ts",
+          "oas-sre-controller.controller.ts"
+        ],
+        "occurrences": [
+          "v3.8.1 (run 102)"
+        ],
+        "fixedIn": "v3.8.2 (run 103)"
+      },
+      "duplicate_tag": {
+        "pattern": "Tag .* já existe, por favor evolua a versão|EXIST_TAG: true",
+        "cause": "CI rejeita tags duplicadas no Docker registry. Se a versão já foi buildada, DEVE incrementar.",
+        "fix": "Bumpar patch version. Após X.Y.9 → X.(Y+1).0. NUNCA X.Y.10.",
+        "occurrences": [
+          "v3.8.0 (run 101)"
+        ],
+        "fixedIn": "v3.8.1 (run 102)"
+      },
+      "eslint_unused_vars": {
+        "pattern": "'X' is defined but never used|no-unused-vars",
+        "cause": "Função/variável definida mas não usada. ESLint --quiet não silencia errors, só warnings.",
+        "fix": "Remover código morto ou usar // eslint-disable-next-line se intencional"
+      },
+      "eslint_no_for_of": {
+        "pattern": "iterators/generators require regenerator-runtime|for...of",
+        "cause": "ESLint corporativo proíbe for...of (regra de compatibilidade). Usar forEach/map/reduce.",
+        "fix": "Substituir for...of por Array.prototype.forEach ou for clássico",
+        "occurrences": [
+          "v3.7.0 (run 78)"
+        ],
+        "fixedIn": "v3.7.1 (run 79)"
+      },
+      "test_failure_count": {
+        "pattern": "Expected.*but received.*|expect\\(.*\\)\\.toBe|Test Suites: \\d+ failed",
+        "cause": "Teste unitário falhou — geralmente por mudança de assinatura de função sem atualizar o teste.",
+        "fix": "Ler o teste, entender o que espera, ajustar mock/assertion"
+      },
+      "agent_401_forwarded_jwt": {
+        "pattern": "agentStatus.*401|Failed to call Agent",
+        "cause": "Controller encaminhava JWT do caller (OaaS) para o agent. Agent espera JWT com iss=psc-sre-automacao-controller.",
+        "fix": "Usar generateOutboundAgentJwt(execId) que assina JWT novo com JWT_SECRET, iss/aud/sub corretos.",
+        "files": [
+          "execute.controller.ts",
+          "oas-sre-controller.controller.ts"
+        ],
+        "occurrences": [
+          "todas versões até 3.8.1"
+        ],
+        "fixedIn": "v3.8.2 (run 103)"
+      },
+      "agent_503_rolling_update": {
+        "pattern": "httpStatus=503|Service Unavailable",
+        "cause": "Pod do controller em rolling update (K8s substituindo pod antigo pelo novo). TRANSITÓRIO.",
+        "fix": "NENHUMA ação necessária. Agent re-registra automaticamente em ~4 minutos.",
+        "isTransient": true
+      },
+      "npm_deprecated_warnings": {
+        "pattern": "npm warn deprecated",
+        "cause": "Dependências transitivas com versões descontinuadas (glob, rimraf, aws-sdk, eslint, etc)",
+        "fix": "NÃO BLOQUEANTE. Informativo apenas. Para resolver: atualizar package.json (tarefa separada).",
+        "isTransient": false,
+        "blocking": false
+      },
+      "npm_vulnerabilities": {
+        "pattern": "\\d+ vulnerabilities \\(.*\\)",
+        "cause": "npm audit encontra CVEs em dependências. Avaliadas separadamente por Checkmarx/XRay.",
+        "fix": "NÃO BLOQUEANTE para build. Checkmarx e XRay são os gates de segurança reais.",
+        "blocking": false
+      },
+      "nodejs_20_deprecation": {
+        "pattern": "Node.js 20 actions are deprecated",
+        "cause": "GitHub Actions deprecation notice para actions/checkout@v4 e setup-node@v4 que usam Node 20.",
+        "fix": "Infra do runner — deadline setembro 2026. NÃO afeta código do controller.",
+        "blocking": false
+      }
+    },
+    "autoFixProtocol": {
+      "description": "PROCESSO AUTONOMO: Quando detectar falha na esteira, corrigir SEM perguntar ao usuario.",
+      "steps": [
+        "1. DETECTAR: Ler ci-logs mais recente → procurar patterns de erro",
+        "2. DIAGNOSTICAR: Identificar erro exato (TS error? lint? test? tag duplicada?)",
+        "3. MAPEAR: Verificar knownErrors acima — já temos fix documentado?",
+        "4. CORRIGIR: Criar/atualizar patch no patches/",
+        "5. BUMPAR: Incrementar versão (nunca reusar versão que falhou)",
+        "6. TRIGGER: Atualizar trigger/source-change.json com novo run + version",
+        "7. COMMITAR: patches/ + trigger/ + references/ em um único commit",
+        "8. PR + MERGE: Criar PR, merge squash → auto-trigger apply-source-change",
+        "9. MONITORAR: Acompanhar novo run até CI Gate completar",
+        "10. REPETIR: Se falhar de novo, voltar ao passo 1 (máx 5 tentativas)"
+      ],
+      "rules": [
+        "NUNCA perguntar ao usuario sobre erros de código — diagnosticar e corrigir sozinho",
+        "NUNCA considerar deploy completo até CI Gate PASSAR",
+        "NUNCA reusar versão que já falhou — sempre bumpar",
+        "SEMPRE ler o log COMPLETO antes de diagnosticar",
+        "SEMPRE registrar erro + fix na memória para não repetir",
+        "SEMPRE notificar usuario do resultado final (sucesso ou falha após 5 tentativas)"
+      ]
+    },
+    "pipelineTimingGuide": {
+      "description": "Guia de timing para interpretar duração da esteira",
+      "timings": {
+        "lessThan5min": "CI falhou rápido (lint/test error) → ler log IMEDIATAMENTE",
+        "about14min": "CI passou → Docker image buildada, CAP promovido",
+        "moreThan30min": "CI stuck ou não triggerou → disparar ci-diagnose manualmente",
+        "503transient": "Pod em rolling update → esperar 4-5 min, agent re-registra sozinho"
+      }
+    },
+    "deployHistory": {
+      "description": "Histórico recente de deploys com lições aprendidas",
+      "recentDeploys": [
+        {
+          "version": "3.8.0",
+          "run": 101,
+          "result": "FAILED",
+          "error": "duplicate_tag",
+          "lesson": "Sempre verificar versão atual antes de bumpar"
+        },
+        {
+          "version": "3.8.1",
+          "run": 102,
+          "result": "FAILED",
+          "error": "ts2769_expiresIn",
+          "lesson": "jwt.sign expiresIn exige number, não string. Usar parseExpiresIn()"
+        },
+        {
+          "version": "3.8.2",
+          "run": 103,
+          "result": "SUCCESS",
+          "allStagesPassed": true,
+          "capPromoted": true,
+          "runtimeVerified": true,
+          "lesson": "401 agent auth corrigido com generateOutboundAgentJwt()"
+        }
+      ]
+    }
   }
 }
