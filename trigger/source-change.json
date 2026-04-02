@@ -8,12 +8,18 @@
     {
       "action": "search-replace",
       "target_path": "tsconfig.json",
-      "search": "\"ignoreDeprecations\": \"6.0\", \"types\": [\"node\"],",
-      "replace": "\"types\": [\"node\"],"
+      "search": "\"ignoreDeprecations\": \"6.0\",",
+      "replace": ""
+    },
+    {
+      "action": "search-replace",
+      "target_path": "tsconfig.json",
+      "search": " \"types\": [\"node\"],",
+      "replace": ""
     }
   ],
-  "commit_message": "fix(controller): remove invalid ignoreDeprecations from tsconfig (v3.7.9)",
+  "commit_message": "fix(controller): remove ignoreDeprecations + types node from tsconfig (v3.7.9)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 90
+  "run": 91
 }
