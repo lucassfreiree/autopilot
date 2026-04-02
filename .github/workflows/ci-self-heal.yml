@@ -249,6 +249,18 @@ jobs:
 
           if [ "$NEW_ATTEMPT" -ge "$MAX_HEAL_ATTEMPTS" ]; then
             echo "exhausted=true" >> "$GITHUB_OUTPUT"
+
+            # Report exhaustion to autonomy tracker via report-status
+            echo "::notice ::Dispatching report-status for self-heal exhaustion (tracks as intervention)"
+            gh api "repos/$REPO/actions/workflows/report-status.yml/dispatches" \
+              --method POST \
+              -f "ref=main" \
+              -f "inputs[source]=ci-self-heal" \
+              -f "inputs[workflow_name]=[Core] CI Self-Heal" \
+              -f "inputs[outcome]=failure" \
+              -f "inputs[intervention]=true" \
+              -f "inputs[reason]=Self-heal exhausted after $MAX_HEAL_ATTEMPTS attempts for PR #$PR_NUMBER" \
+              2>/dev/null || echo "::warning ::Failed to dispatch report-status"
           else
             echo "exhausted=false" >> "$GITHUB_OUTPUT"
           fi
