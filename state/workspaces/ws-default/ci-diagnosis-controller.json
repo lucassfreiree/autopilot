@@ -5,9 +5,9 @@
   "commitSha": "efe4f2b08473c2dd24545e228c799052c0cb274c",
   "commitMessage": "fix(controller): restore valid tsconfig deprecation guard (v3.8.0)",
   "commitAuthor": "github-actions",
-  "diagnosedAt": "2026-04-02T14:04:02Z",
-  "runId": "23904299214",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23904299214",
+  "diagnosedAt": "2026-04-02T14:22:58Z",
+  "runId": "23905162875",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23905162875",
   "reproduction": {
     "scripts": "  build: tsc -p ./tsconfig.json\n  debug: tsc && node --inspect=9229 dist/server.js\n  lint: tsc --noEmit && eslint . --quiet --fix --resolve-plugins-relative-to .\n  start: node dist/server.js\n  prestart: npm run build\n  dev: nodemon --watch src --exec ts-node-dev src/server.ts\n  test: jest\n  unitTest: jest --testPathPattern=ut.test\\.ts$\n  integrationTest: jest --testPathPattern=it.test\\.ts$ --detectOpenHandles --passWithNoTests --forceExit\n",
     "lintErrors": [],
