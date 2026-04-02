@@ -18,7 +18,7 @@ run-name: "${{ github.workflow }} • brain — observe, decide, act, learn"
 on:
   schedule:
     # Every 15 min business hours (8-17 BRT = 11-20 UTC, Mon-Fri)
-    - cron: '*/15 11-20 * * 1-5'
+    - cron: '*/30 11-20 * * 1-5'  # Optimized: was */15. workflow_run triggers cover real-time. Overlaps with health-monitor + deploy-pipeline-monitor reduced.
     # Every 30 min off-hours
     - cron: '0,30 0-10,21-23 * * 1-5'
     # Every hour weekends

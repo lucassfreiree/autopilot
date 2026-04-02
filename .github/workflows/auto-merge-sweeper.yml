@@ -16,7 +16,7 @@ run-name: "${{ github.workflow }} • sweep open PRs"
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'  # Optimized: was */5 (288→96 runs/day). PR trigger handles immediate response.
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch: {}
