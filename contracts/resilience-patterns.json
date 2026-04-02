@@ -57,7 +57,7 @@
     },
     {
       "id": "ci-lint-failure",
-      "trigger": "eslint|problems \\(.*errors\\)|Lint error",
+      "trigger": "eslint|problems.*errors|Lint error",
       "category": "ci",
       "severity": "medium",
       "affectedWorkflows": [
@@ -138,7 +138,7 @@
     },
     {
       "id": "duplicate-tag",
-      "trigger": "tag already exists|duplicate tag|409.*tag",
+      "trigger": "tag.*already exists|duplicate tag|409.*tag",
       "category": "deploy",
       "severity": "high",
       "affectedWorkflows": [
@@ -171,7 +171,7 @@
     },
     {
       "id": "workflow-disabled",
-      "trigger": "is not active|workflow is disabled",
+      "trigger": "is not active|is disabled|workflow.*disabled",
       "category": "infrastructure",
       "severity": "high",
       "affectedWorkflows": [
