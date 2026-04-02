@@ -50,6 +50,7 @@ jobs:
   guard:
     name: "Session Guard"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
       lock_acquired: ${{ steps.lock.outputs.acquired }}
       lock_id: ${{ steps.lock.outputs.lock_id }}
