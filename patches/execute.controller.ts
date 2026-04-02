@@ -163,6 +163,21 @@ async function postJson(
   return { ok: false, status: resp.status, text };
 }
 
+function parseExpiresIn(raw: string): number {
+  if (!raw) return 0;
+  const num = Number(raw);
+  if (Number.isFinite(num) && num > 0) return Math.floor(num);
+  const match = raw.match(/^(\d+)\s*(s|m|h|d)$/i);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit === "s") return value;
+  if (unit === "m") return value * 60;
+  if (unit === "h") return value * 3600;
+  if (unit === "d") return value * 86400;
+  return 0;
+}
+
 function generateOutboundAgentJwt(execId: string): string | undefined {
   const secret = safeString(process.env.JWT_SECRET);
   if (!secret) {
@@ -176,7 +191,8 @@ function generateOutboundAgentJwt(execId: string): string | undefined {
     safeString(process.env.JWT_AUDIENCE) || "psc-sre-automacao-agent";
   const subject =
     safeString(process.env.JWT_DEFAULT_SUBJECT) || "execute-controller";
-  const expiresIn = safeString(process.env.JWT_EXPIRES_IN) || "5m";
+  const expiresInRaw = safeString(process.env.JWT_EXPIRES_IN);
+  const expiresIn = parseExpiresIn(expiresInRaw) || 300;
   const algorithm = (safeString(process.env.JWT_SIGN_ALG) ||
     "HS256") as jwt.Algorithm;
 
