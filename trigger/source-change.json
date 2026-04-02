@@ -8,12 +8,18 @@
     {
       "action": "search-replace",
       "target_path": "tsconfig.json",
-      "search": "\"compilerOptions\": {  \"types\": [\"node\"],",
-      "replace": "\"compilerOptions\": {  \"ignoreDeprecations\": \"5.0\","
+      "search": "\"types\": \\[\"node\"\\],",
+      "replace": ""
+    },
+    {
+      "action": "search-replace",
+      "target_path": "tsconfig.json",
+      "search": "\"ignoreDeprecations\": \"5.0\"",
+      "replace": "\"ignoreDeprecations\": \"6.0\""
     }
   ],
-  "commit_message": "fix(controller): patch live 3.8.0 tsconfig types restriction",
+  "commit_message": "fix(controller): remove types restriction + ignoreDeprecations 6.0 (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 94
+  "run": 95
 }
