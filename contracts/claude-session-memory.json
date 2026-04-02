@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T18:15:00Z",
+  "lastUpdated": "2026-04-02T19:00:00Z",
   "lastSessionId": "session_01YC9RyjbGfw471NTB928HcA",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1890,6 +1890,50 @@
           "runtimeVerified": true,
           "lesson": "401 agent auth corrigido com generateOutboundAgentJwt()"
         }
+      ]
+    }
+  },
+  "recentAudit": {
+    "date": "2026-04-02",
+    "scope": "Complete project audit — 74 workflows, dashboard, schemas, contracts, ops, scripts, patches",
+    "findings": {
+      "workflowsAudited": 74,
+      "disabledWorkflows": 12,
+      "schemasComplete": 12,
+      "contractsValid": 25,
+      "opsScripts": 13,
+      "patchFiles": 24,
+      "monitoringStack": "5 layers — ALL FUNCTIONAL"
+    },
+    "fixesApplied": [
+      "spark-sync-state.yml: Fixed dashboard token (github.token → RELEASE_TOKEN) — fixes stale state.json",
+      "langchain-orchestrator.yml: Added concurrency group",
+      "claude-assistant.yml: Added concurrency group (cancel-in-progress: false)",
+      "ci-monitor-loop.yml: Two-phase polling (30s fast x10, 120s slow x12) — 5x faster failure detection",
+      "Created .claude/intelligence/README.md for community sync reports",
+      "Enhanced ci-fix.md with 6 new error patterns (TS2769, ENOMEM, ENOSPC, npm 401/403, socket timeout, jest timeout)",
+      "Created incident-response.md skill (SRE auto-triage, rollback procedure)",
+      "Created capacity-planning.md skill (schedule optimization, cost analysis)"
+    ],
+    "confirmedFunctional": [
+      "auto-dispatch-task.yml — NOT orphaned, triggers on issues: [opened, labeled]",
+      "autonomous-merge-direct.yml — NOT orphaned, triggers on pull_request_target",
+      "security-intake-dispatch.yml — NOT orphaned, triggers on issues: [opened, labeled, reopened]",
+      "ci-monitor-loop.yml — already had concurrency (line 41), only 2 workflows needed it"
+    ],
+    "skillsInventory": {
+      "total": 8,
+      "existing": [
+        "ci-fix",
+        "daily-digest",
+        "deploy-monitor",
+        "devops-sre-cloud",
+        "observability",
+        "security-expert"
+      ],
+      "new": [
+        "incident-response",
+        "capacity-planning"
       ]
     }
   }

@@ -163,7 +163,7 @@ jobs:
       - name: Update panel/dashboard/state.json on main
         if: steps.state_artifact.outputs.state_file != ''
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           STATE_FILE="${{ steps.state_artifact.outputs.state_file }}"
           STATE_B64_FILE="${{ steps.state_artifact.outputs.state_b64_file }}"
