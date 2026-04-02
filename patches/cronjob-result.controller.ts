@@ -249,7 +249,7 @@ function indexCronjobResult(namespace: string, execId: string): void {
 // ── Handlers ───────────────────────────────────────────────────
 
 /**
- * POST /api/cronjob/result
+ * POST /agent/cronjob/result
  *
  * Receives the final cronjob execution result from the Agent,
  * adapts the compliance_status payload to the existing execution log
@@ -338,7 +338,7 @@ export async function receiveCronjobResult(
       namespace,
       compliance_status: result.compliance_status,
       indexed: true,
-      statusEndpoint: `/api/cronjob/status/${encodeURIComponent(execId)}`,
+      statusEndpoint: `/agent/cronjob/status/${encodeURIComponent(execId)}`,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -357,7 +357,7 @@ export async function receiveCronjobResult(
 }
 
 /**
- * GET /api/cronjob/status/:execId
+ * GET /agent/cronjob/status/:execId
  *
  * Returns the stored cronjob execution result for a given execId.
  * Uses the existing execution snapshot infrastructure.

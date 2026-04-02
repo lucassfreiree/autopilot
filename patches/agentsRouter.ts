@@ -144,16 +144,16 @@ router.get(
 
 router.get("/agent/errors", getAgentErrors);
 
-// ── Cronjob result endpoints (historia #930217) ──
+// ── Cronjob result endpoints ──────────────────────────────────
 router.post(
-  "/api/cronjob/result",
+  "/agent/cronjob/result",
   requireAgentCallbackJwt,
   requireAgentCallbackScopes([SCOPES.SEND]),
   receiveCronjobResult,
 );
 
 router.get(
-  "/api/cronjob/status/:execId",
+  "/agent/cronjob/status/:execId",
   requireJwt,
   requireScopes([SCOPES.READ]),
   getCronjobStatus,
