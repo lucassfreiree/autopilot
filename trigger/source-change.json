@@ -7,31 +7,13 @@
   "changes": [
     {
       "action": "search-replace",
-      "target_path": "package.json",
-      "search": "\"version\": \"3.7.9\"",
-      "replace": "\"version\": \"3.8.0\""
-    },
-    {
-      "action": "search-replace",
-      "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.9\"",
-      "replace": "\"version\": \"3.8.0\""
-    },
-    {
-      "action": "search-replace",
-      "target_path": "src/swagger/swagger.json",
-      "search": "\"version\": \"3.7.9\"",
-      "replace": "\"version\": \"3.8.0\""
-    },
-    {
-      "action": "search-replace",
       "target_path": "tsconfig.json",
-      "search": "\"compilerOptions\": { \"types\": [\"node\"],",
-      "replace": "\"compilerOptions\": { \"ignoreDeprecations\": \"5.0\", \"types\": [\"node\"],"
+      "search": "\"ignoreDeprecations\": \"5.0\", \"types\": [\"node\"],",
+      "replace": "\"ignoreDeprecations\": \"5.0\","
     }
   ],
-  "commit_message": "fix(controller): restore valid tsconfig deprecation guard (v3.8.0)",
+  "commit_message": "fix(controller): remove types restriction from tsconfig — restore jest type discovery (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 92
+  "run": 93
 }
