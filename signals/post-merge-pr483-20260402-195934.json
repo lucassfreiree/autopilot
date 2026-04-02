@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 483,
+  "branch": "claude/dual-side-validation",
+  "timestamp": "2026-04-02T19:59:34Z",
+  "runId": "23919322094",
+  "healthStatus": "degraded"
+}
