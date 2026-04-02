@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T19:00:00Z",
+  "lastUpdated": "2026-04-02T19:20:00Z",
   "lastSessionId": "session_01YC9RyjbGfw471NTB928HcA",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1891,6 +1891,25 @@
           "lesson": "401 agent auth corrigido com generateOutboundAgentJwt()"
         }
       ]
+    },
+    "autoEscalation": {
+      "description": "When fix-corporate-ci cannot auto-fix, it creates an Issue with @claude mention. claude-assistant.yml triggers, Claude reads CI logs + skills + memory patterns, creates fix patch, deploys.",
+      "flow": [
+        "1. ci-monitor-loop detects CI failure (fast phase: 30s polling)",
+        "2. Dispatches ci-diagnose (saves logs) + fix-corporate-ci (tries ESLint --fix)",
+        "3. If fix-corporate-ci succeeds: pushes fix, re-dispatches ci-monitor-loop",
+        "4. If fix-corporate-ci blocked: creates @claude escalation issue",
+        "5. claude-assistant.yml triggers on issue with @claude in body",
+        "6. Claude reads logs, uses ci-fix + incident-response skills",
+        "7. Creates patch, bumps version, updates trigger, deploys",
+        "8. ci-monitor-loop re-activates for new version"
+      ],
+      "issueLabels": [
+        "automated",
+        "needs-claude",
+        "ci-failure"
+      ],
+      "implemented": "2026-04-02"
     }
   },
   "recentAudit": {
@@ -1913,7 +1932,9 @@
       "Created .claude/intelligence/README.md for community sync reports",
       "Enhanced ci-fix.md with 6 new error patterns (TS2769, ENOMEM, ENOSPC, npm 401/403, socket timeout, jest timeout)",
       "Created incident-response.md skill (SRE auto-triage, rollback procedure)",
-      "Created capacity-planning.md skill (schedule optimization, cost analysis)"
+      "Created capacity-planning.md skill (schedule optimization, cost analysis)",
+      "fix-corporate-ci.yml: Auto-escalation to Claude Code via @claude issue when auto-fix blocked",
+      "ci-monitor-loop.yml: Escalation chain tracking notice added"
     ],
     "confirmedFunctional": [
       "auto-dispatch-task.yml — NOT orphaned, triggers on issues: [opened, labeled]",

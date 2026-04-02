@@ -288,6 +288,7 @@ jobs:
             --field component="$COMPONENT"
 
           echo "fix-corporate-ci dispatched for $COMPONENT."
+          echo "::notice ::Escalation chain: ci-diagnose → fix-corporate-ci → (if blocked) → claude-assistant via @claude issue"
 
       # ── 3c. Create failure notification issue ─────────────────────────────────
       - name: "Create CI failure notification issue"
