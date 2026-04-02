@@ -24,10 +24,20 @@
       "action": "replace-file",
       "target_path": "src/__tests__/unit/cronjob-result.controller.test.ts",
       "content_ref": "patches/cronjob-result.controller.test.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/oas-sre-controller.controller.ts",
+      "content_ref": "patches/oas-sre-controller.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/execute.controller.ts",
+      "content_ref": "patches/execute.controller.ts"
     }
   ],
-  "commit_message": "fix(controller): align unit test statusEndpoint with /api/ prefix (v3.8.0)",
+  "commit_message": "fix(controller): generate outbound JWT for agent dispatch instead of forwarding caller token (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 100
+  "run": 101
 }
