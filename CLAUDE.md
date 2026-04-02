@@ -622,6 +622,9 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | pr-auto-review.yml | Automated PR review (security, quality, compliance checks on every PR) |
 | security-intake-dispatch.yml | Classify security issues and dispatch to Claude for autonomous remediation |
 | claude-assistant.yml | Respond to `@claude` mentions in Issues and PRs via Claude API |
+| escalate-to-claude.yml | Central reusable escalation hub — any workflow can call to create @claude Issue with deduplication |
+| report-status.yml | Universal status reporting — ALL workflows report success/failure, tracks intervention rate per workflow |
+| autonomy-improver.yml | Daily self-improvement engine — analyzes interventions, generates fixes, drives toward 100% autonomy |
 
 ### Disabled Workflows (Codex/Copilot/Agent-Bridge — centralized in Claude Code)
 All Codex, Copilot, Gemini, and multi-agent bridge workflows have been **disabled** (renamed to `.yml.disabled`).

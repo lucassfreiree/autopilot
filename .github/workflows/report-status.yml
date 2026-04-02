@@ -1,0 +1,348 @@
+name: "[Core] Status Reporter"
+run-name: "${{ github.workflow }} • ${{ inputs.source || github.event.workflow_run.name || 'manual' }}"
+
+# UNIVERSAL STATUS REPORTING HUB
+# Every workflow reports here. Tracks:
+# - Success/failure/skip of every process
+# - Intervention history (when @claude was needed)
+# - Improvement tracking (reduce interventions to zero)
+# - Full pipeline visibility for Claude Code
+#
+# TWO MODES:
+# 1. workflow_run: auto-triggered after ANY workflow completes
+# 2. workflow_call: explicitly called by workflows for richer context
+
+on:
+  workflow_run:
+    workflows:
+      - "[Corp] Deploy: Apply Source Change"
+      - "[Core] Compliance Gate"
+      - "[Core] Post-Deploy Validation"
+      - "[Core] Deploy Auto-Learn"
+      - "[Core] CI Monitor Loop"
+      - "[Corp] CI: Diagnose Error Logs"
+      - "[Corp] Fix Corporate CI Errors"
+      - "[Core] Health Check"
+      - "[Core] Post-Merge Monitor"
+      - "[Core] Smart PR Manager"
+      - "[Core] CI Self-Heal"
+      - "[Core] Continuous Improvement"
+      - "[Agent] CI Failure Analysis"
+      - "[Core] Deploy Pipeline Monitor"
+      - "[Core] Emergency Watchdog"
+      - "[Core] Workflow Health Monitor"
+      - "[Core] Workflow Auto-Repair"
+      - "[Core] Workflow Sentinel"
+      - "[Core] Intelligent Orchestrator"
+      - "[Core] Post-Deploy Validation"
+      - "[Corp] Fix & Validate Both Repos"
+      - "[Corp] Drift Correction"
+      - "[Core] Security Vulnerability Scanner"
+      - "[Core] Builds Validation Gate"
+      - "[Core] Backup State"
+      - "[Core] Release Metrics"
+      - "[Core] Promote CAP"
+    types: [completed]
+  workflow_call:
+    inputs:
+      source:
+        description: "Source workflow name"
+        type: string
+        required: true
+      status:
+        description: "success, failure, skipped, intervention-needed"
+        type: string
+        required: true
+      component:
+        description: "controller, agent, autopilot"
+        type: string
+        required: false
+        default: "autopilot"
+      details:
+        description: "Status details (JSON or text)"
+        type: string
+        required: false
+        default: ""
+      intervention_reason:
+        description: "Why @claude intervention was needed (empty if not needed)"
+        type: string
+        required: false
+        default: ""
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform"
+        type: choice
+        options: [report, summary, audit]
+        default: summary
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: status-reporter
+  cancel-in-progress: false
+
+env:
+  REPO: lucassfreiree/autopilot
+  STATE_BRANCH: autopilot-state
+
+jobs:
+  report:
+    name: "Report & Track"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Collect status"
+        id: collect
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TODAY=$(date -u +%Y-%m-%d)
+
+          # Determine source and status
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            SOURCE="${{ github.event.workflow_run.name }}"
+            STATUS="${{ github.event.workflow_run.conclusion }}"
+            RUN_ID="${{ github.event.workflow_run.id }}"
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
+            TRIGGER_EVENT="${{ github.event.workflow_run.event }}"
+            DURATION=""
+            COMPONENT="autopilot"
+            DETAILS=""
+            INTERVENTION=""
+
+            # Calculate duration
+            CREATED="${{ github.event.workflow_run.created_at }}"
+            UPDATED="${{ github.event.workflow_run.updated_at }}"
+            if [ -n "$CREATED" ] && [ -n "$UPDATED" ]; then
+              C_SEC=$(date -d "$CREATED" +%s 2>/dev/null || echo "0")
+              U_SEC=$(date -d "$UPDATED" +%s 2>/dev/null || echo "0")
+              DURATION=$(( U_SEC - C_SEC ))
+            fi
+          elif [ "${{ github.event_name }}" = "workflow_call" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SOURCE="${{ inputs.source || 'manual' }}"
+            STATUS="${{ inputs.status || 'unknown' }}"
+            RUN_ID="${{ github.run_id }}"
+            BRANCH="main"
+            TRIGGER_EVENT="workflow_call"
+            DURATION=""
+            COMPONENT="${{ inputs.component || 'autopilot' }}"
+            DETAILS="${{ inputs.details || '' }}"
+            INTERVENTION="${{ inputs.intervention_reason || '' }}"
+          fi
+
+          # Determine if intervention was needed
+          NEEDED_INTERVENTION="false"
+          if [ "$STATUS" = "failure" ] || [ -n "$INTERVENTION" ] || [ "$STATUS" = "intervention-needed" ]; then
+            NEEDED_INTERVENTION="true"
+          fi
+
+          echo "source=$SOURCE" >> "$GITHUB_OUTPUT"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "component=$COMPONENT" >> "$GITHUB_OUTPUT"
+          echo "needed_intervention=$NEEDED_INTERVENTION" >> "$GITHUB_OUTPUT"
+          echo "duration=$DURATION" >> "$GITHUB_OUTPUT"
+          echo "timestamp=$NOW" >> "$GITHUB_OUTPUT"
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+
+          echo "::notice ::Status: $SOURCE → $STATUS (intervention=$NEEDED_INTERVENTION)"
+
+      - name: "Update daily status ledger"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          SOURCE="${{ steps.collect.outputs.source }}"
+          STATUS="${{ steps.collect.outputs.status }}"
+          RUN_ID="${{ steps.collect.outputs.run_id }}"
+          BRANCH="${{ steps.collect.outputs.branch }}"
+          COMPONENT="${{ steps.collect.outputs.component }}"
+          NEEDED="${{ steps.collect.outputs.needed_intervention }}"
+          DURATION="${{ steps.collect.outputs.duration }}"
+          NOW="${{ steps.collect.outputs.timestamp }}"
+          TODAY="${{ steps.collect.outputs.today }}"
+          INTERVENTION="${{ inputs.intervention_reason || '' }}"
+
+          # Build status entry
+          ENTRY=$(jq -n \
+            --arg src "$SOURCE" \
+            --arg st "$STATUS" \
+            --arg rid "$RUN_ID" \
+            --arg br "$BRANCH" \
+            --arg comp "$COMPONENT" \
+            --arg int "$NEEDED" \
+            --arg dur "$DURATION" \
+            --arg ts "$NOW" \
+            --arg reason "$INTERVENTION" \
+            '{
+              workflow: $src,
+              status: $st,
+              runId: $rid,
+              branch: $br,
+              component: $comp,
+              neededIntervention: ($int == "true"),
+              durationSeconds: (if $dur != "" then ($dur | tonumber) else null end),
+              interventionReason: (if $reason != "" then $reason else null end),
+              timestamp: $ts
+            }')
+
+          # Read existing daily ledger
+          LEDGER_PATH="state/status-ledger/${TODAY}.json"
+          EXISTING_CONTENT=$(gh api "repos/$REPO/contents/${LEDGER_PATH}?ref=$STATE_BRANCH" \
+            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{"date":"'"$TODAY"'","entries":[],"summary":{"total":0,"success":0,"failure":0,"interventions":0}}')
+          EXISTING_SHA=$(gh api "repos/$REPO/contents/${LEDGER_PATH}?ref=$STATE_BRANCH" \
+            --jq '.sha' 2>/dev/null || echo "")
+
+          # Append entry
+          UPDATED=$(echo "$EXISTING_CONTENT" | jq --argjson entry "$ENTRY" '
+            .entries += [$entry] |
+            .summary.total += 1 |
+            .summary.success += (if $entry.status == "success" then 1 else 0 end) |
+            .summary.failure += (if $entry.status == "failure" then 1 else 0 end) |
+            .summary.interventions += (if $entry.neededIntervention then 1 else 0 end) |
+            .summary.lastUpdated = $entry.timestamp
+          ')
+
+          # Write back
+          ARGS=(-f "branch=$STATE_BRANCH" \
+            -f "message=status: $SOURCE $STATUS [skip ci]" \
+            -f "content=$(echo "$UPDATED" | base64 -w0)")
+          [ -n "$EXISTING_SHA" ] && [ "$EXISTING_SHA" != "null" ] && ARGS+=(-f "sha=$EXISTING_SHA")
+
+          gh api "repos/$REPO/contents/${LEDGER_PATH}" \
+            --method PUT "${ARGS[@]}" > /dev/null 2>&1 || echo "::warning ::Failed to update ledger"
+
+          echo "::notice ::Ledger updated: $TODAY — $(echo "$UPDATED" | jq -r '.summary | "\(.total) total, \(.success) success, \(.failure) failure, \(.interventions) interventions"')"
+
+      - name: "Update workflow autonomy tracker"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          SOURCE="${{ steps.collect.outputs.source }}"
+          STATUS="${{ steps.collect.outputs.status }}"
+          NEEDED="${{ steps.collect.outputs.needed_intervention }}"
+          NOW="${{ steps.collect.outputs.timestamp }}"
+
+          # Read autonomy tracker (tracks intervention rate per workflow)
+          TRACKER_PATH="state/autonomy-tracker.json"
+          TRACKER=$(gh api "repos/$REPO/contents/${TRACKER_PATH}?ref=$STATE_BRANCH" \
+            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{"schemaVersion":1,"workflows":{},"globalStats":{"totalRuns":0,"totalInterventions":0,"autonomyRate":100,"lastUpdated":null},"improvementLog":[]}')
+          TRACKER_SHA=$(gh api "repos/$REPO/contents/${TRACKER_PATH}?ref=$STATE_BRANCH" \
+            --jq '.sha' 2>/dev/null || echo "")
+
+          # Sanitize source name for jq key
+          SAFE_SRC=$(echo "$SOURCE" | sed 's/[^a-zA-Z0-9_-]/_/g')
+
+          # Update per-workflow stats
+          UPDATED=$(echo "$TRACKER" | jq --arg src "$SAFE_SRC" --arg st "$STATUS" --arg int "$NEEDED" --arg ts "$NOW" '
+            # Initialize workflow entry if not exists
+            .workflows[$src] //= {totalRuns: 0, successes: 0, failures: 0, interventions: 0, lastRun: null, lastIntervention: null, autonomyRate: 100, streak: 0} |
+
+            # Update counters
+            .workflows[$src].totalRuns += 1 |
+            .workflows[$src].lastRun = $ts |
+            .workflows[$src].successes += (if $st == "success" then 1 else 0 end) |
+            .workflows[$src].failures += (if $st == "failure" then 1 else 0 end) |
+            .workflows[$src].interventions += (if $int == "true" then 1 else 0 end) |
+
+            # Update streak (consecutive successes without intervention)
+            .workflows[$src].streak = (if $int == "true" then 0 elif $st == "success" then .workflows[$src].streak + 1 else .workflows[$src].streak end) |
+
+            # Update last intervention
+            (if $int == "true" then .workflows[$src].lastIntervention = $ts else . end) |
+
+            # Calculate per-workflow autonomy rate
+            .workflows[$src].autonomyRate = (
+              if .workflows[$src].totalRuns > 0 then
+                (((.workflows[$src].totalRuns - .workflows[$src].interventions) * 100) / .workflows[$src].totalRuns | floor)
+              else 100 end
+            ) |
+
+            # Update global stats
+            .globalStats.totalRuns += 1 |
+            .globalStats.totalInterventions += (if $int == "true" then 1 else 0 end) |
+            .globalStats.lastUpdated = $ts |
+            .globalStats.autonomyRate = (
+              if .globalStats.totalRuns > 0 then
+                (((.globalStats.totalRuns - .globalStats.totalInterventions) * 100) / .globalStats.totalRuns | floor)
+              else 100 end
+            )
+          ')
+
+          # If intervention was needed, log it as improvement opportunity
+          if [ "$NEEDED" = "true" ]; then
+            INTERVENTION_REASON="${{ inputs.intervention_reason || 'Workflow failed — manual investigation required' }}"
+            UPDATED=$(echo "$UPDATED" | jq --arg src "$SAFE_SRC" --arg ts "$NOW" --arg reason "$INTERVENTION_REASON" '
+              .improvementLog += [{
+                workflow: $src,
+                timestamp: $ts,
+                reason: $reason,
+                status: "open",
+                resolution: null
+              }] |
+              # Keep only last 50 improvement entries
+              .improvementLog = (.improvementLog | .[-50:])
+            ')
+          fi
+
+          # Write back
+          ARGS=(-f "branch=$STATE_BRANCH" \
+            -f "message=autonomy: $SAFE_SRC $STATUS [skip ci]" \
+            -f "content=$(echo "$UPDATED" | base64 -w0)")
+          [ -n "$TRACKER_SHA" ] && [ "$TRACKER_SHA" != "null" ] && ARGS+=(-f "sha=$TRACKER_SHA")
+
+          gh api "repos/$REPO/contents/${TRACKER_PATH}" \
+            --method PUT "${ARGS[@]}" > /dev/null 2>&1 || echo "::warning ::Failed to update autonomy tracker"
+
+          # Report autonomy stats
+          GLOBAL_RATE=$(echo "$UPDATED" | jq -r '.globalStats.autonomyRate')
+          WF_RATE=$(echo "$UPDATED" | jq -r --arg src "$SAFE_SRC" '.workflows[$src].autonomyRate')
+          WF_STREAK=$(echo "$UPDATED" | jq -r --arg src "$SAFE_SRC" '.workflows[$src].streak')
+
+          echo "::notice ::Autonomy — Global: ${GLOBAL_RATE}% | $SOURCE: ${WF_RATE}% (streak: $WF_STREAK)"
+
+      - name: "Generate summary"
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'summary'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TODAY=$(date -u +%Y-%m-%d)
+
+          # Read today's ledger
+          LEDGER=$(gh api "repos/$REPO/contents/state/status-ledger/${TODAY}.json?ref=$STATE_BRANCH" \
+            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{"summary":{"total":0}}')
+
+          # Read autonomy tracker
+          TRACKER=$(gh api "repos/$REPO/contents/state/autonomy-tracker.json?ref=$STATE_BRANCH" \
+            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{"globalStats":{"autonomyRate":0}}')
+
+          {
+            echo "# Status Report — $TODAY"
+            echo ""
+            echo "## Global Autonomy"
+            echo "| Metric | Value |"
+            echo "|--------|-------|"
+            echo "| Autonomy Rate | **$(echo "$TRACKER" | jq -r '.globalStats.autonomyRate')%** |"
+            echo "| Total Runs | $(echo "$TRACKER" | jq -r '.globalStats.totalRuns') |"
+            echo "| Interventions | $(echo "$TRACKER" | jq -r '.globalStats.totalInterventions') |"
+            echo ""
+            echo "## Today's Activity"
+            echo "| Metric | Value |"
+            echo "|--------|-------|"
+            echo "$LEDGER" | jq -r '.summary | "| Total Runs | \(.total) |\n| Success | \(.success) |\n| Failure | \(.failure) |\n| Interventions | \(.interventions) |"'
+            echo ""
+            echo "## Per-Workflow Autonomy (need improvement if < 100%)"
+            echo "| Workflow | Rate | Runs | Interventions | Streak |"
+            echo "|----------|------|------|---------------|--------|"
+            echo "$TRACKER" | jq -r '.workflows | to_entries | sort_by(.value.autonomyRate) | .[] | "| \(.key) | \(.value.autonomyRate)% | \(.value.totalRuns) | \(.value.interventions) | \(.value.streak) |"'
+            echo ""
+            echo "## Open Improvements (workflows that need enhancement)"
+            echo "$TRACKER" | jq -r '.improvementLog | map(select(.status == "open")) | if length > 0 then .[] | "- **\(.workflow)**: \(.reason) (\(.timestamp))" else "None — all workflows are autonomous!" end'
+          } >> "$GITHUB_STEP_SUMMARY"
