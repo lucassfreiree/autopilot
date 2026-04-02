@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T19:54:54Z",
+  "lastUpdated": "2026-04-02T21:30:00Z",
   "lastSessionId": "session_01YC9RyjbGfw471NTB928HcA",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1481,6 +1481,31 @@
         "cause": "Corporate CI rejects duplicate image tags in Docker registry",
         "fix": "Always check current version before bump. Increment patch. After X.Y.9 goes to X.(Y+1).0",
         "learned": "2026-04-02"
+      },
+      "health-check-exit1": {
+        "error": "health-check.yml exit 1 on dedup marks job as failed instead of skipped",
+        "fix": "Change exit 1 to exit 0 in dedup branch",
+        "rule": "exit 0 for intentional skips"
+      },
+      "fix-corporate-ci-permissions": {
+        "error": "fix-corporate-ci.yml missing issues:write — gh issue create silently fails",
+        "fix": "Add issues: write to permissions block",
+        "rule": "Any workflow creating issues needs issues:write"
+      },
+      "autonomy-improver-string-compare": {
+        "error": "GitHub Actions string comparison bug: steps.*.outputs.total_runs > 10 compares as strings",
+        "fix": "Use fromJSON(steps.*.outputs.total_runs) > 10 for numeric comparison",
+        "rule": "Always wrap numeric outputs in fromJSON() in if conditions"
+      },
+      "jwt-scope-regex-gap": {
+        "error": "jwt-scope regex did not catch unquoted object keys like { scopes: [...] }",
+        "fix": "Added \\bscopes\\s*: to regex pattern",
+        "rule": "Test regex against both quoted and unquoted JS patterns"
+      },
+      "needs-claude-label-missing": {
+        "error": "continuous-improvement.yml created issues without needs-claude label — never reached @claude",
+        "fix": "Added needs-claude to labels array",
+        "rule": "ALL @claude escalation issues MUST include needs-claude label"
       }
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",

@@ -47,7 +47,7 @@ fi
 
 # ── 2. JWT Scope Singular (Rule 4) ──
 for f in "${PATCH_FILES[@]}"; do
-  if grep -qE 'payload\.scopes|"scopes"|\.scopes\b' "$f" 2>/dev/null; then
+  if grep -qE 'payload\.scopes|"scopes"|\.scopes\b|\bscopes\s*:' "$f" 2>/dev/null; then
     add_violation "jwt-scope-singular: $(basename "$f") uses 'scopes' (plural). MUST be 'scope' (singular)"
   fi
 done

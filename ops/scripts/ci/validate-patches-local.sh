@@ -89,7 +89,7 @@ for f in "${PATCH_FILES[@]}"; do
   BN=$(basename "$f")
 
   # Rule 4: JWT scope singular
-  if grep -qE 'payload\.scopes|"scopes"' "$f" 2>/dev/null; then
+  if grep -qE 'payload\.scopes|"scopes"|\bscopes\s*:' "$f" 2>/dev/null; then
     if [ "$FIX" = true ]; then
       sed -i 's/payload\.scopes/payload.scope/g; s/"scopes"/"scope"/g' "$f"
       log "FIXED: $BN — scopes → scope"

@@ -78,7 +78,7 @@ on:
 
 permissions:
   contents: write
-  issues: read
+  issues: write
 
 concurrency:
   group: status-reporter
