@@ -1,7 +1,7 @@
 {
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
-  "component": "agent",
-  "files": "src/routes/apis.ts,src/controllers/execute.controller.ts,src/util/jwt.ts,src/routes/index.ts,package.json,src/app.ts",
-  "run": 24
+  "component": "controller",
+  "files": "tsconfig.json,package.json,package-lock.json",
+  "run": 25
 }
