@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 502,
+  "branch": "claude/test-simulation",
+  "timestamp": "2026-04-02T21:28:00Z",
+  "runId": "23922829238",
+  "healthStatus": "degraded"
+}
