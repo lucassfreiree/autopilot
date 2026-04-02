@@ -493,11 +493,11 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 | test-full-flow.yml | Full integration test (controller + agent + CAP) |
 | test-corporate-flow.yml | Corporate flow test |
 
-### Deploy Compliance Pipeline (OBRIGATORIO — 4 stages)
+### Deploy Compliance Pipeline (OBRIGATORIO — 5 stages)
 **NUNCA deployar sem validar primeiro.** O pipeline de compliance roda automaticamente em PRs e pos-deploy.
 
 ```
-PR Created → Compliance Gate (14 checks) → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn
+PR Created → Compliance Gate (18 checks) + Interface Check → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn (with write-back)
 ```
 
 #### Stage 1: Compliance Gate (PRE-DEPLOY — compliance-gate.yml)
@@ -517,9 +517,29 @@ PR Created → Compliance Gate (14 checks) → apply-source-change (7 stages) �
 | 12 | security-dos-loop | Loop without MAX_RESULTS | error |
 | 13 | hardcoded-secret | Secrets in patches | error |
 | 14 | use-before-define | Function before definition | error |
+| 15 | interface-jwt-claims | JWT claims match interface contract | error |
+| 16 | interface-route-paths | Route paths cross-check | warning |
+| 17 | interface-response-shape | API response shape validation | warning |
+| 18 | dual-side-required | Patch touches interface surface | warning |
 
+**Interface Check** (Stage 1.5): Validates patches against `contracts/interface-contract.json` — JWT issuer, cross-side requirements
 **Pull & Test** (with BBVINET_TOKEN): Clone corporate → apply patches → npm ci → tsc → eslint → jest
 **Tag Check**: Duplicate tag? → CAP current tag? → Reference values.yaml?
+
+### Dual-Side Validation System
+Validates BOTH controller and agent sides BEFORE commit/deploy. Errors and vulnerabilities are mapped automatically.
+
+| Artifact | Path | Purpose |
+|----------|------|---------|
+| Interface Contract | `contracts/interface-contract.json` | Defines Controller↔Agent API surface (JWT, routes, security) |
+| Contract Schema | `schemas/interface-contract.schema.json` | JSON Schema validating interface contract |
+| Pre-commit Script | `scripts/claude/pre-commit-validate.sh` | 12 checks before git commit (no npm needed) |
+| Local Validator | `ops/scripts/ci/validate-patches-local.sh` | User-facing wrapper (`--component`, `--verbose`, `--fix`) |
+| PreToolUse Hook | `.claude/settings.json` | Intercepts `git commit` → runs pre-commit-validate.sh |
+| Compliance Rules 15-18 | `compliance-gate.yml` | Interface contract checks in CI |
+| Auto-Learn Write-back | `deploy-auto-learn.yml` Step 4 | Persists learned patterns to session memory + contract |
+
+**Flow**: `git commit` → PreToolUse hook → `pre-commit-validate.sh` → 12 checks → approve/block → PR → compliance-gate (18 rules + interface-check) → deploy → auto-learn (write-back)
 
 #### Stage 2: apply-source-change (DURING DEPLOY — 7 stages)
 Setup → Session Guard → Apply & Push → CI Gate → Promote → Save State → Audit

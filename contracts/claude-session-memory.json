@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T19:20:00Z",
+  "lastUpdated": "2026-04-02T19:54:54Z",
   "lastSessionId": "session_01YC9RyjbGfw471NTB928HcA",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1934,7 +1934,12 @@
       "Created incident-response.md skill (SRE auto-triage, rollback procedure)",
       "Created capacity-planning.md skill (schedule optimization, cost analysis)",
       "fix-corporate-ci.yml: Auto-escalation to Claude Code via @claude issue when auto-fix blocked",
-      "ci-monitor-loop.yml: Escalation chain tracking notice added"
+      "ci-monitor-loop.yml: Escalation chain tracking notice added",
+      "Created interface-contract.json + schema",
+      "Created pre-commit-validate.sh (12 checks) + validate-patches-local.sh (wrapper)",
+      "Added PreToolUse hook for git commit dual-side validation",
+      "Added Rules 15-18 + interface-check job to compliance-gate.yml",
+      "Fixed deploy-auto-learn.yml subshell bug + added write-back step"
     ],
     "confirmedFunctional": [
       "auto-dispatch-task.yml — NOT orphaned, triggers on issues: [opened, labeled]",
@@ -1957,5 +1962,26 @@
         "capacity-planning"
       ]
     }
+  },
+  "dualSideValidation": {
+    "description": "Sistema de validacao dual-side (controller + agent) que garante compatibilidade antes de commit/deploy",
+    "artifacts": {
+      "interfaceContract": "contracts/interface-contract.json",
+      "interfaceContractSchema": "schemas/interface-contract.schema.json",
+      "preCommitValidation": "scripts/claude/pre-commit-validate.sh",
+      "localValidationWrapper": "ops/scripts/ci/validate-patches-local.sh"
+    },
+    "hooks": {
+      "preToolUse": "PreToolUse hook in .claude/settings.json intercepts git commit and runs pre-commit-validate.sh",
+      "timeout": 10
+    },
+    "complianceGateRules": {
+      "rule15": "interface-jwt-claims",
+      "rule16": "interface-route-paths",
+      "rule17": "interface-response-shape",
+      "rule18": "dual-side-required"
+    },
+    "autoLearnWriteback": "deploy-auto-learn.yml writes learned patterns back to memory + contract",
+    "subshellBugFix": "Fixed variable loss in pipe | while read by using temp files"
   }
 }

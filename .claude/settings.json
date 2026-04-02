@@ -67,6 +67,17 @@
             "statusMessage": "Security check..."
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command // \"\"' 2>/dev/null || echo \"\"); if echo \"$CMD\" | grep -qE '^git commit'; then bash scripts/claude/pre-commit-validate.sh 2>&1 | tail -20; else echo '{\"decision\":\"approve\"}'; fi",
+            "timeout": 10,
+            "statusMessage": "Dual-side validation (controller + agent)..."
+          }
+        ]
       }
     ]
   }
