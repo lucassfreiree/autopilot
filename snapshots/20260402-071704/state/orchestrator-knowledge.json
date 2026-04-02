@@ -1,0 +1,176 @@
+{
+  "patterns": [
+    {
+      "workflow": ".github/workflows/auto-dispatch-task.yml",
+      "consecutiveAt": "2026-03-30T04:25:02Z",
+      "count": 5
+    },
+    {
+      "workflow": ".github/workflows/devin-assistant.yml",
+      "consecutiveAt": "2026-03-31T22:32:31Z",
+      "count": 3
+    },
+    {
+      "workflow": ".github/workflows/emergency-watchdog.yml",
+      "consecutiveAt": "2026-03-30T04:25:02Z",
+      "count": 5
+    },
+    {
+      "workflow": "[Agent] Claude Code Assistant",
+      "consecutiveAt": "2026-04-01T16:05:42Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Autonomous Direct Merge",
+      "consecutiveAt": "2026-03-30T20:05:34Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Backup: State Snapshot",
+      "consecutiveAt": "2026-03-31T08:56:20Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Builds Validation Gate",
+      "consecutiveAt": "2026-03-31T22:32:31Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Compliance Gate",
+      "consecutiveAt": "2026-03-31T17:55:15Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Intelligent Orchestrator",
+      "consecutiveAt": "2026-03-31T01:25:03Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] PR Auto-Review",
+      "consecutiveAt": "2026-03-31T13:14:22Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Workflow Auto-Repair",
+      "consecutiveAt": "2026-03-30T21:02:32Z",
+      "count": 3
+    }
+  ],
+  "fixes": [
+    {
+      "workflow": "[Core] Backup: State Snapshot",
+      "action": "re-run",
+      "fixedAt": "2026-03-31T07:51:20Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Builds Validation Gate",
+      "action": "re-run",
+      "fixedAt": "2026-03-31T22:32:31Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Compliance Gate",
+      "action": "re-run",
+      "fixedAt": "2026-03-31T17:55:15Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Intelligent Orchestrator",
+      "action": "re-run",
+      "fixedAt": "2026-03-30T21:40:01Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Workflow Auto-Repair",
+      "action": "re-run",
+      "fixedAt": "2026-03-30T21:02:32Z",
+      "method": "re-run"
+    }
+  ],
+  "lastRun": "2026-04-02T06:11:33Z",
+  "lastHealth": "degraded",
+  "runCount": 63,
+  "healthHistory": [
+    {
+      "ts": "2026-04-01T05:11:11Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T06:58:39Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T08:18:21Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T09:44:39Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T10:52:48Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T11:52:11Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T13:17:38Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T14:49:18Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T16:05:42Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T17:11:49Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T18:03:41Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-01T19:22:06Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-01T20:07:05Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T21:01:43Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-01T21:39:32Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-01T22:35:09Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-01T23:34:16Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-02T02:03:20Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-02T04:40:26Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-02T06:11:33Z",
+      "health": "degraded"
+    }
+  ]
+}
