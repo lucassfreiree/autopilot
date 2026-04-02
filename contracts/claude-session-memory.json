@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T22:00:00Z",
+  "lastUpdated": "2026-04-02T22:30:00Z",
   "lastSessionId": "session_01YC9RyjbGfw471NTB928HcA",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -532,6 +532,37 @@
           "jwt.sign expiresIn requires number (seconds) not string — @types/jsonwebtoken is strict",
           "Always monitor corporate CI proactively — user expects autonomous detection and fixing",
           "parseExpiresIn pattern: parse env string to seconds, fallback to 300"
+        ]
+      },
+      {
+        "date": "2026-04-02",
+        "agent": "claude-code",
+        "summary": "Comprehensive testing + 8 bug fixes + resilience system",
+        "prs": [
+          "#488: 8 workflow bugs + 3 escalations + regex gap",
+          "#489: claude-assistant trigger condition fix",
+          "#491: Haiku model + curl fallback for claude-assistant",
+          "#493: resilience-patterns.json + auto-discovery in autonomy-improver"
+        ],
+        "testsRun": {
+          "yamlValidation": "70/70 pass",
+          "jsonValidation": "3/3 pass",
+          "patternDetection": "7/7 pass",
+          "permissionChecks": "4/4 pass",
+          "escalationAudit": "22 workflows with needs-claude"
+        },
+        "bugsFixed": [
+          "health-check exit 1→0",
+          "fix-corporate-ci missing issues:write",
+          "continuous-improvement missing needs-claude",
+          "autonomy-improver string comparison",
+          "report-status issues:read→write",
+          "apply-source-change missing issues:write",
+          "drift-correction missing issues:write",
+          "claude-assistant no fallback"
+        ],
+        "newArtifacts": [
+          "contracts/resilience-patterns.json"
         ]
       }
     ]

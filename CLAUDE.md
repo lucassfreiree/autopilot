@@ -17,6 +17,8 @@ Zero local dependencies. 100% GitHub-native.
   - `contracts/shared-agent-context.md` — Shared context documentation for all agents
   - `contracts/codex-deploy-guide.md` — Codex-specific deploy guide
   - `contracts/codex-session-memory.json` — Codex cumulative session memory
+  - `contracts/interface-contract.json` — Controller↔Agent API surface contract (JWT, routes, security)
+  - `contracts/resilience-patterns.json` — 13 failure patterns with automatic workarounds and fallback chains
 - `.github/workflows/` — All automation workflows
 - `AGENTS.md` — Legacy Codex prompt (workflow disabled, file kept for reference)
 - `panel/` — GitHub Pages control plane UI (`panel/index.html`)
@@ -538,8 +540,42 @@ Validates BOTH controller and agent sides BEFORE commit/deploy. Errors and vulne
 | PreToolUse Hook | `.claude/settings.json` | Intercepts `git commit` → runs pre-commit-validate.sh |
 | Compliance Rules 15-18 | `compliance-gate.yml` | Interface contract checks in CI |
 | Auto-Learn Write-back | `deploy-auto-learn.yml` Step 4 | Persists learned patterns to session memory + contract |
+| Resilience Patterns | `contracts/resilience-patterns.json` | 13 known failure patterns with automatic workarounds and fallback chains |
 
 **Flow**: `git commit` → PreToolUse hook → `pre-commit-validate.sh` → 12 checks → approve/block → PR → compliance-gate (18 rules + interface-check) → deploy → auto-learn (write-back)
+
+### Resilience & Self-Healing System
+Automatic failure recovery without human intervention. Maps known failures to workarounds, discovers new patterns autonomously.
+
+| Artifact | Path | Purpose |
+|----------|------|---------|
+| Resilience Patterns | `contracts/resilience-patterns.json` | 13 failure patterns with workarounds (billing, auth, CI, network, deploy, git, infra) |
+| Autonomy Improver | `autonomy-improver.yml` | Daily analysis: reads patterns → matches failures → applies workarounds → escalates unknowns |
+| Autonomy Tracker | `state/autonomy-tracker.json` (autopilot-state) | Per-workflow stats: runs, interventions, autonomy rate, streak |
+| Status Ledger | `state/status-ledger/YYYY-MM-DD.json` (autopilot-state) | Daily workflow run results |
+| Report Status | `report-status.yml` | Records every workflow run outcome → feeds autonomy tracker |
+| Escalation Hub | `escalate-to-claude.yml` | Central reusable @claude Issue creator with deduplication |
+
+**Fallback Chains** (each failure type has ordered recovery steps):
+| Chain | Steps |
+|-------|-------|
+| API call | claude-code-action+Haiku → curl+Haiku → error comment |
+| CI failure | ci-self-heal → fix-corporate-ci → ci-diagnose → @claude |
+| Deploy | retry → version bump → ci-monitor → @claude |
+| Network | retry 2s → 4s → 8s → 16s → escalate |
+
+**Auto-Discovery Loop**:
+```
+failure → match resilience-patterns.json → workaround applied
+  ↓ no match
+match session memory errorRecovery → fix applied
+  ↓ no match
+create @claude issue (auto-discovery) → analyze → implement fix → add pattern
+  ↓
+next occurrence → auto-fixed (zero intervention)
+```
+
+**@claude Escalation**: 22+ workflows create GitHub Issues with `needs-claude` label on failure. `claude-assistant.yml` responds using Haiku model (cheapest) with curl fallback.
 
 #### Stage 2: apply-source-change (DURING DEPLOY — 7 stages)
 Setup → Session Guard → Apply & Push → CI Gate → Promote → Save State → Audit
