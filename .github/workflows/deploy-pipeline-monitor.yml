@@ -238,6 +238,29 @@ jobs:
             --label "pipeline-alert,autonomous" 2>/dev/null || \
             echo "::warning ::Could not create alert issue"
 
+          # Escalate to Claude Code for intelligent pipeline diagnosis
+          ESCALATION_BODY=$(cat <<'ESCEOF'
+          ## Auto-Escalation from Deploy Pipeline Monitor
+
+          Deploy pipeline stuck for 60+ minutes. ci-monitor-loop was dispatched but CI is still failing.
+
+          ### What to do
+          @claude The deploy pipeline is stuck. Read the latest CI logs from state/workspaces/ws-default/ci-logs-*.txt on autopilot-state. Diagnose the corporate CI failure, create a fix patch, bump the version, and redeploy. Use ci-fix and deploy-monitor skills.
+
+          ### Context
+          - Session memory: contracts/claude-session-memory.json
+          - CI fix patterns: .claude/skills/ci-fix.md
+          - Deploy monitor: .claude/skills/deploy-monitor.md
+          - CI logs: state/workspaces/ws-default/ci-logs-*.txt (autopilot-state)
+          ESCEOF
+          )
+          gh issue create \
+            --repo "$AUTOPILOT_REPO" \
+            --title "[AutoPilot] @claude Pipeline stuck — $ALERT needs intelligent diagnosis" \
+            --label "automated,needs-claude,pipeline-alert" \
+            --body "$ESCALATION_BODY" 2>/dev/null || \
+            echo "::warning ::Could not create Claude escalation issue"
+
       - name: "Write pipeline-status.json to autopilot-state"
         if: always()
         env:

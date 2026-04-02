@@ -319,7 +319,26 @@ jobs:
                 ;;
 
               "alert-only")
-                echo "::notice ::$WF_NAME needs manual investigation"
+                echo "::notice ::$WF_NAME needs manual investigation — escalating to Claude Code"
+                # Escalate to Claude Code for intelligent investigation
+                ESCALATION_BODY="## Auto-Escalation from Workflow Auto-Repair
+
+          Workflow **$WF_NAME** has consecutive failures that auto-repair cannot fix (classified as alert-only).
+
+          ### What to do
+          @claude Investigate workflow $WF_NAME. Check its YAML for syntax errors, missing secrets, deprecated actions, or logic bugs. Read recent run logs, diagnose the failure, apply a fix, and verify. Use ci-fix skills.
+
+          ### Context
+          - Session memory: contracts/claude-session-memory.json
+          - CI fix patterns: .claude/skills/ci-fix.md
+          - Workflow file: .github/workflows/ (search by name)"
+
+                gh api "repos/$REPO/issues" \
+                  --method POST \
+                  --field "title=[AutoPilot] @claude Auto-repair escalation — $WF_NAME needs intelligent fix" \
+                  --field "body=$ESCALATION_BODY" \
+                  --field "labels=[\"automated\",\"needs-claude\",\"auto-repair\"]" \
+                  > /dev/null 2>&1 || echo "::warning ::Could not create Claude escalation issue for $WF_NAME"
                 ;;
             esac
 

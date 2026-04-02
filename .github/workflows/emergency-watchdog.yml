@@ -162,6 +162,27 @@ jobs:
               --title "$ISSUE_TITLE" \
               --body "Watchdog Report - Issues detected and self-healing attempted. Check dashboard for details." \
               --label "watchdog,automated" 2>/dev/null || echo "Issue creation failed"
+
+            # Escalate to Claude Code for intelligent resolution
+            ESCALATION_BODY=$(cat <<'ESCEOF'
+          ## Auto-Escalation from Emergency Watchdog
+
+          The emergency watchdog detected critical issues that self-healing could not fully resolve.
+
+          ### What to do
+          @claude Check the latest watchdog run at `.github/workflows/emergency-watchdog.yml`. Read the health state from `state/workspaces/ws-default/health.json` on autopilot-state. Diagnose the root cause of the detected issues, apply fixes, and verify system health. Use the incident-response and ci-fix skills.
+
+          ### Context
+          - Session memory: `contracts/claude-session-memory.json`
+          - Incident response: `.claude/skills/incident-response.md`
+          - Health state: `state/workspaces/ws-default/health.json` (autopilot-state branch)
+          ESCEOF
+          )
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "[AutoPilot] @claude Watchdog escalation — ${{ steps.vitals.outputs.issues }} issues need intelligent fix" \
+              --label "automated,needs-claude,watchdog" \
+              --body "$ESCALATION_BODY" 2>/dev/null || echo "::warning ::Could not create Claude escalation issue"
           fi
 
       - name: Write audit
