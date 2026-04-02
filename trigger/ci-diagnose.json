@@ -2,6 +2,6 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "controller",
-  "note": "Diagnose controller 3.7.2 CI failure — run80 sha f5ec64b840504117652a614df17f01a7b89a045e",
-  "run": 28
+  "note": "Diagnose controller 3.7.9 CI — check if run90 fix (remove ignoreDeprecations) resolved TS5103",
+  "run": 29
 }
