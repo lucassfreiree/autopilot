@@ -527,6 +527,59 @@ jobs:
           echo "- Failure patterns tracked: $PATTERNS_COUNT" >> "$GITHUB_STEP_SUMMARY"
           echo "- Current ecosystem health: **$HEALTH**" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: "Propagate learned fixes to resilience-patterns.json"
+        run: |
+          set -e
+          RESULTS="${{ needs.act.outputs.results || '[]' }}"
+          echo "$RESULTS" | jq empty 2>/dev/null || RESULTS='[]'
+          NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+          # Extract successful dispatches/repairs
+          SUCCESSFUL=$(echo "$RESULTS" | jq -c '[.[] | select(.result == "dispatched" or .result == "enabled")]' 2>/dev/null || echo '[]')
+          COUNT=$(echo "$SUCCESSFUL" | jq 'length' 2>/dev/null || echo "0")
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::notice ::$COUNT successful actions to check against resilience-patterns"
+
+            # Fetch resilience-patterns from main
+            PATTERNS=$(gh api "repos/$REPO/contents/contracts/resilience-patterns.json?ref=main" \
+              --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{"patterns":[]}')
+            EXISTING_SHA=$(gh api "repos/$REPO/contents/contracts/resilience-patterns.json?ref=main" \
+              --jq '.sha' 2>/dev/null || echo "")
+
+            UPDATED=false
+            echo "$SUCCESSFUL" | jq -c '.[]' | while IFS= read -r fix; do
+              TARGET=$(echo "$fix" | jq -r '.target // "unknown"')
+              ACTION=$(echo "$fix" | jq -r '.type // "unknown"')
+              PATTERN_ID="orchestrator-${ACTION}-${TARGET}"
+
+              # Check if already exists
+              HAS=$(echo "$PATTERNS" | jq --arg id "$PATTERN_ID" '[.patterns[] | select(.id == $id)] | length')
+              if [ "$HAS" -eq 0 ]; then
+                PATTERNS=$(echo "$PATTERNS" | jq --arg id "$PATTERN_ID" --arg ts "$NOW" \
+                  --arg target "$TARGET" --arg action "$ACTION" \
+                  '.lastUpdated = $ts | .patterns += [{
+                    id: $id, trigger: $target, category: "orchestrator",
+                    severity: "medium", affectedWorkflows: [$target],
+                    workaround: { type: $action, strategy: ("Orchestrator auto-" + $action + " for " + $target), implementation: "intelligent-orchestrator.yml" },
+                    autoFix: true, status: "learned", learnedAt: $ts, learnedFrom: "intelligent-orchestrator"
+                  }]')
+                UPDATED=true
+                echo "::notice ::New pattern learned: $PATTERN_ID"
+              fi
+            done
+
+            if [ "$UPDATED" = "true" ] && [ -n "$EXISTING_SHA" ]; then
+              gh api "repos/$REPO/contents/contracts/resilience-patterns.json" \
+                --method PUT \
+                -f "branch=main" \
+                -f "message=chore(auto-learn): orchestrator learned new patterns [skip ci]" \
+                -f "content=$(echo "$PATTERNS" | base64 -w0)" \
+                -f "sha=$EXISTING_SHA" > /dev/null 2>&1 || \
+                echo "::warning ::Could not push orchestrator patterns"
+            fi
+          fi
+
       - name: Create alert if critical and unresolvable
         if: needs.observe.outputs.ecosystem_health == 'critical'
         run: |

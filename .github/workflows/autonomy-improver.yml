@@ -152,15 +152,32 @@ jobs:
             REASON=$(echo "$item" | jq -r '.reason')
             echo "::notice ::Analyzing: $WF — $REASON"
 
-            # Step 1: Match against resilience-patterns.json
+            # Step 1: Match against resilience-patterns.json (trigger regex + strategy keywords + category)
             PATTERN_MATCH=""
             while IFS= read -r pattern; do
               [ -z "$pattern" ] && continue
               TRIGGER=$(echo "$pattern" | jq -r '.trigger')
+              STRATEGY=$(echo "$pattern" | jq -r '.workaround.strategy')
+              CATEGORY=$(echo "$pattern" | jq -r '.category')
+              PID_CHECK=$(echo "$pattern" | jq -r '.id')
+
+              # Match 1: regex trigger against reason
               if echo "$REASON" | grep -qiE "$TRIGGER" 2>/dev/null; then
                 PATTERN_MATCH="$pattern"
                 break
               fi
+              # Match 2: workflow name contains category
+              if echo "$WF" | grep -qiF "$CATEGORY" 2>/dev/null; then
+                PATTERN_MATCH="$pattern"
+                break
+              fi
+              # Match 3: reason keywords against strategy text
+              for word in $(echo "$REASON" | tr ' .,;:!?-' '\n' | grep -E '.{4,}' | head -5); do
+                if echo "$STRATEGY" | grep -qiF "$word" 2>/dev/null; then
+                  PATTERN_MATCH="$pattern"
+                  break 2
+                fi
+              done
             done < <(echo "$RESILIENCE" | jq -c '.patterns[]' 2>/dev/null)
 
             if [ -n "$PATTERN_MATCH" ]; then
