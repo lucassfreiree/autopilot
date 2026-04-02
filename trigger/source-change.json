@@ -9,10 +9,20 @@
       "action": "replace-file",
       "target_path": "tsconfig.json",
       "content_ref": "patches/tsconfig.json"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/routes/agentsRouter.ts",
+      "content_ref": "patches/agentsRouter.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/cronjob-result.controller.ts",
+      "content_ref": "patches/cronjob-result.controller.ts"
     }
   ],
-  "commit_message": "fix(controller): replace tsconfig — remove types restriction and ignoreDeprecations (v3.8.0)",
+  "commit_message": "fix(controller): fix cronjob callback routes — /agent/ to /api/ prefix + register routes in agentsRouter (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 98
+  "run": 99
 }

@@ -338,7 +338,7 @@ export async function receiveCronjobResult(
       namespace,
       compliance_status: result.compliance_status,
       indexed: true,
-      statusEndpoint: `/agent/cronjob/status/${encodeURIComponent(execId)}`,
+      statusEndpoint: `/api/cronjob/status/${encodeURIComponent(execId)}`,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -357,7 +357,7 @@ export async function receiveCronjobResult(
 }
 
 /**
- * GET /agent/cronjob/status/:execId
+ * GET /api/cronjob/status/:execId
  *
  * Returns the stored cronjob execution result for a given execId.
  * Uses the existing execution snapshot infrastructure.

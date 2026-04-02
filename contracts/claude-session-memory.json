@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T14:00:00Z",
+  "lastUpdated": "2026-04-02T16:10:00Z",
   "lastSessionId": "session_01V1f8MvuyH6p1oRKp8QMsjp",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1426,6 +1426,12 @@
         "cause": "GitHub-hosted runners cannot reach corporate npm registry. Even with public fallback, tsc may find different errors than corporate TS.",
         "fix": "Use continue-on-error: true on the validation step to make it informational, not blocking",
         "lesson": "Pre-push validation on GHA is best-effort only. Corporate CI is the authoritative build check."
+      },
+      "cronjob_route_prefix_mismatch": {
+        "error": "agentsRouter.test.ts: POST /api/cronjob/result returns 404; cronjob-result.controller.test.ts: statusEndpoint expected /api/ got /agent/",
+        "cause": "Cronjob routes were registered at /agent/cronjob/ but tests (in src/__tests__/routes/) expect /api/cronjob/ prefix. Controller statusEndpoint also used /agent/ prefix.",
+        "fix": "Change route paths to /api/cronjob/result and /api/cronjob/status/:execId. Change controller statusEndpoint to /api/cronjob/status/. Tests exist in TWO locations: __tests__/unit/ (old) and __tests__/routes/ + __tests__/controllers/ (new).",
+        "lesson": "Corporate repo has test files in multiple directories. Always check CI log file paths carefully — __tests__/unit/ vs __tests__/routes/ vs __tests__/controllers/ may have different test expectations."
       }
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
@@ -1509,7 +1515,7 @@
   "currentState": {
     "controllerVersion": "3.7.8",
     "agentVersion": "2.3.3",
-    "lastTriggerRun": 98,
+    "lastTriggerRun": 99,
     "lastSuccessfulRun": 82,
     "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)",
     "historia930188": "COMPLETED — controller 3.7.2 CI PASSED (run #80, 2026-03-30T19:03Z). ciOutcome=success. CAP tag=3.7.2. Security fixes: XSS sanitizeForOutput, SSRF validateTrustedUrl, DoS boundedEntries, no for...of. 3 iterations: run78(for...of ESLint), run79(count:1 test), run80(PASS).",
