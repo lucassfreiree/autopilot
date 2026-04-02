@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-01T14:00:00Z",
-  "lastSessionId": "session_01N6wTVvkGd7Hs1zMtus8i5i",
+  "lastUpdated": "2026-04-02T12:00:00Z",
+  "lastSessionId": "session_01V1f8MvuyH6p1oRKp8QMsjp",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
     "companies": {
@@ -22,7 +22,7 @@
           "bbvinet/psc-sre-automacao-controller": {
             "role": "Controller — orquestra automacoes, despacha para agents, gerencia logs de execucao",
             "type": "source-code",
-            "currentVersion": "3.7.4",
+            "currentVersion": "3.7.8",
             "stack": "Node 22, TypeScript, Express, Jest, SQLite, S3",
             "ci": "Esteira de Build NPM (corporate runner)",
             "actionsUrl": "https://github.com/bbvinet/psc-sre-automacao-controller/actions",
@@ -61,7 +61,7 @@
           }
         },
         "status": "active",
-        "lastDeploy": "controller 3.6.6, agent 2.2.9 (historia #930217 — cronjob callback)",
+        "lastDeploy": "controller 3.7.8 (security: XSS/SSRF/DoS encodeURIComponent, ALLOWED_AGENT_DOMAINS, eliminate for-loop), agent 2.3.3",
         "notes": "Pipeline completo e funcional. Controller CAP agora no GitHub (bbvinet/psc_releases_cap_sre-aut-controller) com auto-promote HABILITADO no Stage 4 do apply-source-change. Esteira de Build NPM. Controller v3.6.3 operacional no cluster k8shmlbb111b (HML). Security fixes: XSS sanitizeForOutput, DoS MAX_RESULTS=1000, error detail hardening. Pre-deploy validation workflow criado."
       },
       "cit": {
@@ -494,6 +494,21 @@
           "auto-merge-sweeper reduced to */5",
           "18 workflows got concurrency groups",
           "dashboard state.json fixed (controller 3.7.3, agent 2.3.2)"
+        ]
+      },
+      {
+        "sessionId": "session_01V1f8MvuyH6p1oRKp8QMsjp",
+        "startTime": "2026-04-02T11:30:00Z",
+        "endTime": null,
+        "keyActions": [
+          "Autonomous control plane monitoring sweep",
+          "CI logs checked: controller 2 test failures (cronjob-result), agent 1 failure (K8s API) — both from older runs, current ciOutcome=success",
+          "Release state: controller 3.7.8 promoted, agent 2.3.3 ci-passed but NOT promoted (stale 3d)",
+          "Dashboard state.json: FRESH (55min old), agent version drift (shows source-change instead of 2.3.3)",
+          "Pipeline health: 67 active workflows, 5-layer monitoring stack operational, lock GC active",
+          "No stale locks detected",
+          "Unmapped workflows found: security-intake-dispatch.yml, claude-assistant.yml — added to CLAUDE.md",
+          "Session memory updated: controller version 3.7.4→3.7.8, new error patterns added"
         ]
       }
     ]
@@ -1381,7 +1396,19 @@
       "checkmarx_indirect_data_flow": "Checkmarx faz TAINT ANALYSIS em profundidade. Mesmo que validacao exista, se o taint flow cruza funcoes sem verificacao explicita no ponto de entrada, ele reporta. Ex: req.params.execId → getExecutionSnapshot(execId) → pickPreferredSnapshot → for-loop. O fix Math.min no for-loop resolve porque Checkmarx ve o bound explicito.",
       "security_scanner_completed": "security-vuln-scanner.yml completou primeiro scan com sucesso em 27s. Encontrou 64 CVEs do build 3.7.4. Report salvo em autopilot-state: security-scan-controller-3.7.4.json. Script: scripts/security/scan-corporate-vulns.sh. Triggers: workflow_run (apply-source-change + ci-monitor-loop), push, dispatch.",
       "vuln_scanner_timeout_fix": "CRITICO: scan-corporate-vulns.sh original travava porque: (1) gh api .../logs download sem timeout, (2) jq dentro de while-loop (O(n^2)), (3) declare -A nao portavel. FIX: timeout 60s no download, batch npm/rpm parsing com sed+jq -s, limit 20 CVEs com timeout 10s cada. PR #424.",
-      "checkmarx_xss_array_in_response": "CRITICO: Checkmarx Reflected_XSS traceia req.body → validation → clustersNames/authMode/missingTargets → res.json() mesmo que parseSafeIdentifier tenha sido usado. FIX: .map(sanitizeForOutput) em arrays e sanitizeForOutput() em strings. Afeta oas-sre-controller: clustersNames, authMode, missingTargets, cluster em summarizeDispatches. Fix deployado em 3.7.6 (run 84)."
+      "checkmarx_xss_array_in_response": "CRITICO: Checkmarx Reflected_XSS traceia req.body → validation → clustersNames/authMode/missingTargets → res.json() mesmo que parseSafeIdentifier tenha sido usado. FIX: .map(sanitizeForOutput) em arrays e sanitizeForOutput() em strings. Afeta oas-sre-controller: clustersNames, authMode, missingTargets, cluster em summarizeDispatches. Fix deployado em 3.7.6 (run 84).",
+      "agent_promotion_stale": {
+        "symptom": "Agent release-state shows ci-passed but promoted=false for >2 days",
+        "cause": "No new agent source change triggered since last deploy, promotion not re-attempted",
+        "fix": "Check if agent code changes are pending; if not, agent is idle by design. If pending, re-trigger apply-source-change with component=agent",
+        "learned": "2026-04-02"
+      },
+      "unmapped_workflow_detection": {
+        "symptom": "New workflows added to .github/workflows/ but not documented in CLAUDE.md",
+        "cause": "Workflows created in session but CLAUDE.md table not updated",
+        "fix": "Always add new workflows to the Infrastructure table in CLAUDE.md immediately after creation",
+        "learned": "2026-04-02"
+      }
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
     "gha_no_heredoc_in_run": "CRITICO: NUNCA usar heredoc (cat <<EOF / cat <<'EOF') dentro de blocos run: | em GitHub Actions. O GHA parser le TODO o bloco run: como YAML literal ANTES de avaliar como shell. Qualquer linha com dois-pontos (ex: 'Workspace: $WS') e interpretada como YAML key-value e quebra. FIX: usar variavel simples com string inline. Ex: BODY='texto sem colon' e depois gh issue comment --body \"$BODY\". NUNCA heredoc.",

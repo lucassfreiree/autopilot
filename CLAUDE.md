@@ -600,6 +600,8 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | stale-issue-cleanup.yml | Weekly cleanup of stale issues (14+ days inactive → close, 7+ days → warn) |
 | workflow-cost-tracker.yml | Weekly workflow usage & cost tracking (runs, success rate, wasteful workflows) |
 | pr-auto-review.yml | Automated PR review (security, quality, compliance checks on every PR) |
+| security-intake-dispatch.yml | Classify security issues and dispatch to Claude for autonomous remediation |
+| claude-assistant.yml | Respond to `@claude` mentions in Issues and PRs via Claude API |
 
 ### Disabled Workflows (Codex/Copilot/Agent-Bridge — centralized in Claude Code)
 All Codex, Copilot, Gemini, and multi-agent bridge workflows have been **disabled** (renamed to `.yml.disabled`).
