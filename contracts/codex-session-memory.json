@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-02T14:12:00Z",
+  "lastUpdated": "2026-04-02T14:21:00Z",
   "sessionCount": 8,
   "currentState": {
-    "controllerVersion": "3.8.1-pending-validation",
+    "controllerVersion": "3.8.0-verifying",
     "agentVersion": "2.2.9",
     "lastTriggerRun": 93,
     "lastSuccessfulRun": 66,
     "workspace": "ws-default",
-    "pipelineStatus": "controller-tsconfig-fix-pending"
+    "pipelineStatus": "controller-run93-verification"
   },
   "sessionsLog": [
     {
@@ -22,9 +22,9 @@
       "action": "Confirmed spark-sync-state synced spark-dashboard successfully but failed to publish panel/dashboard/state.json because a git push back to main hit a non-fast-forward race."
     },
     {
-      "timestamp": "2026-04-02T14:12:00Z",
-      "topic": "controller-ci-follow-up",
-      "action": "Recorded that controller 3.8.0 was promoted with pre-existing CI failure, fetched the live corporate tsconfig, and prepared 3.8.1 to remove explicit node types while restoring ignoreDeprecations 5.0."
+      "timestamp": "2026-04-02T14:21:00Z",
+      "topic": "controller-run93-verification",
+      "action": "Recorded that the valid mainline fix remains on controller 3.8.0 at autopilot commit 645f70c6, abandoned the 3.8.1 draft, and triggered fetch-files plus ci-diagnose to verify whether the corporate repo and pipeline actually moved after run 93."
     }
   ],
   "decisions": [
@@ -39,9 +39,9 @@
       "reason": "A long-running sync job can start from an older main SHA; using git push makes the dashboard publish path fail on concurrent commits and prevents deploy-panel dispatch."
     },
     {
-      "timestamp": "2026-04-02T14:12:00Z",
-      "decision": "After 3.8.0 was already promoted, the controller follow-up fix must ship as 3.8.1 and not create a fourth version segment.",
-      "reason": "The version line must keep standard three-part semver while avoiding a duplicate or regressive release number."
+      "timestamp": "2026-04-02T14:21:00Z",
+      "decision": "Keep the controller follow-up on version 3.8.0 and do not open a new semver line while the mainline run93 fix is the authoritative path.",
+      "reason": "The user explicitly requires 3.8.0 without adding another version segment, and main already contains the corresponding source-change trigger."
     }
   ],
   "lessonsLearned": [
@@ -54,16 +54,16 @@
       "lesson": "spark-sync-state must not rely on a local git commit and git push back to main for panel/dashboard/state.json. Use the Contents API on main and dispatch deploy-panel only after that update succeeds."
     },
     {
-      "timestamp": "2026-04-02T14:12:00Z",
+      "timestamp": "2026-04-02T14:21:00Z",
       "lesson": "Always fetch the current corporate file via fetch-files before preparing search-replace changes; whitespace differences in the search string can silently prevent the intended patch."
     },
     {
-      "timestamp": "2026-04-02T14:12:00Z",
-      "lesson": "On controller, TS2688 for node types and TS5107 for module resolution are coupled in this tsconfig path; the safe repair is to remove explicit types:[\"node\"] and add ignoreDeprecations 5.0 at the start of compilerOptions."
+      "timestamp": "2026-04-02T14:21:00Z",
+      "lesson": "For controller 3.8.0, removing explicit types:[\"node\"] is required both to avoid TS2688 when @types/node is absent and to restore Jest type auto-discovery for test compilation."
     },
     {
-      "timestamp": "2026-04-02T14:12:00Z",
-      "lesson": "A promoted-preexisting-ci-fail result means apply-source-change advanced despite a failing corporate baseline; promotion alone does not prove that the new controller commit is green."
+      "timestamp": "2026-04-02T14:21:00Z",
+      "lesson": "If apply-source-change finishes with Setup and Apply success but skips CI Gate, Save State, and CI Monitor, do not trust release-state alone; immediately verify via fetch-files and a fresh ci-diagnose on the latest corporate head."
     }
   ],
   "errorPatterns": {
@@ -76,16 +76,17 @@
         "fetched-controller-tsconfig.json still contains types:[\"node\"]"
       ],
       "rootCause": "The tsconfig search string did not match the live corporate file because there are two spaces after \"compilerOptions\": {.",
-      "fix": "Use the exact search string \\\"compilerOptions\\\": {  \\\"types\\\": [\\\"node\\\"],"
+      "fix": "Use the exact search string \"compilerOptions\": {  \"types\": [\"node\"],"
     },
-    "controller_ts2688_ts5107": {
-      "observedAt": "2026-04-02T14:03:00Z",
+    "controller_apply_success_state_skipped": {
+      "observedAt": "2026-04-02T14:15:04Z",
       "symptoms": [
-        "error TS2688: Cannot find type definition file for 'node'",
-        "error TS5107: Option 'moduleResolution=node10' is deprecated"
+        "apply-source-change run 93 completes with success",
+        "CI Gate, Save State, and CI Monitor are skipped",
+        "controller-release-state.json remains on the previous SHA"
       ],
-      "rootCause": "The project tsconfig explicitly requires node types without @types/node and lacks a valid deprecation guard for the module resolution path used by the compiler.",
-      "fix": "Add ignoreDeprecations 5.0 and remove explicit types:[\"node\"] at the start of compilerOptions."
+      "rootCause": "The workflow completed the source apply path but did not publish a tracked commit/output for the downstream state and monitoring stages.",
+      "fix": "Trigger fetch-files and ci-diagnose immediately to confirm the live corporate file contents and latest commit health."
     }
   }
 }

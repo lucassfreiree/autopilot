@@ -2,6 +2,6 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "controller",
-  "files": "tsconfig.json,package.json,package-lock.json",
+  "files": "tsconfig.json,package.json",
   "run": 25
 }
