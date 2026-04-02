@@ -11,8 +11,8 @@
       "content_ref": "patches/tsconfig.json"
     }
   ],
-  "commit_message": "fix(controller): replace tsconfig — remove types restriction + add ignoreDeprecations 6.0 (v3.8.0)",
+  "commit_message": "fix(controller): replace tsconfig — remove types restriction and ignoreDeprecations (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 97
+  "run": 98
 }

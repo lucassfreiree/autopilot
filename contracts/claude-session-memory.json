@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T12:00:00Z",
+  "lastUpdated": "2026-04-02T14:00:00Z",
   "lastSessionId": "session_01V1f8MvuyH6p1oRKp8QMsjp",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -514,7 +514,7 @@
     ]
   },
   "versioningRules": {
-    "currentVersion": "3.7.8",
+    "currentVersion": "3.8.0",
     "previousVersion": "3.7.7",
     "rule": "Se a esteira ja gerou imagem para uma versao, a proxima DEVE incrementar o patch. CI rejeita tags duplicadas no registry.",
     "versioningPattern": "CRITICO: Apos X.Y.9, a proxima versao e X.(Y+1).0 — NUNCA X.Y.10. Exemplos: 3.5.9 → 3.6.0, 3.6.9 → 3.7.0, 3.9.9 → 3.10.0. O terceiro digito (patch) vai de 0 a 9 apenas.",
@@ -1408,6 +1408,24 @@
         "cause": "Workflows created in session but CLAUDE.md table not updated",
         "fix": "Always add new workflows to the Infrastructure table in CLAUDE.md immediately after creation",
         "learned": "2026-04-02"
+      },
+      "tsconfig_ignoreDeprecations_invalid": {
+        "error": "TS5103: Invalid value for --ignoreDeprecations",
+        "cause": "ignoreDeprecations 6.0 is not valid for the corporate TS version. The TS5107 warning SUGGESTS 6.0 but the compiler does not actually support it.",
+        "fix": "Remove ignoreDeprecations entirely. The original working tsconfig had neither types nor ignoreDeprecations.",
+        "lesson": "NEVER add ignoreDeprecations based on TS5107 suggestion — verify the TS version supports it first. For corporate runner, simply omit the field."
+      },
+      "tsconfig_replace_file_only": {
+        "error": "search-replace fails on tsconfig.json due to unusual formatting from previous sed operations",
+        "cause": "types:[node] was on same line as compilerOptions:{ — sed had collapsed whitespace. [] are regex special chars in sed.",
+        "fix": "Always use replace-file action for tsconfig.json, never search-replace",
+        "lesson": "For any file previously edited by sed, formatting may be corrupted. Use replace-file for full replacement."
+      },
+      "pre_push_validation_continue_on_error": {
+        "error": "Pre-push validation blocks pipeline even though GitHub runners cannot replicate corporate build env",
+        "cause": "GitHub-hosted runners cannot reach corporate npm registry. Even with public fallback, tsc may find different errors than corporate TS.",
+        "fix": "Use continue-on-error: true on the validation step to make it informational, not blocking",
+        "lesson": "Pre-push validation on GHA is best-effort only. Corporate CI is the authoritative build check."
       }
     },
     "gha_yaml_markdown_bold": "CRITICO: NUNCA usar **texto**: (markdown bold seguido de dois-pontos) dentro de blocos run: | em workflows GitHub Actions. O parser YAML do GHA interpreta ** como alias syntax e : como mapping key, quebrando o YAML ANTES de avaliar o shell. Fix: remover ** ou usar variaveis. Corrigido em 6 workflows: emergency-watchdog, auto-dispatch-task, continuous-improvement, dashboard-auto-improve, deploy-auto-learn, workflow-sentinel.",
@@ -1491,7 +1509,7 @@
   "currentState": {
     "controllerVersion": "3.7.8",
     "agentVersion": "2.3.3",
-    "lastTriggerRun": 86,
+    "lastTriggerRun": 98,
     "lastSuccessfulRun": 82,
     "historia930217": "completed — all 4 deploys passed (3.6.5, 3.6.6, 2.2.8, 2.2.9)",
     "historia930188": "COMPLETED — controller 3.7.2 CI PASSED (run #80, 2026-03-30T19:03Z). ciOutcome=success. CAP tag=3.7.2. Security fixes: XSS sanitizeForOutput, SSRF validateTrustedUrl, DoS boundedEntries, no for...of. 3 iterations: run78(for...of ESLint), run79(count:1 test), run80(PASS).",
