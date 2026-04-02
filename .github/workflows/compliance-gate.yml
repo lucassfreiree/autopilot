@@ -274,8 +274,134 @@ jobs:
             done
           done
 
+          # ══ RULE 15: Interface JWT Claims (interface-contract.json) ══
+          if [ -f "contracts/interface-contract.json" ]; then
+            for f in $PATCH_TS; do
+              if grep -q "jwt\.sign\|jwt\.verify\|jsonwebtoken" "$f" 2>/dev/null; then
+                # Check scope singular
+                if grep -qP "scopes" "$f" 2>/dev/null; then
+                  viol "interface-jwt-claims" "$f: uses 'scopes' — interface contract requires 'scope' (singular)" "error"
+                fi
+                # Check expiresIn numeric
+                if grep -qP "expiresIn:\s*['\"]" "$f" 2>/dev/null; then
+                  if ! grep -q "parseExpiresIn" "$f" 2>/dev/null; then
+                    viol "interface-jwt-claims" "$f: expiresIn as string without parseExpiresIn() — contract requires numeric seconds" "error"
+                  fi
+                fi
+              fi
+            done
+          fi
+
+          # ══ RULE 16: Interface Route Paths ══
+          if [ -f "contracts/interface-contract.json" ]; then
+            CTRL_ROUTES=$(jq -r '.routes.controllerEndpoints | keys[]' contracts/interface-contract.json 2>/dev/null || true)
+            AGENT_ROUTES=$(jq -r '.routes.agentEndpoints | keys[]' contracts/interface-contract.json 2>/dev/null || true)
+            for f in $PATCH_TS; do
+              for route in $CTRL_ROUTES $AGENT_ROUTES; do
+                ROUTE_BASE=$(echo "$route" | sed 's|/:.*||')
+                if grep -q "router\.\(get\|post\|put\|delete\|patch\)" "$f" 2>/dev/null; then
+                  if grep -q "$ROUTE_BASE" "$f" 2>/dev/null; then
+                    warn "interface-route-paths" "$f modifies route $ROUTE_BASE — verify both controller and agent sides match"
+                  fi
+                fi
+              done
+            done
+          fi
+
+          # ══ RULE 17: Interface Response Shape ══
+          for f in $PATCH_TS; do
+            if grep -qP "res\.(json|send)\(\s*\{" "$f" 2>/dev/null; then
+              if grep -q "sanitizeForOutput" "$f" 2>/dev/null; then
+                : # good
+              elif grep -qP "req\.(body|query|params)" "$f" 2>/dev/null; then
+                warn "interface-response-shape" "$f: modifies API response shape — verify consuming side expects new format"
+              fi
+            fi
+          done
+
+          # ══ RULE 18: Dual-Side Required (Interface Surface) ══
+          if [ -f "contracts/interface-contract.json" ]; then
+            CTRL_SURFACE=$(jq -r '.interfaceSurface.controller[]' contracts/interface-contract.json 2>/dev/null | xargs -I{} basename {} || true)
+            AGENT_SURFACE=$(jq -r '.interfaceSurface.agent[]' contracts/interface-contract.json 2>/dev/null | xargs -I{} basename {} || true)
+            for f in $ALL_PATCHES; do
+              BN=$(basename "$f")
+              for surf in $CTRL_SURFACE $AGENT_SURFACE; do
+                if [ "$BN" = "$surf" ]; then
+                  warn "dual-side-required" "$f touches interface surface file $surf — validate BOTH controller and agent sides"
+                fi
+              done
+            done
+          fi
+
           echo "violations=$(echo "$V" | jq -c .)" >> "$GITHUB_OUTPUT"
           echo "warnings=$(echo "$W" | jq -c .)" >> "$GITHUB_OUTPUT"
+
+  # ═══════════════════════════════════════════
+  # STAGE 1.5: Interface Contract Check
+  # ═══════════════════════════════════════════
+  interface-check:
+    name: "1.5 Interface Check"
+    runs-on: ubuntu-latest
+    needs: static-analysis
+    outputs:
+      cross_side_required: ${{ steps.check.outputs.cross_side_required }}
+      violations: ${{ steps.check.outputs.violations }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Validate interface contract"
+        id: check
+        run: |
+          set -e
+          V="[]"; CROSS="false"
+          viol() { V=$(echo "$V" | jq --arg r "$1" --arg m "$2" --arg s "$3" '. + [{rule: $r, message: $m, severity: $s}]'); }
+
+          if [ ! -f "contracts/interface-contract.json" ]; then
+            echo "::warning ::No interface contract found — skipping"
+            echo "cross_side_required=false" >> "$GITHUB_OUTPUT"
+            echo "violations=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          COMPONENT="${{ needs.static-analysis.outputs.component }}"
+          TRIGGER=$(cat trigger/source-change.json 2>/dev/null || echo '{}')
+          CHANGES=$(echo "$TRIGGER" | jq -c '.changes // []')
+
+          # Check if patches touch interface surface files
+          CTRL_SURFACE=$(jq -r '.interfaceSurface.controller[]' contracts/interface-contract.json 2>/dev/null || true)
+          AGENT_SURFACE=$(jq -r '.interfaceSurface.agent[]' contracts/interface-contract.json 2>/dev/null || true)
+
+          for target in $(echo "$CHANGES" | jq -r '.[].target_path // empty' 2>/dev/null); do
+            for surf in $CTRL_SURFACE $AGENT_SURFACE; do
+              if echo "$target" | grep -qF "$(basename "$surf")" 2>/dev/null; then
+                CROSS="true"
+                echo "::warning ::Patch touches interface surface: $target (matches $surf)"
+                break
+              fi
+            done
+          done
+
+          # Validate JWT claims in patches
+          REFS=$(echo "$CHANGES" | jq -r '.[].content_ref // empty' 2>/dev/null | sort -u || true)
+          for ref in $REFS; do
+            [ -f "$ref" ] || continue
+            if grep -q "jwt\.sign" "$ref" 2>/dev/null; then
+              # Verify issuer matches contract
+              EXPECTED_ISS=$(jq -r ".jwt.${COMPONENT}ToAgent.issuer // .jwt.controllerToAgent.issuer" contracts/interface-contract.json 2>/dev/null || echo "")
+              if [ -n "$EXPECTED_ISS" ] && ! grep -q "$EXPECTED_ISS" "$ref" 2>/dev/null; then
+                viol "interface-jwt-issuer" "$ref: JWT issuer may not match contract ($EXPECTED_ISS)" "warning"
+              fi
+            fi
+          done
+
+          if [ "$CROSS" = "true" ]; then
+            OTHER="agent"
+            [ "$COMPONENT" = "agent" ] && OTHER="controller"
+            echo "::warning ::⚠️ DUAL-SIDE REQUIRED: Changes touch interface surface — $OTHER side must also be validated"
+          fi
+
+          echo "cross_side_required=$CROSS" >> "$GITHUB_OUTPUT"
+          echo "violations=$(echo "$V" | jq -c .)" >> "$GITHUB_OUTPUT"
 
   # ═══════════════════════════════════════════
   # STAGE 2: Pull Corporate + Run Tests
@@ -508,9 +634,9 @@ jobs:
   # STAGE 4: Final Report
   # ═══════════════════════════════════════════
   report:
-    name: "4. Compliance Report"
+    name: "5. Compliance Report"
     runs-on: ubuntu-latest
-    needs: [static-analysis, pull-and-test, release-tag-check]
+    needs: [static-analysis, interface-check, pull-and-test, release-tag-check]
     if: always()
     outputs:
       passed: ${{ steps.final.outputs.passed }}
@@ -521,11 +647,13 @@ jobs:
         run: |
           STATIC='${{ needs.static-analysis.outputs.violations || '[]' }}'
           STATIC_W='${{ needs.static-analysis.outputs.warnings || '[]' }}'
+          IFACE='${{ needs.interface-check.outputs.violations || '[]' }}'
           TEST='${{ needs.pull-and-test.outputs.test_violations || '[]' }}'
           TAG='${{ needs.release-tag-check.outputs.violations || '[]' }}'
+          CROSS='${{ needs.interface-check.outputs.cross_side_required || 'false' }}'
 
           # Merge all violations
-          ALL=$(echo "[$STATIC, $TEST, $TAG]" | jq '[.[] | .[]?]' 2>/dev/null || echo '[]')
+          ALL=$(echo "[$STATIC, $IFACE, $TEST, $TAG]" | jq '[.[] | .[]?]' 2>/dev/null || echo '[]')
           ALL_W=$(echo "$STATIC_W" | jq '.' 2>/dev/null || echo '[]')
           VC=$(echo "$ALL" | jq 'length')
           WC=$(echo "$ALL_W" | jq 'length')
@@ -577,7 +705,7 @@ jobs:
           VER: ${{ needs.static-analysis.outputs.version }}
         run: |
           if [ "$PASSED" = "true" ]; then
-            BODY="## Compliance Gate: PASSED\n**${COMP} v${VER}** - All stages passed.\n- Static Analysis (14 rules): PASS\n- Pull and Test (npm ci + tsc + eslint + jest): PASS\n- Release Tag Check (duplicate + CAP): PASS"
+            BODY="## Compliance Gate: PASSED\n**${COMP} v${VER}** - All stages passed.\n- Static Analysis (18 rules): PASS\n- Interface Contract Check: PASS\n- Pull and Test (npm ci + tsc + eslint + jest): PASS\n- Release Tag Check (duplicate + CAP): PASS"
           else
             BODY="## Compliance Gate: FAILED\n**${COMP} v${VER}** - Violations found. Fix before merge.\nSee workflow run for details."
           fi

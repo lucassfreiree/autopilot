@@ -99,38 +99,77 @@ jobs:
           # ── Known error patterns from compliance gate ──
           KNOWN_PATTERNS='[{"pattern":"no-nested-ternary","rule":"eslint_no_nested_ternary","fix":"Replace nested ternary with if/else","autofix":true},{"pattern":"no-use-before-define","rule":"eslint_no_use_before_define","fix":"Move function definition before usage","autofix":true},{"pattern":"TS2769.*overload","rule":"ts2769_jwt_sign","fix":"Use parseExpiresIn() with cast","autofix":false},{"pattern":"TS2339.*Property.*does not exist","rule":"ts_property_missing","fix":"Add property to interface","autofix":false},{"pattern":"duplicate.*tag|already exists","rule":"duplicate_tag","fix":"Increment patch version","autofix":true},{"pattern":"scope.*plural|scopes","rule":"jwt_scope_plural","fix":"Use scope (singular)","autofix":true},{"pattern":"ASCII|garbled|encode","rule":"swagger_garbled","fix":"Remove accented characters","autofix":true},{"pattern":"validateTrustedUrl.*mock","rule":"validate_in_fetch","fix":"Remove from fetch, use at input","autofix":true},{"pattern":"403.*push|permission denied","rule":"push_403","fix":"Use agent branch prefix","autofix":false},{"pattern":"run.*not.*increment|trigger.*not.*fir","rule":"trigger_not_firing","fix":"Increment run field","autofix":true},{"pattern":"exit code 127|command not found","rule":"gha_command_not_found","fix":"Remove heredoc from run blocks","autofix":true},{"pattern":"heredoc.*EOF|EOFBODY|cat <<","rule":"gha_heredoc_in_run","fix":"Replace heredoc with inline variable","autofix":true}]'
 
-          # ── Match failures against patterns ──
-          NEW_LESSONS="[]"
+          # ── Match failures against patterns (FIX: avoid subshell variable loss) ──
           MATCHED=0
           UNMATCHED=0
+          LESSONS_FILE=$(mktemp)
+          echo "[]" > "$LESSONS_FILE"
 
-          echo "$FAILURES" | jq -c '.[]' 2>/dev/null | while read -r failure; do
+          # Write failures to temp file to avoid subshell pipe
+          FAIL_FILE=$(mktemp)
+          echo "$FAILURES" | jq -c '.[]' 2>/dev/null > "$FAIL_FILE" || true
+
+          while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
             WF=$(echo "$failure" | jq -r '.workflow')
-            JOBS=$(echo "$failure" | jq -c '.failed_jobs // []')
 
-            echo "$JOBS" | jq -c '.[]' 2>/dev/null | while read -r job; do
+            JOB_FILE=$(mktemp)
+            echo "$failure" | jq -c '.failed_jobs[]' 2>/dev/null > "$JOB_FILE" || true
+
+            while IFS= read -r job; do
+              [ -z "$job" ] && continue
               JOB_NAME=$(echo "$job" | jq -r '.name')
-              STEPS=$(echo "$job" | jq -c '.steps // []')
 
-              echo "$STEPS" | jq -c '.[]' 2>/dev/null | while read -r step; do
+              STEP_FILE=$(mktemp)
+              echo "$job" | jq -c '.steps[]' 2>/dev/null > "$STEP_FILE" || true
+
+              while IFS= read -r step; do
+                [ -z "$step" ] && continue
                 STEP_NAME=$(echo "$step" | jq -r '.name')
 
                 # Try to match against known patterns
+                PAT_FILE=$(mktemp)
+                echo "$KNOWN_PATTERNS" | jq -c '.[]' 2>/dev/null > "$PAT_FILE" || true
+
                 FOUND=false
-                echo "$KNOWN_PATTERNS" | jq -c '.[]' 2>/dev/null | while read -r pat; do
+                while IFS= read -r pat; do
+                  [ -z "$pat" ] && continue
                   REGEX=$(echo "$pat" | jq -r '.pattern')
                   if echo "$STEP_NAME $JOB_NAME" | grep -qiP "$REGEX" 2>/dev/null; then
                     RULE=$(echo "$pat" | jq -r '.rule')
                     FIX=$(echo "$pat" | jq -r '.fix')
+                    AUTOFIX=$(echo "$pat" | jq -r '.autofix')
                     echo "::notice ::Matched error pattern: $RULE → $FIX"
+                    MATCHED=$((MATCHED + 1))
+
+                    # Append lesson to file (not subshell variable)
+                    CURRENT=$(cat "$LESSONS_FILE")
+                    echo "$CURRENT" | jq --arg wf "$WF" --arg rule "$RULE" --arg fix "$FIX" --arg af "$AUTOFIX" \
+                      '. + [{workflow: $wf, rule: $rule, fix: $fix, autofix: ($af == "true"), timestamp: now | todate}]' > "$LESSONS_FILE"
+
                     FOUND=true
                     break
                   fi
-                done
-              done
-            done
-          done
+                done < "$PAT_FILE"
+                rm -f "$PAT_FILE"
 
+                if [ "$FOUND" = "false" ]; then
+                  UNMATCHED=$((UNMATCHED + 1))
+                  echo "::warning ::Unmatched error in $WF/$JOB_NAME: $STEP_NAME"
+                fi
+              done < "$STEP_FILE"
+              rm -f "$STEP_FILE"
+            done < "$JOB_FILE"
+            rm -f "$JOB_FILE"
+          done < "$FAIL_FILE"
+          rm -f "$FAIL_FILE"
+
+          NEW_LESSONS=$(cat "$LESSONS_FILE")
+          rm -f "$LESSONS_FILE"
+
+          echo "::notice ::Pattern matching: $MATCHED matched, $UNMATCHED unmatched"
+          echo "matched=$MATCHED" >> "$GITHUB_OUTPUT"
+          echo "unmatched=$UNMATCHED" >> "$GITHUB_OUTPUT"
           echo "new_lessons=$(echo "$NEW_LESSONS" | jq -c .)" >> "$GITHUB_OUTPUT"
 
       - name: "3. Generate learning report"
@@ -241,7 +280,76 @@ jobs:
 
           echo "::notice ::Learning report generated"
 
-      - name: "4. Update Spark dashboard state"
+      - name: "4. Write-back learned patterns"
+        id: writeback
+        run: |
+          set -e
+          NEW_LESSONS='${{ steps.map.outputs.new_lessons }}'
+          MATCHED='${{ steps.map.outputs.matched || 0 }}'
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          LESSON_COUNT=$(echo "$NEW_LESSONS" | jq 'length' 2>/dev/null || echo "0")
+          if [ "$LESSON_COUNT" -eq 0 ]; then
+            echo "::notice ::No new lessons to write back"
+            echo "wrote_back=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::notice ::Writing $LESSON_COUNT new lessons to session memory and contract files"
+
+          # ── Write to session memory errorRecovery ──
+          if [ -f "contracts/claude-session-memory.json" ]; then
+            echo "$NEW_LESSONS" | jq -c '.[]' 2>/dev/null | while IFS= read -r lesson; do
+              RULE=$(echo "$lesson" | jq -r '.rule')
+              FIX=$(echo "$lesson" | jq -r '.fix')
+              WF=$(echo "$lesson" | jq -r '.workflow')
+
+              # Add to errorRecovery if not already present
+              EXISTS=$(jq --arg r "$RULE" '.commonPatterns.errorRecovery | has($r)' contracts/claude-session-memory.json 2>/dev/null || echo "false")
+              if [ "$EXISTS" = "false" ]; then
+                jq --arg r "$RULE" --arg f "$FIX" --arg wf "$WF" --arg ts "$TIMESTAMP" \
+                  '.commonPatterns.errorRecovery[$r] = {error: $r, fix: $f, source: ("auto-learn from " + $wf), learnedAt: $ts}' \
+                  contracts/claude-session-memory.json > /tmp/memory-updated.json && \
+                  mv /tmp/memory-updated.json contracts/claude-session-memory.json
+                echo "::notice ::Added errorRecovery pattern: $RULE"
+              fi
+            done
+
+            # Update lastUpdated
+            jq --arg ts "$TIMESTAMP" '.lastUpdated = $ts' contracts/claude-session-memory.json > /tmp/memory-ts.json && \
+              mv /tmp/memory-ts.json contracts/claude-session-memory.json
+          fi
+
+          # ── Write security-related patterns to interface contract knownBreakingChanges ──
+          if [ -f "contracts/interface-contract.json" ]; then
+            echo "$NEW_LESSONS" | jq -c '.[] | select(.rule | test("jwt|scope|interface|ssrf|xss"))' 2>/dev/null | while IFS= read -r lesson; do
+              [ -z "$lesson" ] && continue
+              RULE=$(echo "$lesson" | jq -r '.rule')
+              FIX=$(echo "$lesson" | jq -r '.fix')
+
+              jq --arg d "$(date -u +%Y-%m-%d)" --arg desc "Auto-learned: $RULE" --arg fix "$FIX" \
+                '.knownBreakingChanges += [{date: $d, description: $desc, fix: $fix, affectedFiles: [], version: "auto-learned"}]' \
+                contracts/interface-contract.json > /tmp/contract-updated.json && \
+                mv /tmp/contract-updated.json contracts/interface-contract.json
+              echo "::notice ::Added to interface contract knownBreakingChanges: $RULE"
+            done
+          fi
+
+          # ── Commit write-back ──
+          git config user.name "autopilot-bot"
+          git config user.email "autopilot@users.noreply.github.com"
+          git add contracts/claude-session-memory.json contracts/interface-contract.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "::notice ::No changes to commit"
+            echo "wrote_back=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore(auto-learn): write-back $LESSON_COUNT learned patterns [skip ci]"
+            git push origin main 2>/dev/null || echo "::warning ::Could not push write-back (non-fatal)"
+            echo "wrote_back=true" >> "$GITHUB_OUTPUT"
+            echo "::notice ::Write-back committed and pushed"
+          fi
+
+      - name: "5. Update Spark dashboard state"
         run: |
           # Trigger spark sync to pick up latest state
           echo "::notice ::Spark dashboard will auto-sync in next 5-min cycle"
