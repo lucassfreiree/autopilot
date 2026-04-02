@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: ci-failure-analysis-${{ github.event.pull_request.number || github.sha }}
@@ -191,6 +192,54 @@ jobs:
               echo "$AI_TEXT"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Escalate to @claude if unfixable"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          CATEGORY=$(jq -r '.category' /tmp/analysis.json 2>/dev/null || echo "unknown")
+          SUGGESTION=$(jq -r '.suggestion' /tmp/analysis.json 2>/dev/null || echo "")
+          COMPONENT="${{ github.event.inputs.component }}"
+          RUN_ID="${{ github.event.inputs.run_id }}"
+          WS_ID="${{ github.event.inputs.workspace_id }}"
+
+          # Auto-fixable categories don't need escalation (handled by fix-corporate-ci)
+          if [ "$CATEGORY" = "lint" ] || [ "$CATEGORY" = "dependency" ]; then
+            echo "::notice ::Category '$CATEGORY' is auto-fixable — skipping escalation"
+            exit 0
+          fi
+
+          # Escalate non-trivial failures
+          EXISTING=$(gh api "repos/$REPO/issues?labels=needs-claude,ci-analysis&state=open&per_page=3" \
+            --jq '[.[] | select(.title | contains("'"$COMPONENT"'"))] | length' 2>/dev/null || echo "0")
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "::notice ::Existing CI analysis issue for $COMPONENT — skipping duplicate"
+            exit 0
+          fi
+
+          AI_TEXT=$(cat /tmp/ai-analysis.txt 2>/dev/null || echo "No AI analysis available")
+
+          gh api "repos/$REPO/issues" --method POST \
+            -f "title=🔬 CI Analysis: $COMPONENT $CATEGORY failure — @claude fix needed" \
+            -f "body=## CI Failure Analysis Escalation
+
+          **Component**: $COMPONENT
+          **Workspace**: $WS_ID
+          **Category**: $CATEGORY
+          **Suggestion**: $SUGGESTION
+          **Failed Run**: $RUN_ID
+
+          ### AI Analysis
+          $AI_TEXT
+
+          ### Action Required
+          @claude Please analyze and fix this $CATEGORY failure:
+          1. Review the analysis at \`state/workspaces/$WS_ID/audit/ci-failure-$RUN_ID-*.json\`
+          2. Apply the suggested fix or create a new patch
+          3. Deploy and monitor until CI passes
+
+          Reference: \`contracts/claude-session-memory.json\`, \`.claude/skills/ci-fix.md\`" \
+            -f "labels=[\"needs-claude\",\"ci-analysis\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create issue"
 
       - name: Upload artifacts
         if: always()

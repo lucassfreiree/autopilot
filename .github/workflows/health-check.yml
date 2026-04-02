@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: health-check
@@ -196,8 +197,36 @@ jobs:
           path: /tmp/report.md
           retention-days: 30
 
-      - name: Fail if critical
+      - name: "Escalate to @claude if critical"
         if: steps.check.outputs.overall == 'critical'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          echo "::error ::Health check critical."
+          echo "::error ::Health check critical — escalating to @claude"
+
+          # Check if a recent health-critical issue already exists
+          EXISTING=$(gh api "repos/$REPO/issues?labels=needs-claude,health-critical&state=open&per_page=5" \
+            --jq 'length' 2>/dev/null || echo "0")
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "::notice ::Existing health-critical issue found — skipping duplicate"
+            exit 1
+          fi
+
+          gh api "repos/$REPO/issues" --method POST \
+            -f "title=🚨 Health check CRITICAL — @claude investigate" \
+            -f "body=## Health Check Critical
+
+          The hourly health check detected **critical** issues across workspaces.
+
+          **Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          **Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          ### What to do
+          @claude Please investigate the critical health issues:
+          1. Check \`state/workspaces/*/health.json\` on autopilot-state for details
+          2. Look for stuck runs, expired locks, missing workspace configs
+          3. Fix the root cause and verify health returns to \`healthy\`
+
+          Reference: \`.claude/skills/ci-fix.md\`, \`contracts/claude-session-memory.json\`" \
+            -f "labels=[\"needs-claude\",\"health-critical\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create issue"
           exit 1
