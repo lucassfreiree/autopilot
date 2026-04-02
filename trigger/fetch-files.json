@@ -3,5 +3,5 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "files": "src/__tests__/cronjob-result.controller.test.ts,src/__tests__/unit/cronjob-result.controller.test.ts,src/__tests__/integration/cronjob-result.controller.test.ts,src/controllers/cronjob-result.controller.ts,src/routes/index.ts,src/server.ts",
-  "run": 27
+  "run": 28
 }
