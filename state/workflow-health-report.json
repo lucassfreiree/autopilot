@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-04-02T09:59:58Z",
-  "lookbackSince": "2026-04-02T03:59:54Z",
+  "timestamp": "2026-04-02T11:02:57Z",
+  "lookbackSince": "2026-04-02T05:02:54Z",
   "summary": {
     "totalWorkflows": 72,
     "totalRuns": 50,
     "workflowsWithFailures": 0,
     "critical": 0,
     "degraded": 0,
-    "healthy": 15,
+    "healthy": 14,
     "overallStatus": "healthy"
   },
   "criticalWorkflows": [],
@@ -56,7 +56,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23894416487"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23896418248"
     },
     {
       "name": "[Core] Lock GC",
@@ -71,22 +71,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23893282449"
-    },
-    {
-      "name": "[Infra] Cleanup: Stale Branches",
-      "path": ".github/workflows/cleanup-branches.yml",
-      "workflow_id": 249768723,
-      "status": "healthy",
-      "runs": 1,
-      "successes": 1,
-      "failures": 0,
-      "cancelled": 0,
-      "in_progress": 0,
-      "failRate": 0,
-      "consecutiveFailures": 0,
-      "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23884773681"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23896059124"
     },
     {
       "name": "[Corp] Drift Correction",
@@ -131,22 +116,22 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23894402411"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23896407515"
     },
     {
       "name": "[Core] Auto-Merge Sweeper",
       "path": ".github/workflows/auto-merge-sweeper.yml",
       "workflow_id": 253043557,
       "status": "healthy",
-      "runs": 5,
-      "successes": 5,
+      "runs": 6,
+      "successes": 6,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23894506714"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23896425435"
     },
     {
       "name": "[Core] Token Auto-Optimize",
@@ -191,7 +176,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "unknown",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23894983426"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23897282396"
     },
     {
       "name": "[Core] Workflow Sentinel",
@@ -221,7 +206,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23894965414"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23897253110"
     },
     {
       "name": "[Core] Deploy Pipeline Monitor",
@@ -236,7 +221,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23894877925"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23896889772"
     }
   ]
 }
