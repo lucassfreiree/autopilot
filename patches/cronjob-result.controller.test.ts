@@ -122,9 +122,7 @@ describe("cronjob-result.controller", () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           ok: false,
-          details: expect.arrayContaining([
-            "Request body must be a JSON object.",
-          ]),
+          details: expect.arrayContaining(["Request body must be a JSON object."]),
         }),
       );
     });
@@ -136,9 +134,7 @@ describe("cronjob-result.controller", () => {
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
-      expect(
-        jsonArg.details.some((d: string) => d.includes("compliance_status")),
-      ).toBe(true);
+      expect(jsonArg.details.some((d: string) => d.includes("compliance_status"))).toBe(true);
     });
 
     test("returns 400 when compliance_status is invalid", async () => {
@@ -147,9 +143,7 @@ describe("cronjob-result.controller", () => {
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
-      expect(
-        jsonArg.details.some((d: string) => d.includes("compliance_status")),
-      ).toBe(true);
+      expect(jsonArg.details.some((d: string) => d.includes("compliance_status"))).toBe(true);
     });
 
     test("returns 400 when namespace is missing", async () => {
@@ -159,9 +153,7 @@ describe("cronjob-result.controller", () => {
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
-      expect(
-        jsonArg.details.some((d: string) => d.includes("namespace")),
-      ).toBe(true);
+      expect(jsonArg.details.some((d: string) => d.includes("namespace"))).toBe(true);
     });
 
     test("returns 400 when captured_data is absent for success", async () => {
@@ -171,9 +163,7 @@ describe("cronjob-result.controller", () => {
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
-      expect(
-        jsonArg.details.some((d: string) => d.includes("captured_data")),
-      ).toBe(true);
+      expect(jsonArg.details.some((d: string) => d.includes("captured_data"))).toBe(true);
     });
 
     test("returns 400 when failures is absent for failed", async () => {
@@ -183,9 +173,7 @@ describe("cronjob-result.controller", () => {
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
-      expect(
-        jsonArg.details.some((d: string) => d.includes("failures")),
-      ).toBe(true);
+      expect(jsonArg.details.some((d: string) => d.includes("failures"))).toBe(true);
     });
 
     test("returns 400 when errors is absent for error", async () => {
@@ -195,9 +183,7 @@ describe("cronjob-result.controller", () => {
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
-      expect(
-        jsonArg.details.some((d: string) => d.includes("errors")),
-      ).toBe(true);
+      expect(jsonArg.details.some((d: string) => d.includes("errors"))).toBe(true);
     });
   });
 
@@ -210,9 +196,7 @@ describe("cronjob-result.controller", () => {
       await receiveCronjobResult(req, res);
       expect(mockInitExecution).toHaveBeenCalledWith("exec-123");
       const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
-      const entries = syntheticReq.body.entries as Array<
-        Record<string, unknown>
-      >;
+      const entries = syntheticReq.body.entries as Array<Record<string, unknown>>;
       expect(entries[0].execStatus).toBe("DONE");
       expect(entries[0].status).toBe("DONE");
     });
@@ -222,9 +206,7 @@ describe("cronjob-result.controller", () => {
       const res = makeRes();
       await receiveCronjobResult(req, res);
       const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
-      const entries = syntheticReq.body.entries as Array<
-        Record<string, unknown>
-      >;
+      const entries = syntheticReq.body.entries as Array<Record<string, unknown>>;
       expect(entries[0].execStatus).toBe("ERROR");
     });
 
@@ -233,9 +215,7 @@ describe("cronjob-result.controller", () => {
       const res = makeRes();
       await receiveCronjobResult(req, res);
       const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
-      const entries = syntheticReq.body.entries as Array<
-        Record<string, unknown>
-      >;
+      const entries = syntheticReq.body.entries as Array<Record<string, unknown>>;
       expect(entries[0].execStatus).toBe("ERROR");
     });
   });
@@ -243,14 +223,12 @@ describe("cronjob-result.controller", () => {
   // ── adaptCronjobResultToLogEntries ────────────────────────────
 
   describe("adaptCronjobResultToLogEntries (via receiveCronjobResult)", () => {
-    test("success entry has correct fields: ts, execId, source, from, level, status, message, data", async () => {
+    test("success entry has correct fields", async () => {
       const req = makeReq(validSuccessBody);
       const res = makeRes();
       await receiveCronjobResult(req, res);
       const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
-      const entry = (
-        syntheticReq.body.entries as Array<Record<string, unknown>>
-      )[0];
+      const entry = (syntheticReq.body.entries as Array<Record<string, unknown>>)[0];
       expect(entry.ts).toBe("2024-01-01T00:00:00.000Z");
       expect(entry.execId).toBe("exec-123");
       expect(entry.source).toBe("cronjob-callback");
@@ -259,9 +237,7 @@ describe("cronjob-result.controller", () => {
       expect(entry.status).toBe("DONE");
       expect(entry.execStatus).toBe("DONE");
       expect(typeof entry.message).toBe("string");
-      expect((entry.data as Record<string, unknown>).captured_data).toEqual({
-        pods: 5,
-      });
+      expect((entry.data as Record<string, unknown>).captured_data).toEqual({ pods: 5 });
     });
 
     test("failed entry has failures in data", async () => {
@@ -269,14 +245,9 @@ describe("cronjob-result.controller", () => {
       const res = makeRes();
       await receiveCronjobResult(req, res);
       const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
-      const entry = (
-        syntheticReq.body.entries as Array<Record<string, unknown>>
-      )[0];
+      const entry = (syntheticReq.body.entries as Array<Record<string, unknown>>)[0];
       expect(entry.level).toBe("ERROR");
-      expect(entry.execStatus).toBe("ERROR");
-      expect((entry.data as Record<string, unknown>).failures).toEqual([
-        { reason: "pod crashed" },
-      ]);
+      expect((entry.data as Record<string, unknown>).failures).toEqual([{ reason: "pod crashed" }]);
     });
 
     test("error entry has errors in data", async () => {
@@ -284,21 +255,16 @@ describe("cronjob-result.controller", () => {
       const res = makeRes();
       await receiveCronjobResult(req, res);
       const syntheticReq = mockPushAgentExecutionLogs.mock.calls[0][0];
-      const entry = (
-        syntheticReq.body.entries as Array<Record<string, unknown>>
-      )[0];
+      const entry = (syntheticReq.body.entries as Array<Record<string, unknown>>)[0];
       expect(entry.level).toBe("ERROR");
-      expect(entry.execStatus).toBe("ERROR");
-      expect((entry.data as Record<string, unknown>).errors).toEqual([
-        { message: "network timeout" },
-      ]);
+      expect((entry.data as Record<string, unknown>).errors).toEqual([{ message: "network timeout" }]);
     });
   });
 
   // ── receiveCronjobResult handler ──────────────────────────────
 
   describe("receiveCronjobResult handler", () => {
-    test("returns 200 with indexed:true on valid success payload", async () => {
+    test("returns 200 with correct statusEndpoint on valid success payload", async () => {
       const req = makeReq(validSuccessBody);
       const res = makeRes();
       await receiveCronjobResult(req, res);
@@ -310,7 +276,8 @@ describe("cronjob-result.controller", () => {
           namespace: "ns-test",
           compliance_status: "success",
           indexed: true,
-          statusEndpoint: "/api/cronjob/status/exec-123",
+          // rota padronizada: /agent/cronjob/status/:execId
+          statusEndpoint: "/agent/cronjob/status/exec-123",
         }),
       );
     });
@@ -328,22 +295,16 @@ describe("cronjob-result.controller", () => {
       const res = makeRes();
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ ok: false }),
-      );
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: false }));
     });
 
     test("returns 500 when pushAgentExecutionLogs throws", async () => {
-      mockPushAgentExecutionLogs.mockRejectedValueOnce(
-        new Error("Storage failure"),
-      );
+      mockPushAgentExecutionLogs.mockRejectedValueOnce(new Error("Storage failure"));
       const req = makeReq(validSuccessBody);
       const res = makeRes();
       await receiveCronjobResult(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ ok: false }),
-      );
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: false }));
     });
   });
 
@@ -403,9 +364,7 @@ describe("cronjob-result.controller", () => {
       const res = makeRes();
       await getCronjobStatus(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ ok: false }),
-      );
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: false }));
     });
   });
 });
