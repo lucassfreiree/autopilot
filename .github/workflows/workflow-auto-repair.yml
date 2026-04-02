@@ -93,12 +93,24 @@ jobs:
               echo "Skipping intentionally disabled: $WF_NAME"
               continue
             fi
+
+            # Capture WHY the workflow was disabled (check last 5 runs for failure pattern)
+            DISABLE_REASON="$WF_STATE"
+            LAST_RUNS=$(gh api "repos/$REPO/actions/workflows/$WF_ID/runs?per_page=5&status=completed" \
+              --jq '[.workflow_runs[] | {conclusion: .conclusion, created: .created_at, url: .html_url}]' 2>/dev/null || echo '[]')
+            CONSEC_FAILURES=$(echo "$LAST_RUNS" | jq '[.[] | select(.conclusion == "failure")] | length' 2>/dev/null || echo "0")
+            LAST_FAILURE_URL=$(echo "$LAST_RUNS" | jq -r '[.[] | select(.conclusion == "failure")][0].url // ""' 2>/dev/null || echo "")
+            if [ "$CONSEC_FAILURES" -gt 0 ]; then
+              DISABLE_REASON="${WF_STATE} (${CONSEC_FAILURES} recent failures before disable)"
+            fi
+
             REPAIRS=$(echo "$REPAIRS" | jq --argjson r "{
               \"type\": \"re-enable\",
               \"workflow_id\": $WF_ID,
               \"workflow_name\": \"$WF_NAME\",
-              \"reason\": \"Workflow is $WF_STATE\",
-              \"action\": \"Enable workflow via API\"
+              \"reason\": \"$DISABLE_REASON\",
+              \"action\": \"Enable workflow via API\",
+              \"lastFailureUrl\": \"$LAST_FAILURE_URL\"
             }" '. + [$r]' 2>/dev/null || echo "$REPAIRS")
           done < <(echo "$DISABLED" | jq -c '.[]' 2>/dev/null || true)
           echo "::endgroup::"
@@ -124,29 +136,30 @@ jobs:
           done < <(echo "$STUCK" | jq -c '.[]' 2>/dev/null || true)
           echo "::endgroup::"
 
-          # ── Pattern 3: Expired locks on state branch ──
+          # ── Pattern 3: Expired locks on state branch (ALL workspaces) ──
           echo "::group::Checking for expired locks"
-          NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-          LOCK_RAW=$(gh api "repos/$REPO/contents/state/workspaces/ws-default/locks/session-lock.json?ref=$STATE_BRANCH" \
-            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
+          NOW_TS=$(date +%s)
+          for WS_ID in ws-default ws-cit; do
+            LOCK_RAW=$(gh api "repos/$REPO/contents/state/workspaces/${WS_ID}/locks/session-lock.json?ref=$STATE_BRANCH" \
+              --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
 
-          if echo "$LOCK_RAW" | jq empty 2>/dev/null; then
-            LOCK_EXPIRES=$(echo "$LOCK_RAW" | jq -r '.expiresAt // ""' 2>/dev/null || echo "")
-            if [ -n "$LOCK_EXPIRES" ] && [ "$LOCK_EXPIRES" != "null" ]; then
-              LOCK_TS=$(date -d "$LOCK_EXPIRES" +%s 2>/dev/null || echo 0)
-              NOW_TS=$(date +%s)
-              if [ "$LOCK_TS" -lt "$NOW_TS" ] && [ "$LOCK_TS" -gt 0 ]; then
-                LOCK_AGENT=$(echo "$LOCK_RAW" | jq -r '.agentId // "unknown"')
-                REPAIRS=$(echo "$REPAIRS" | jq --argjson r "{
-                  \"type\": \"clear-lock\",
-                  \"lock_path\": \"state/workspaces/ws-default/locks/session-lock.json\",
-                  \"workflow_name\": \"session-lock\",
-                  \"reason\": \"Lock expired at $LOCK_EXPIRES (held by $LOCK_AGENT)\",
-                  \"action\": \"Delete expired lock\"
-                }" '. + [$r]' 2>/dev/null || echo "$REPAIRS")
+            if echo "$LOCK_RAW" | jq empty 2>/dev/null; then
+              LOCK_EXPIRES=$(echo "$LOCK_RAW" | jq -r '.expiresAt // ""' 2>/dev/null || echo "")
+              if [ -n "$LOCK_EXPIRES" ] && [ "$LOCK_EXPIRES" != "null" ]; then
+                LOCK_TS=$(date -d "$LOCK_EXPIRES" +%s 2>/dev/null || echo 0)
+                if [ "$LOCK_TS" -lt "$NOW_TS" ] && [ "$LOCK_TS" -gt 0 ]; then
+                  LOCK_AGENT=$(echo "$LOCK_RAW" | jq -r '.agentId // "unknown"')
+                  REPAIRS=$(echo "$REPAIRS" | jq --argjson r "{
+                    \"type\": \"clear-lock\",
+                    \"lock_path\": \"state/workspaces/${WS_ID}/locks/session-lock.json\",
+                    \"workflow_name\": \"session-lock (${WS_ID})\",
+                    \"reason\": \"Lock expired at $LOCK_EXPIRES (held by $LOCK_AGENT in ${WS_ID})\",
+                    \"action\": \"Delete expired lock\"
+                  }" '. + [$r]' 2>/dev/null || echo "$REPAIRS")
+                fi
               fi
             fi
-          fi
+          done
           echo "::endgroup::"
 
           # ── Pattern 4: Critical workflows from health report ──
