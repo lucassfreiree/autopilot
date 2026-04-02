@@ -56,6 +56,11 @@
       "count": 3
     },
     {
+      "workflow": "[Corp] Deploy: Apply Source Change",
+      "consecutiveAt": "2026-04-02T15:15:53Z",
+      "count": 3
+    },
+    {
       "workflow": "[Corp] Fix: CI Lint Errors",
       "consecutiveAt": "2026-04-02T14:09:03Z",
       "count": 3
@@ -99,14 +104,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-02T14:09:03Z",
+  "lastRun": "2026-04-02T15:15:53Z",
   "lastHealth": "degraded",
-  "runCount": 70,
+  "runCount": 71,
   "healthHistory": [
-    {
-      "ts": "2026-04-01T14:49:18Z",
-      "health": "degraded"
-    },
     {
       "ts": "2026-04-01T16:05:42Z",
       "health": "degraded"
@@ -181,6 +182,10 @@
     },
     {
       "ts": "2026-04-02T14:09:03Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-02T15:15:53Z",
       "health": "degraded"
     }
   ]
