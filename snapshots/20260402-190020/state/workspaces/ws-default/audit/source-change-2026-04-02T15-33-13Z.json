@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T15:33:13Z",
+  "runId": "23908155492",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23908155492",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): replace tsconfig — remove types restriction and ignoreDeprecations (v3.8.0)",
+  "commitSha": "5112d18002fd061fdf077e01fb10b9d0927ec083",
+  "ciResult": "failure",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
