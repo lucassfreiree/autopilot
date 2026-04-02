@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "lastReleasedSha": "0e8dc8910ac48005f7f1397d09757282ff67e1c1",
+  "lastTag": "3.7.8",
+  "updatedAt": "2026-04-01T20:50:52Z",
+  "runId": "23869637043",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23869637043",
+  "ciResult": "success",
+  "status": "promoted",
+  "changeType": "source-code",
+  "commitMessage": "fix(security): Checkmarx XSS/SSRF/DoS — encodeURIComponent on output, ALLOWED_AGENT_DOMAINS allowlist, eliminate for-loop (v3.7.8)",
+  "promoted": true,
+  "preExistingFailure": false,
+  "gateDecision": "pass"
+}
