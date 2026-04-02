@@ -8,12 +8,12 @@
     {
       "action": "search-replace",
       "target_path": "tsconfig.json",
-      "search": "\"ignoreDeprecations\": \"5.0\", \"types\": [\"node\"],",
-      "replace": "\"ignoreDeprecations\": \"5.0\","
+      "search": "\"compilerOptions\": {  \"types\": [\"node\"],",
+      "replace": "\"compilerOptions\": {  \"ignoreDeprecations\": \"5.0\","
     }
   ],
-  "commit_message": "fix(controller): remove types restriction from tsconfig — restore jest type discovery (v3.8.0)",
+  "commit_message": "fix(controller): patch live 3.8.0 tsconfig types restriction",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 93
+  "run": 94
 }
