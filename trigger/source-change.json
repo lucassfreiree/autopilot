@@ -19,10 +19,15 @@
       "action": "replace-file",
       "target_path": "src/controllers/cronjob-result.controller.ts",
       "content_ref": "patches/cronjob-result.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/__tests__/unit/cronjob-result.controller.test.ts",
+      "content_ref": "patches/cronjob-result.controller.test.ts"
     }
   ],
-  "commit_message": "fix(controller): fix cronjob callback routes — /agent/ to /api/ prefix + register routes in agentsRouter (v3.8.0)",
+  "commit_message": "fix(controller): align unit test statusEndpoint with /api/ prefix (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 99
+  "run": 100
 }

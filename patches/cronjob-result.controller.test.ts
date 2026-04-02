@@ -276,8 +276,8 @@ describe("cronjob-result.controller", () => {
           namespace: "ns-test",
           compliance_status: "success",
           indexed: true,
-          // rota padronizada: /agent/cronjob/status/:execId
-          statusEndpoint: "/agent/cronjob/status/exec-123",
+          // rota padronizada: /api/cronjob/status/:execId
+          statusEndpoint: "/api/cronjob/status/exec-123",
         }),
       );
     });
