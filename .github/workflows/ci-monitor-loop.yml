@@ -62,6 +62,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v4
@@ -306,8 +307,26 @@ jobs:
           SOURCE_REPO="${{ steps.inputs.outputs.source_repo }}"
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          TITLE="[AutoPilot] Corporate CI $OVERALL: $COMPONENT $VERSION @ $NOW"
-          BODY="Corporate CI failed and auto-fix has been dispatched.
+          # Dedup: check if an open issue already exists for this component CI failure
+          EXISTING_ISSUE=$(gh issue list \
+            --repo "$AUTOPILOT_REPO" \
+            --state open \
+            --search "Corporate CI" \
+            --json title,number \
+            --jq "[.[] | select(.title | test(\"Corporate CI.*$COMPONENT\"))] | .[0].number // empty" \
+            2>/dev/null || echo "")
+
+          if [ -n "$EXISTING_ISSUE" ]; then
+            echo "::notice ::Existing CI failure issue #$EXISTING_ISSUE for $COMPONENT — adding comment instead"
+            gh issue comment "$EXISTING_ISSUE" \
+              --repo "$AUTOPILOT_REPO" \
+              --body "**Update**: CI still failing at $NOW
+          Outcome: $OVERALL | SHA: $COMMIT_SHA | Run: $FAILED_URL
+          Auto-fix dispatched again (ci-diagnose + fix-corporate-ci)." \
+              2>/dev/null || true
+          else
+            TITLE="[AutoPilot] Corporate CI $OVERALL: $COMPONENT $VERSION"
+            BODY="Corporate CI failed and auto-fix has been dispatched.
 
           Component: $COMPONENT
           Version: $VERSION
@@ -324,12 +343,13 @@ jobs:
           If this issue persists after auto-fix, manual intervention is needed.
           Check: state/workspaces/ws-default/ci-logs-${COMPONENT}-*.txt on autopilot-state branch."
 
-          gh issue create \
-            --repo "$AUTOPILOT_REPO" \
-            --title "$TITLE" \
-            --body "$BODY" \
-            2>/dev/null || echo "::warning ::Could not create failure notification issue"
-          echo "::notice ::CI failure issue created for $COMPONENT"
+            gh issue create \
+              --repo "$AUTOPILOT_REPO" \
+              --title "$TITLE" \
+              --body "$BODY" \
+              2>/dev/null || echo "::warning ::Could not create failure notification issue"
+            echo "::notice ::CI failure issue created for $COMPONENT"
+          fi
 
       # ── 4. Save result to autopilot-state ────────────────────────────────────
       - name: "Save monitor result to state"
