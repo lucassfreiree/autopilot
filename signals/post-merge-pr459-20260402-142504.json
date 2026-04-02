@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 459,
+  "branch": "codex/fix-controller-3-8-1-tsconfig-20260402",
+  "timestamp": "2026-04-02T14:25:04Z",
+  "runId": "23905320303",
+  "healthStatus": "degraded"
+}
