@@ -1,13 +1,17 @@
-name: "[Core] Auto-Merge Sweeper"
-run-name: "${{ github.workflow }} • sweep open agent PRs"
+name: "[Core] Smart PR Manager"
+run-name: "${{ github.workflow }} • sweep open PRs"
 
-# DEFINITIVE auto-merge solution. Runs every 5 minutes.
+# INTELLIGENT PR management. Runs every 5 minutes.
 # Handles EVERYTHING automatically:
 # - Draft PRs → mark as ready
 # - Conflict PRs → update branch (rebase from main)
 # - Pending checks → skip merge-related suites, merge if real checks pass
 # - Approval → auto-approve via review
 # - Merge → squash merge + cleanup branch
+# - Fork PRs (codex) → merge if green, close if stale (>3 days with conflicts)
+# - Dependabot stale → comment @dependabot rebase, close if >7 days
+# - Dangerous PRs (CODEOWNERS) → auto-close with explanation
+# - Unmergeable PRs → escalate to @claude after 2 days
 # ZERO manual intervention required.
 
 on:
@@ -40,6 +44,8 @@ jobs:
             const repo = context.repo.repo;
             const mergedPRs = [];
             const skippedPRs = [];
+            const closedPRs = [];
+            const escalatedPRs = [];
 
             // List all open PRs
             const { data: prs } = await github.rest.pulls.list({
@@ -53,12 +59,42 @@ jobs:
 
             core.notice(`Found ${prs.length} open PR(s). Processing...`);
 
+            // ── HELPER: Age in days ──
+            const ageDays = (dateStr) => Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+
+            // ── HELPER: Check for dangerous files ──
+            const dangerousPatterns = ['CODEOWNERS'];
+            const isDangerous = async (prNum) => {
+              try {
+                const { data: files } = await github.rest.pulls.listFiles({
+                  owner, repo, pull_number: prNum, per_page: 100
+                });
+                return files.some(f => dangerousPatterns.some(p => f.filename.includes(p)));
+              } catch { return false; }
+            };
+
             for (const pr of prs) {
               const branch = pr.head.ref;
               const prNumber = pr.number;
+              const age = ageDays(pr.created_at);
+              const isFork = !(pr.head.repo && pr.head.repo.full_name === pr.base.repo.full_name);
+              const isDependabot = pr.user.login === 'dependabot[bot]';
+
+              // ── GATE 0: Dangerous PRs (CODEOWNERS, etc) → auto-close ──
+              if (await isDangerous(prNumber)) {
+                core.warning(`PR #${prNumber}: modifies dangerous file (CODEOWNERS) — auto-closing.`);
+                try {
+                  await github.rest.issues.createComment({
+                    owner, repo, issue_number: prNumber,
+                    body: '⚠️ **Auto-closed by Smart PR Manager**: This PR modifies `CODEOWNERS` which would block the autonomous agent workflow. If this change is needed, request explicit owner approval first.'
+                  });
+                  await github.rest.pulls.update({ owner, repo, pull_number: prNumber, state: 'closed' });
+                  closedPRs.push(`#${prNumber}: dangerous file (CODEOWNERS)`);
+                } catch (e) { core.warning(`#${prNumber}: close failed: ${e.message}`); }
+                continue;
+              }
 
               // Agent branches from registry + dependabot
-              // Reads prefixes from contracts/agent-registry.json (allKnownPrefixes)
               const knownPrefixes = ['claude/', 'copilot/', 'codex/', 'agent/', 'devin/', 'dependabot/'];
               const isAgent = knownPrefixes.some(p => branch.startsWith(p));
               if (!isAgent) {
@@ -72,11 +108,57 @@ jobs:
                 continue;
               }
 
-              // Skip forks
-              const sameRepo = pr.head.repo && pr.head.repo.full_name === pr.base.repo.full_name;
-              if (!sameRepo) {
-                skippedPRs.push(`#${prNumber}: fork`);
-                continue;
+              // ── GATE 1: Stale dependabot PRs → rebase or close ──
+              if (isDependabot) {
+                if (age > 7) {
+                  core.notice(`PR #${prNumber}: dependabot stale (${age} days) — closing.`);
+                  try {
+                    await github.rest.issues.createComment({
+                      owner, repo, issue_number: prNumber,
+                      body: `Closing: stale for ${age} days. @dependabot recreate`
+                    });
+                    await github.rest.pulls.update({ owner, repo, pull_number: prNumber, state: 'closed' });
+                    closedPRs.push(`#${prNumber}: dependabot stale ${age}d`);
+                  } catch (e) { core.warning(`#${prNumber}: close failed: ${e.message}`); }
+                  continue;
+                }
+                if (age > 2) {
+                  // Try to rebase dependabot PR
+                  try {
+                    await github.rest.issues.createComment({
+                      owner, repo, issue_number: prNumber,
+                      body: '@dependabot rebase'
+                    });
+                    core.notice(`PR #${prNumber}: requested dependabot rebase.`);
+                  } catch (e) {}
+                  // Don't skip — still try to merge below
+                }
+              }
+
+              // ── GATE 2: Fork PRs (codex) — can't update branch, handle differently ──
+              if (isFork) {
+                // Try to merge directly — if green, it works
+                const { data: prDetail } = await github.rest.pulls.get({
+                  owner, repo, pull_number: prNumber
+                });
+
+                if (prDetail.mergeable === false || prDetail.mergeable_state === 'dirty') {
+                  if (age > 3) {
+                    core.notice(`PR #${prNumber}: fork with conflicts for ${age} days — closing.`);
+                    try {
+                      await github.rest.issues.createComment({
+                        owner, repo, issue_number: prNumber,
+                        body: `⚠️ **Auto-closed by Smart PR Manager**: Fork PR with unresolved conflicts for ${age} days. Cannot update fork branches automatically. Please rebase on latest \`main\` and reopen, or the change will be re-applied if still needed.`
+                      });
+                      await github.rest.pulls.update({ owner, repo, pull_number: prNumber, state: 'closed' });
+                      closedPRs.push(`#${prNumber}: fork conflicts ${age}d`);
+                    } catch (e) { core.warning(`#${prNumber}: close failed: ${e.message}`); }
+                    continue;
+                  }
+                  skippedPRs.push(`#${prNumber}: fork with conflicts (${age}d old, closes at 3d)`);
+                  continue;
+                }
+                // Fork is mergeable — fall through to merge logic below
               }
 
               // ── STEP 1: Draft → Ready ──
@@ -133,10 +215,36 @@ jobs:
                   });
                   core.notice(`PR #${prNumber}: branch updated. Will merge on next sweep.`);
                 } catch (e) {
-                  core.warning(`PR #${prNumber}: could not update branch: ${e.message}. Manual conflict resolution needed.`);
-                  // Try to close and reopen with a new branch as last resort
+                  core.warning(`PR #${prNumber}: could not update branch: ${e.message}`);
+                  // Stale with unresolvable conflicts → escalate or close
+                  if (age > 5) {
+                    core.notice(`PR #${prNumber}: conflicts for ${age} days — closing.`);
+                    try {
+                      await github.rest.issues.createComment({
+                        owner, repo, issue_number: prNumber,
+                        body: `⚠️ **Auto-closed by Smart PR Manager**: Unresolvable merge conflicts for ${age} days. Branch update failed. The change will be re-applied by Claude Code if still needed.`
+                      });
+                      await github.rest.pulls.update({ owner, repo, pull_number: prNumber, state: 'closed' });
+                      closedPRs.push(`#${prNumber}: conflicts ${age}d`);
+                    } catch (closeErr) { core.warning(`#${prNumber}: close failed: ${closeErr.message}`); }
+                  } else if (age > 2) {
+                    // Escalate to @claude for intelligent conflict resolution
+                    try {
+                      const existingComments = await github.rest.issues.listComments({
+                        owner, repo, issue_number: prNumber, per_page: 50
+                      });
+                      const alreadyEscalated = existingComments.data.some(c => c.body.includes('@claude'));
+                      if (!alreadyEscalated) {
+                        await github.rest.issues.createComment({
+                          owner, repo, issue_number: prNumber,
+                          body: `@claude This PR has merge conflicts that auto-update cannot resolve (${age} days old). Please diagnose the conflicts, apply the changes from this branch onto latest main, and create a new clean PR. Branch: \`${branch}\``
+                        });
+                        escalatedPRs.push(`#${prNumber}: conflicts escalated to @claude`);
+                      }
+                    } catch (escErr) { core.warning(`#${prNumber}: escalation failed: ${escErr.message}`); }
+                  }
                 }
-                continue; // Next sweep after branch update
+                continue;
               }
 
               // ── STEP 4: Check suites (skip merge-related workflows) ──
@@ -177,7 +285,37 @@ jobs:
 
               if (failed.length > 0) {
                 core.warning(`PR #${prNumber}: ${failed.length} check(s) failed.`);
-                skippedPRs.push(`#${prNumber}: checks failed`);
+                // If checks have been failing for >1 day, escalate to @claude
+                if (age > 1) {
+                  try {
+                    const { data: existingComments } = await github.rest.issues.listComments({
+                      owner, repo, issue_number: prNumber, per_page: 50
+                    });
+                    const alreadyEscalated = existingComments.data
+                      ? existingComments.data.some(c => c.body && c.body.includes('@claude') && c.body.includes('checks failed'))
+                      : existingComments.some(c => c.body && c.body.includes('@claude') && c.body.includes('checks failed'));
+                    if (!alreadyEscalated) {
+                      await github.rest.issues.createComment({
+                        owner, repo, issue_number: prNumber,
+                        body: `@claude This PR has ${failed.length} failing check(s) for ${age} day(s). Please investigate the CI failures, fix the issues, and push to branch \`${branch}\`. If unfixable, close this PR and re-apply the changes cleanly.`
+                      });
+                      escalatedPRs.push(`#${prNumber}: CI failed, escalated to @claude`);
+                    }
+                  } catch (e) { core.warning(`#${prNumber}: escalation failed: ${e.message}`); }
+                }
+                // Close if failing for >5 days
+                if (age > 5) {
+                  try {
+                    await github.rest.issues.createComment({
+                      owner, repo, issue_number: prNumber,
+                      body: `⚠️ **Auto-closed by Smart PR Manager**: CI checks failing for ${age} days without resolution. The change will be re-applied by Claude Code if still needed.`
+                    });
+                    await github.rest.pulls.update({ owner, repo, pull_number: prNumber, state: 'closed' });
+                    closedPRs.push(`#${prNumber}: CI failed ${age}d`);
+                  } catch (e) { core.warning(`#${prNumber}: close failed: ${e.message}`); }
+                } else {
+                  skippedPRs.push(`#${prNumber}: checks failed (${age}d, escalates at 1d, closes at 5d)`);
+                }
                 continue;
               }
 
@@ -205,16 +343,24 @@ jobs:
             }
 
             // Summary
-            const lines = [`## Auto-Merge Sweeper — ${new Date().toISOString()}`];
+            const lines = [`## Smart PR Manager — ${new Date().toISOString()}`];
             if (mergedPRs.length > 0) {
-              lines.push(`\n### Merged (${mergedPRs.length})`);
+              lines.push(`\n### ✅ Merged (${mergedPRs.length})`);
               mergedPRs.forEach(p => lines.push(`- ${p}`));
             }
+            if (closedPRs.length > 0) {
+              lines.push(`\n### 🗑️ Closed (${closedPRs.length})`);
+              closedPRs.forEach(p => lines.push(`- ${p}`));
+            }
+            if (escalatedPRs.length > 0) {
+              lines.push(`\n### 🔔 Escalated to @claude (${escalatedPRs.length})`);
+              escalatedPRs.forEach(p => lines.push(`- ${p}`));
+            }
             if (skippedPRs.length > 0) {
-              lines.push(`\n### Skipped (${skippedPRs.length})`);
+              lines.push(`\n### ⏭️ Skipped (${skippedPRs.length})`);
               skippedPRs.forEach(p => lines.push(`- ${p}`));
             }
-            if (mergedPRs.length === 0 && skippedPRs.length === 0) {
-              lines.push('\nNo open agent PRs found.');
+            if (mergedPRs.length === 0 && skippedPRs.length === 0 && closedPRs.length === 0) {
+              lines.push('\nNo open PRs found.');
             }
             await core.summary.addRaw(lines.join('\n')).write();
