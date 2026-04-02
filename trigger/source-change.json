@@ -14,5 +14,5 @@
   "commit_message": "fix(controller): replace tsconfig — remove types restriction + add ignoreDeprecations 6.0 (v3.8.0)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 96
+  "run": 97
 }

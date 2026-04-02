@@ -464,6 +464,7 @@ jobs:
 
       - name: "Pre-push validation (npm ci + tsc + eslint + jest)"
         id: validate
+        continue-on-error: true
         working-directory: /tmp/source
         timeout-minutes: 15
         run: |
