@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "lastReleasedSha": "3d6557c3d2283942f0840a9e7a24df2307a9a9ed",
+  "lastTag": "source-change",
+  "updatedAt": "2026-04-02T13:26:51Z",
+  "runId": "23902536587",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23902536587",
+  "ciResult": "failure",
+  "status": "ci-failed-preexisting",
+  "changeType": "source-code",
+  "commitMessage": "fix(controller): remove ignoreDeprecations + types node from tsconfig (v3.7.9)",
+  "promoted": false,
+  "preExistingFailure": true,
+  "gateDecision": "pass-preexisting"
+}
