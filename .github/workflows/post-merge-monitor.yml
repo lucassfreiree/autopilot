@@ -259,3 +259,190 @@ jobs:
               echo "> ✅ Post-merge health check passed."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ─── Auto-update session memory + detect undocumented artifacts ──────────
+  auto-update-docs:
+    name: "Auto-update memory & docs"
+    needs: [check-merged, health-check]
+    if: needs.check-merged.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.RELEASE_TOKEN }}
+          fetch-depth: 2
+
+      - name: "1. Register PR in session memory"
+        id: memory
+        run: |
+          set -e
+          PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+          BRANCH="${{ needs.check-merged.outputs.branch }}"
+          SHA="${{ needs.check-merged.outputs.sha }}"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          HEALTH="${{ needs.health-check.outputs.health_status }}"
+
+          # Get PR title from the merge commit message (first line)
+          PR_TITLE=$(git log -1 --format="%s" "$SHA" 2>/dev/null || echo "PR #$PR_NUMBER")
+
+          # Get changed files in this merge
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          NEW_WORKFLOWS=$(echo "$CHANGED_FILES" | grep -c '\.github/workflows/.*\.yml$' || echo "0")
+          NEW_CONTRACTS=$(echo "$CHANGED_FILES" | grep -c 'contracts/.*\.json$' || echo "0")
+          NEW_TRIGGERS=$(echo "$CHANGED_FILES" | grep -c 'trigger/.*\.json$' || echo "0")
+          NEW_SCHEMAS=$(echo "$CHANGED_FILES" | grep -c 'schemas/.*\.json$' || echo "0")
+
+          # Update session memory: add PR to latest session or create entry
+          if [ -f contracts/claude-session-memory.json ]; then
+            jq --arg ts "$NOW" \
+               --arg pr "#$PR_NUMBER" \
+               --arg title "$PR_TITLE" \
+               --arg health "$HEALTH" \
+               '.lastUpdated = $ts |
+                .currentState.lastMergedPR = $pr |
+                .currentState.lastMergedTitle = $title |
+                .currentState.lastMergedHealth = $health' \
+               contracts/claude-session-memory.json > /tmp/mem-updated.json && \
+               mv /tmp/mem-updated.json contracts/claude-session-memory.json
+            echo "::notice ::Session memory updated with PR #$PR_NUMBER"
+          fi
+
+          echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED_FILES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "new_workflows=$NEW_WORKFLOWS" >> "$GITHUB_OUTPUT"
+          echo "new_contracts=$NEW_CONTRACTS" >> "$GITHUB_OUTPUT"
+          echo "new_triggers=$NEW_TRIGGERS" >> "$GITHUB_OUTPUT"
+          echo "new_schemas=$NEW_SCHEMAS" >> "$GITHUB_OUTPUT"
+          echo "pr_title=$PR_TITLE" >> "$GITHUB_OUTPUT"
+
+      - name: "2. Detect undocumented artifacts in CLAUDE.md"
+        id: scan
+        run: |
+          set -e
+          MISSING_ITEMS=""
+          MISSING_COUNT=0
+
+          # Scan workflows not in CLAUDE.md
+          for wf in .github/workflows/*.yml; do
+            WF_NAME=$(basename "$wf")
+            if ! grep -qF "$WF_NAME" CLAUDE.md 2>/dev/null; then
+              # Get workflow display name
+              WF_DISPLAY=$(grep -m1 '^name:' "$wf" | sed 's/^name:\s*//' | tr -d '"' || echo "$WF_NAME")
+              MISSING_ITEMS="${MISSING_ITEMS}\n- Workflow: \`$WF_NAME\` ($WF_DISPLAY)"
+              MISSING_COUNT=$((MISSING_COUNT + 1))
+            fi
+          done
+
+          # Scan trigger files not in CLAUDE.md
+          for tf in trigger/*.json; do
+            [ -f "$tf" ] || continue
+            TF_NAME=$(basename "$tf")
+            if ! grep -qF "$TF_NAME" CLAUDE.md 2>/dev/null; then
+              MISSING_ITEMS="${MISSING_ITEMS}\n- Trigger: \`$TF_NAME\`"
+              MISSING_COUNT=$((MISSING_COUNT + 1))
+            fi
+          done
+
+          # Scan contracts not in CLAUDE.md
+          for cf in contracts/*.json; do
+            [ -f "$cf" ] || continue
+            CF_NAME=$(basename "$cf")
+            if ! grep -qF "$CF_NAME" CLAUDE.md 2>/dev/null; then
+              MISSING_ITEMS="${MISSING_ITEMS}\n- Contract: \`$CF_NAME\`"
+              MISSING_COUNT=$((MISSING_COUNT + 1))
+            fi
+          done
+
+          # Scan schemas not in CLAUDE.md
+          for sf in schemas/*.json; do
+            [ -f "$sf" ] || continue
+            SF_NAME=$(basename "$sf")
+            if ! grep -qF "$SF_NAME" CLAUDE.md 2>/dev/null; then
+              MISSING_ITEMS="${MISSING_ITEMS}\n- Schema: \`$SF_NAME\`"
+              MISSING_COUNT=$((MISSING_COUNT + 1))
+            fi
+          done
+
+          echo "missing_count=$MISSING_COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$MISSING_COUNT" -gt 0 ]; then
+            echo "missing_items<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$MISSING_ITEMS" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "::warning ::Found $MISSING_COUNT undocumented artifacts in CLAUDE.md"
+          else
+            echo "::notice ::All artifacts are documented in CLAUDE.md"
+          fi
+
+      - name: "3. Commit memory update"
+        run: |
+          set -e
+          git config user.name "autopilot-bot"
+          git config user.email "autopilot@users.noreply.github.com"
+
+          git add contracts/claude-session-memory.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "::notice ::No memory changes to commit"
+          else
+            PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+            git commit -m "chore(auto): update session memory after PR #$PR_NUMBER [skip ci]"
+            git push origin main 2>/dev/null || echo "::warning ::Could not push memory update (non-fatal)"
+            echo "::notice ::Session memory auto-committed"
+          fi
+
+      - name: "4. Create @claude issue if undocumented artifacts found"
+        if: steps.scan.outputs.missing_count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          MISSING_COUNT="${{ steps.scan.outputs.missing_count }}"
+          MISSING_ITEMS="${{ steps.scan.outputs.missing_items }}"
+          PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
+
+          # Only create issue if significant (>3 missing items) to avoid noise
+          if [ "$MISSING_COUNT" -le 3 ]; then
+            echo "::notice ::Only $MISSING_COUNT undocumented items — below threshold, logging only"
+            exit 0
+          fi
+
+          EXISTING=$(gh api "repos/$REPO/issues?labels=needs-claude,docs-update&state=open&per_page=3" \
+            --jq 'length' 2>/dev/null || echo "0")
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "::notice ::Existing docs-update issue — skipping"
+            exit 0
+          fi
+
+          gh api "repos/$REPO/issues" --method POST \
+            -f "title=📝 $MISSING_COUNT undocumented artifacts found after PR #$PR_NUMBER — @claude" \
+            -f "body=## Auto-Documentation Request
+
+          After merging PR #$PR_NUMBER, the post-merge monitor detected **$MISSING_COUNT artifacts** not documented in \`CLAUDE.md\`.
+
+          ### Missing Items
+          $MISSING_ITEMS
+
+          ### Required Actions
+          @claude Update \`CLAUDE.md\` to include all missing artifacts:
+          - Add missing workflows to the Workflows table
+          - Add missing triggers to the Trigger Files table
+          - Add missing contracts to the Key Files section
+          - Add missing schemas to the Schemas table
+
+          _Auto-generated by post-merge-monitor auto-update-docs._" \
+            -f "labels=[\"needs-claude\",\"docs-update\",\"auto-generated\"]" 2>/dev/null || true
+
+      - name: "5. Step summary"
+        if: always()
+        run: |
+          {
+            echo "## Auto-Update Docs Report"
+            echo "| Metric | Value |"
+            echo "|--------|-------|"
+            echo "| PR | #${{ needs.check-merged.outputs.pr_number }} |"
+            echo "| Memory updated | Yes |"
+            echo "| New workflows in PR | ${{ steps.memory.outputs.new_workflows }} |"
+            echo "| New contracts in PR | ${{ steps.memory.outputs.new_contracts }} |"
+            echo "| Undocumented items | ${{ steps.scan.outputs.missing_count }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
