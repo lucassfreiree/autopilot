@@ -291,6 +291,26 @@ jobs:
             --field "labels=[\"workflow-health\",\"critical\",\"auto-generated\"]" \
             > /dev/null 2>&1 || echo "::warning ::Failed to create alert issue"
 
+          # Escalate to Claude Code for intelligent resolution
+          ESCALATION_BODY="## Auto-Escalation from Workflow Health Monitor
+
+          $CRITICAL workflow(s) in critical state (5+ consecutive failures). Auto-repair was triggered but the issue persists.
+
+          ### What to do
+          @claude Check the workflow health monitor at .github/workflows/workflow-health-monitor.yml. $CRITICAL workflows have 5+ consecutive failures. Diagnose root causes, check workflow YAML for syntax errors or missing secrets, fix and re-enable. Use ci-fix and incident-response skills.
+
+          ### Context
+          - Session memory: contracts/claude-session-memory.json
+          - Workflow health: workflow-health-monitor.yml latest run
+          - CI fix patterns: .claude/skills/ci-fix.md"
+
+          gh api "repos/$REPO/issues" \
+            --method POST \
+            --field "title=[AutoPilot] @claude Health monitor escalation — $CRITICAL critical workflow(s) need fix" \
+            --field "body=$ESCALATION_BODY" \
+            --field "labels=[\"automated\",\"needs-claude\",\"workflow-health\"]" \
+            > /dev/null 2>&1 || echo "::warning ::Could not create Claude escalation issue"
+
   auto-repair:
     name: "Trigger auto-repair"
     needs: monitor

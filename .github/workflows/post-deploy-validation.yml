@@ -220,3 +220,29 @@ jobs:
             -f title="[Alert] Post-deploy validation failed: $COMP v$VER" \
             -F body=@- \
             -f "labels[]=bug" -f "labels[]=deploy" 2>/dev/null || echo "::warning ::Failed to create issue"
+
+          # Escalate to Claude Code for intelligent diagnosis and fix
+          ESCALATION_BODY="## Auto-Escalation from Post-Deploy Validation
+
+          Deploy of ${COMP} v${VER} failed validation checks.
+
+          - Source version: ${SRC_RESULT} (${SRC_REAL})
+          - CAP tag: ${CAP_RESULT} (${CAP_TAG})
+          - Autopilot state: ${STATE_RESULT}
+          - Corporate CI: ${CI_OUTCOME}
+
+          ### What to do
+          @claude Post-deploy validation failed for ${COMP} v${VER}. Diagnose which check failed and why. If source version mismatch: check apply-source-change logs. If CAP not promoted: trigger promote-cap. If CI failed: read ci-logs and create fix patch. Use ci-fix, deploy-monitor, and incident-response skills.
+
+          ### Context
+          - Session memory: contracts/claude-session-memory.json
+          - CI fix patterns: .claude/skills/ci-fix.md
+          - Deploy monitor: .claude/skills/deploy-monitor.md
+          - Incident response: .claude/skills/incident-response.md"
+
+          gh api "repos/${{ github.repository }}/issues" \
+            --method POST \
+            -f title="[AutoPilot] @claude Post-deploy validation failed: $COMP v$VER — needs intelligent fix" \
+            -F body="$ESCALATION_BODY" \
+            -f "labels[]=automated" -f "labels[]=needs-claude" -f "labels[]=deploy" \
+            > /dev/null 2>&1 || echo "::warning ::Could not create Claude escalation issue"
