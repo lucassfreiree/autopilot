@@ -6,6 +6,12 @@
   "version": "3.7.9",
   "changes": [
     {
+      "action": "search-replace",
+      "target_path": "tsconfig.json",
+      "search": "\"compilerOptions\": {",
+      "replace": "\"compilerOptions\": { \"ignoreDeprecations\": \"6.0\","
+    },
+    {
       "action": "replace-file",
       "target_path": "src/routes/agentsRouter.ts",
       "content_ref": "patches/agentsRouter.ts"
@@ -24,22 +30,10 @@
       "action": "replace-file",
       "target_path": "src/swagger/swagger.json",
       "content_ref": "patches/controller-swagger.json"
-    },
-    {
-      "action": "search-replace",
-      "target_path": "package.json",
-      "search": "\"version\": \"3.7.8\"",
-      "replace": "\"version\": \"3.7.9\""
-    },
-    {
-      "action": "search-replace",
-      "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.8\"",
-      "replace": "\"version\": \"3.7.9\""
     }
   ],
-  "commit_message": "refactor(controller): padroniza rotas cronjob para /agent/cronjob/* + version 3.7.9",
+  "commit_message": "fix(controller): tsconfig ignoreDeprecations TS5107 + rotas cronjob /agent/* (v3.7.9)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 87
+  "run": 88
 }
