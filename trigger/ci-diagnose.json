@@ -2,7 +2,6 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "controller",
-  "commit_sha": "efe4f2b08473c2dd24545e228c799052c0cb274c",
-  "note": "Diagnose controller 3.8.0 CI after tsconfig deprecation-guard restore",
-  "run": 30
+  "note": "Diagnose latest controller commit after run93 tsconfig types removal on 3.8.0",
+  "run": 29
 }
