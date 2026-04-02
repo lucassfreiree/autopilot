@@ -8,32 +8,12 @@
     {
       "action": "search-replace",
       "target_path": "tsconfig.json",
-      "search": "\"ignoreDeprecations\": \"6.0\",",
-      "replace": "\"ignoreDeprecations\": \"6.0\", \"types\": [\"node\"],"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/routes/agentsRouter.ts",
-      "content_ref": "patches/agentsRouter.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/controllers/cronjob-result.controller.ts",
-      "content_ref": "patches/cronjob-result.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/unit/cronjob-result.controller.test.ts",
-      "content_ref": "patches/cronjob-result.controller.test.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/swagger/swagger.json",
-      "content_ref": "patches/controller-swagger.json"
+      "search": "\"ignoreDeprecations\": \"6.0\", \"types\": [\"node\"],",
+      "replace": "\"types\": [\"node\"],"
     }
   ],
-  "commit_message": "fix(controller): tsconfig types node TS2591 + rotas cronjob /agent/* (v3.7.9)",
+  "commit_message": "fix(controller): remove invalid ignoreDeprecations from tsconfig (v3.7.9)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 89
+  "run": 90
 }
