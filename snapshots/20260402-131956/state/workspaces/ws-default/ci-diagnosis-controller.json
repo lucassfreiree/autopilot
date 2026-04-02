@@ -1,0 +1,19 @@
+{
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "sourceRepo": "bbvinet/psc-sre-automacao-controller",
+  "commitSha": "3d6557c3d2283942f0840a9e7a24df2307a9a9ed",
+  "commitMessage": "fix(controller): remove ignoreDeprecations + types node from tsconfig (v3.7.9)",
+  "commitAuthor": "github-actions",
+  "diagnosedAt": "2026-04-02T13:28:56Z",
+  "runId": "23902746488",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23902746488",
+  "reproduction": {
+    "scripts": "  build: tsc -p ./tsconfig.json\n  debug: tsc && node --inspect=9229 dist/server.js\n  lint: tsc --noEmit && eslint . --quiet --fix --resolve-plugins-relative-to .\n  start: node dist/server.js\n  prestart: npm run build\n  dev: nodemon --watch src --exec ts-node-dev src/server.ts\n  test: jest\n  unitTest: jest --testPathPattern=ut.test\\.ts$\n  integrationTest: jest --testPathPattern=it.test\\.ts$ --detectOpenHandles --passWithNoTests --forceExit\n",
+    "lintErrors": [],
+    "buildSuccess": false,
+    "buildLog": "\n> psc-sre-automacao-controller@3.7.9 build\n> tsc -p ./tsconfig.json\n\nerror TS2688: Cannot find type definition file for 'node'.\n  The file is in the program because:\n    Entry point of type library 'node' specified in compilerOptions\ntsconfig.json(5,25): error TS5107: Option 'moduleResolution=node10' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '\"ignoreDeprecations\": \"6.0\"' to silence this error.\n  Visit https://aka.ms/ts6 for migration information.\n",
+    "testSuccess": true,
+    "testLog": "\n> psc-sre-automacao-controller@3.7.9 test\n> jest\n\nsh: 1: jest: not found\n"
+  }
+}
