@@ -129,48 +129,85 @@ jobs:
           set -e
           TRACKER=$(echo "${{ steps.read.outputs.tracker_b64 }}" | base64 -d 2>/dev/null)
           IMPROVEMENTS_MADE=0
+          MATCHED=0
+          UNMATCHED=0
           RECOMMENDATIONS=""
+          UNMATCHED_ITEMS=""
 
-          # Known auto-fixable patterns
-          # Pattern: workflow fails because of YAML syntax
-          # Fix: builds-validation-gate should catch this before merge
-          # Pattern: CI fails because of lint errors
-          # Fix: ci-self-heal should auto-fix lint
-          # Pattern: deploy blocked by compliance
-          # Fix: pre-commit-validate.sh should catch before commit
+          # Load resilience patterns from contract
+          RESILIENCE=$(cat contracts/resilience-patterns.json 2>/dev/null || echo '{"patterns":[]}')
+          PATTERN_COUNT=$(echo "$RESILIENCE" | jq '.patterns | length')
+          echo "::notice ::Loaded $PATTERN_COUNT resilience patterns"
 
-          # Analyze each open improvement item
-          echo "$TRACKER" | jq -c '.improvementLog[] | select(.status == "open")' 2>/dev/null | while IFS= read -r item; do
+          # Load session memory error recovery patterns
+          MEMORY_PATTERNS=$(jq -r '.commonPatterns.errorRecovery // {} | keys[]' contracts/claude-session-memory.json 2>/dev/null || echo "")
+
+          # Analyze each open improvement item against resilience patterns
+          ITEMS_FILE=$(mktemp)
+          echo "$TRACKER" | jq -c '.improvementLog[] | select(.status == "open")' 2>/dev/null > "$ITEMS_FILE" || true
+
+          while IFS= read -r item; do
             [ -z "$item" ] && continue
             WF=$(echo "$item" | jq -r '.workflow')
             REASON=$(echo "$item" | jq -r '.reason')
-
             echo "::notice ::Analyzing: $WF — $REASON"
 
-            # Match known improvement patterns
-            case "$REASON" in
-              *"lint"*|*"eslint"*|*"ESLint"*)
-                RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF**: Add ESLint autofix to ci-self-heal patterns"
-                ;;
-              *"compliance"*|*"blocked"*)
-                RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF**: Improve pre-commit validation to catch violations earlier"
-                ;;
-              *"timeout"*|*"stuck"*)
-                RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF**: Increase timeout or add circuit breaker"
-                ;;
-              *"conflict"*|*"merge"*)
-                RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF**: Smart PR Manager should auto-rebase earlier"
-                ;;
-              *"token"*|*"auth"*|*"403"*|*"401"*)
-                RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF**: Check token expiry and add token rotation"
-                ;;
-              *)
-                RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF**: Unknown pattern — needs Claude analysis: $REASON"
-                ;;
-            esac
-          done
+            # Step 1: Match against resilience-patterns.json
+            PATTERN_MATCH=""
+            while IFS= read -r pattern; do
+              [ -z "$pattern" ] && continue
+              TRIGGER=$(echo "$pattern" | jq -r '.trigger')
+              if echo "$REASON" | grep -qiE "$TRIGGER" 2>/dev/null; then
+                PATTERN_MATCH="$pattern"
+                break
+              fi
+            done < <(echo "$RESILIENCE" | jq -c '.patterns[]' 2>/dev/null)
+
+            if [ -n "$PATTERN_MATCH" ]; then
+              MATCHED=$((MATCHED + 1))
+              PID=$(echo "$PATTERN_MATCH" | jq -r '.id')
+              STRATEGY=$(echo "$PATTERN_MATCH" | jq -r '.workaround.strategy')
+              AUTO=$(echo "$PATTERN_MATCH" | jq -r '.autoFix')
+              RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF** [$PID]: $STRATEGY (autoFix=$AUTO)"
+
+              if [ "$AUTO" = "true" ]; then
+                IMPROVEMENTS_MADE=$((IMPROVEMENTS_MADE + 1))
+                echo "::notice ::Auto-fixable pattern matched: $PID for $WF"
+              fi
+              continue
+            fi
+
+            # Step 2: Match against session memory errorRecovery
+            MEMORY_MATCH=""
+            for key in $MEMORY_PATTERNS; do
+              if echo "$REASON" | grep -qiF "$key" 2>/dev/null; then
+                MEMORY_MATCH="$key"
+                break
+              fi
+            done
+
+            if [ -n "$MEMORY_MATCH" ]; then
+              MATCHED=$((MATCHED + 1))
+              FIX=$(jq -r ".commonPatterns.errorRecovery[\"$MEMORY_MATCH\"].fix // \"see memory\"" contracts/claude-session-memory.json 2>/dev/null)
+              RECOMMENDATIONS="${RECOMMENDATIONS}\n- **$WF** [memory:$MEMORY_MATCH]: $FIX"
+              continue
+            fi
+
+            # Step 3: Unmatched — needs auto-discovery
+            UNMATCHED=$((UNMATCHED + 1))
+            UNMATCHED_ITEMS="${UNMATCHED_ITEMS}\n- **$WF**: $REASON"
+          done < "$ITEMS_FILE"
+          rm -f "$ITEMS_FILE"
 
           echo "improvements_made=$IMPROVEMENTS_MADE" >> "$GITHUB_OUTPUT"
+          echo "matched=$MATCHED" >> "$GITHUB_OUTPUT"
+          echo "unmatched=$UNMATCHED" >> "$GITHUB_OUTPUT"
+
+          # Save recommendations for report
+          echo "$RECOMMENDATIONS" > /tmp/recommendations.txt
+          echo "$UNMATCHED_ITEMS" > /tmp/unmatched.txt
+
+          echo "::notice ::Pattern matching: $MATCHED matched, $UNMATCHED unmatched, $IMPROVEMENTS_MADE auto-fixable"
 
       - name: "4. Generate autonomy report"
         env:
@@ -214,14 +251,74 @@ jobs:
             fi
 
             echo ""
+            echo "## Resilience Pattern Matching"
+            echo "| Metric | Value |"
+            echo "|--------|-------|"
+            echo "| Patterns matched | ${{ steps.improve.outputs.matched }} |"
+            echo "| Unmatched (needs discovery) | ${{ steps.improve.outputs.unmatched }} |"
+            echo "| Auto-fixable | ${{ steps.improve.outputs.improvements_made }} |"
+            echo ""
+            RECS=$(cat /tmp/recommendations.txt 2>/dev/null || echo "None")
+            if [ -n "$RECS" ] && [ "$RECS" != "None" ]; then
+              echo "### Matched Workarounds"
+              echo -e "$RECS"
+            fi
+            UNMATCHED_LIST=$(cat /tmp/unmatched.txt 2>/dev/null || echo "")
+            if [ -n "$UNMATCHED_LIST" ]; then
+              echo ""
+              echo "### Unmatched — Auto-Discovery Needed"
+              echo -e "$UNMATCHED_LIST"
+            fi
+            echo ""
             echo "## All Workflows Status"
             echo "| Workflow | Rate | Streak | Status |"
             echo "|----------|------|--------|--------|"
             echo "$TRACKER" | jq -r '.workflows | to_entries | sort_by(-.value.autonomyRate) | .[] | "| \(.key) | \(.value.autonomyRate)% | \(.value.streak) | \(if .value.autonomyRate == 100 then "✅" elif .value.autonomyRate >= 80 then "🟡" else "🔴" end) |"' 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: "5. Escalate if autonomy degrading"
-        if: steps.read.outputs.global_rate != '100' && fromJSON(steps.read.outputs.total_runs) > 10
+      - name: "5. Auto-discovery: escalate unmatched patterns"
+        if: steps.improve.outputs.unmatched != '0'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          UNMATCHED="${{ steps.improve.outputs.unmatched }}"
+          UNMATCHED_LIST=$(cat /tmp/unmatched.txt 2>/dev/null || echo "No details")
+
+          EXISTING=$(gh api "repos/$REPO/issues?labels=needs-claude,auto-discovery&state=open&per_page=3" \
+            --jq 'length' 2>/dev/null || echo "0")
+          if [ "$EXISTING" -gt 0 ]; then
+            echo "::notice ::Existing auto-discovery issue — skipping"
+            exit 0
+          fi
+
+          gh api "repos/$REPO/issues" --method POST \
+            -f "title=🔍 Auto-discovery: $UNMATCHED unmatched failure patterns need workarounds — @claude" \
+            -f "body=## Auto-Discovery Request
+
+          The autonomy-improver found **$UNMATCHED failure pattern(s)** that don't match any known workaround in \`contracts/resilience-patterns.json\` or \`contracts/claude-session-memory.json\`.
+
+          ### Unmatched Patterns
+          $UNMATCHED_LIST
+
+          ### Required Actions
+          @claude For each unmatched pattern:
+          1. Analyze the error and root cause
+          2. Search for workarounds (check docs, web if needed)
+          3. Implement a fix or fallback mechanism
+          4. Add the new pattern to \`contracts/resilience-patterns.json\`
+          5. Add to \`contracts/claude-session-memory.json\` errorRecovery
+          6. Verify the workaround works
+
+          ### Reference
+          - Resilience patterns: \`contracts/resilience-patterns.json\`
+          - Session memory: \`contracts/claude-session-memory.json\`
+          - Fallback chains: see \`fallbackChain\` in resilience-patterns.json
+
+          _Auto-generated by autonomy-improver auto-discovery._" \
+            -f "labels=[\"needs-claude\",\"auto-discovery\",\"auto-generated\"]" 2>/dev/null || true
+
+      - name: "6. Escalate if autonomy degrading"
+        if: steps.improve.outputs.unmatched == '0' && steps.read.outputs.global_rate != '100' && fromJSON(steps.read.outputs.total_runs) > 10
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
