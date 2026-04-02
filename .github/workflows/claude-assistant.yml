@@ -6,9 +6,6 @@ run-name: "Claude responding to @claude mention"
 #   2. Anthropic API curl (Haiku) — lightweight AI response
 #   3. OpenAI API curl (GPT-4o-mini) — alternative AI provider
 #   4. Rule-based response — pattern match from resilience-patterns.json (ZERO cost)
-#
-# OWNER DIRECTIVE: This system must function autonomously without human dependency.
-# The @claude escalation path MUST always work — it's the self-improvement mechanism.
 
 on:
   issue_comment:
@@ -48,9 +45,9 @@ jobs:
         run: |
           CLEAN=$(echo "$COMMENT_BODY" | sed 's/@claude//g' | head -c 2000)
           {
-            echo "prompt<<EOF"
+            echo "prompt<<EOFPROMPT"
             echo "$CLEAN"
-            echo "EOF"
+            echo "EOFPROMPT"
           } >> "$GITHUB_OUTPUT"
           echo "title=$ISSUE_TITLE" >> "$GITHUB_OUTPUT"
 
@@ -68,27 +65,15 @@ jobs:
             echo "has_openai=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: "Build context for AI providers"
+      - name: "Build context"
         id: context
         run: |
-          # Compact project context for all AI fallbacks
-          MEMORY=$(jq -c '{
-            controller: .currentState.controllerVersion,
-            agent: .currentState.agentVersion,
-            lastPR: .currentState.lastMergedPR,
-            errors: (.commonPatterns.errorRecovery | keys | length)
-          }' contracts/claude-session-memory.json 2>/dev/null || echo '{}')
-
-          PATTERNS=$(jq -c '{
-            total: (.patterns | length),
-            autofix: ([.patterns[] | select(.autoFix == true)] | length),
-            categories: [.patterns[].category] | unique
-          }' contracts/resilience-patterns.json 2>/dev/null || echo '{}')
-
+          MEMORY=$(jq -c '{controller: .currentState.controllerVersion, agent: .currentState.agentVersion, lastPR: .currentState.lastMergedPR, errors: (.commonPatterns.errorRecovery | keys | length)}' contracts/claude-session-memory.json 2>/dev/null || echo '{}')
+          PATTERNS=$(jq -c '{total: (.patterns | length), autofix: ([.patterns[] | select(.autoFix == true)] | length)}' contracts/resilience-patterns.json 2>/dev/null || echo '{}')
           echo "memory=$MEMORY" >> "$GITHUB_OUTPUT"
           echo "patterns=$PATTERNS" >> "$GITHUB_OUTPUT"
 
-      # ── Level 1: Claude Code Action (Haiku) — full autonomous ─────────────
+      # ── Level 1: Claude Code Action (Haiku) ───────────────────────────────
       - uses: anthropics/claude-code-action@v1
         id: claude_action
         if: steps.check_keys.outputs.has_anthropic == 'true'
@@ -116,167 +101,122 @@ jobs:
       # ── Level 2: Anthropic API curl (Haiku) ───────────────────────────────
       - name: "Fallback L2: Anthropic API (Haiku)"
         id: fallback_anthropic
-        if: |
-          steps.check_keys.outputs.has_anthropic == 'true' &&
-          (steps.claude_action.outcome == 'failure' || steps.claude_action.outcome == 'skipped')
+        if: steps.check_keys.outputs.has_anthropic == 'true' && steps.claude_action.outcome == 'failure'
         continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TITLE: ${{ steps.prompt.outputs.title }}
+          REQUEST: ${{ steps.prompt.outputs.prompt }}
+          MEMORY: ${{ steps.context.outputs.memory }}
         run: |
-          TITLE="${{ steps.prompt.outputs.title }}"
-          REQUEST="${{ steps.prompt.outputs.prompt }}"
-          MEMORY="${{ steps.context.outputs.memory }}"
-
-          ESCAPED_PROMPT=$(jq -Rs . <<PROMPT_EOF
-          You are an AI assistant for Autopilot CI/CD (lucassfreiree/autopilot).
-          State: $MEMORY
-          Issue: $TITLE
-          Request: $REQUEST
-          Respond concisely. For code changes, describe what to change. For status, report from context.
-          PROMPT_EOF
-          )
-
+          FULL_PROMPT="You are an AI assistant for Autopilot CI/CD (lucassfreiree/autopilot). State: $MEMORY. Issue: $TITLE. Request: $REQUEST. Respond concisely."
+          ESCAPED=$(echo "$FULL_PROMPT" | jq -Rs .)
           RESPONSE=$(curl -s --max-time 30 -X POST "https://api.anthropic.com/v1/messages" \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
             -H "content-type: application/json" \
-            -d "{\"model\":\"claude-haiku-4-5-20251001\",\"max_tokens\":2048,\"messages\":[{\"role\":\"user\",\"content\":$ESCAPED_PROMPT}]}" \
-            2>/dev/null || echo "")
-
+            -d "{\"model\":\"claude-haiku-4-5-20251001\",\"max_tokens\":2048,\"messages\":[{\"role\":\"user\",\"content\":$ESCAPED}]}" 2>/dev/null || echo "")
           AI_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty' 2>/dev/null || echo "")
-
           if [ -n "$AI_TEXT" ]; then
             echo "responded=true" >> "$GITHUB_OUTPUT"
-            {
-              echo "response<<EOF"
-              echo "$AI_TEXT"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
+            echo "response<<EOFRESPONSE" >> "$GITHUB_OUTPUT"
+            echo "$AI_TEXT" >> "$GITHUB_OUTPUT"
+            echo "EOFRESPONSE" >> "$GITHUB_OUTPUT"
           else
             echo "responded=false" >> "$GITHUB_OUTPUT"
             ERROR=$(echo "$RESPONSE" | jq -r '.error.message // "unknown"' 2>/dev/null || echo "unknown")
-            echo "::warning ::Anthropic API failed: $ERROR"
+            echo "error=$ERROR" >> "$GITHUB_OUTPUT"
           fi
 
       - name: "Post Anthropic response"
         if: steps.fallback_anthropic.outputs.responded == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          RESPONSE_TEXT: ${{ steps.fallback_anthropic.outputs.response }}
         run: |
           ISSUE_NUM="${{ github.event.issue.number || github.event.pull_request.number }}"
           [ -z "$ISSUE_NUM" ] && exit 0
-          BODY="${{ steps.fallback_anthropic.outputs.response }}
+          BODY=$(printf '%s\n\n---\n_Response by Claude Haiku (API fallback)._' "$RESPONSE_TEXT")
+          gh api "repos/${{ github.repository }}/issues/$ISSUE_NUM/comments" --method POST -f "body=$BODY" 2>/dev/null || true
 
-          ---
-          _Response by Claude Haiku (API fallback). For full capabilities, ensure API credits._"
-          gh api "repos/${{ github.repository }}/issues/$ISSUE_NUM/comments" \
-            --method POST -f "body=$BODY" 2>/dev/null || true
-
-      # ── Level 3: OpenAI API (GPT-4o-mini) — alternative provider ──────────
+      # ── Level 3: OpenAI API (GPT-4o-mini) ─────────────────────────────────
       - name: "Fallback L3: OpenAI API (GPT-4o-mini)"
         id: fallback_openai
         if: |
           steps.check_keys.outputs.has_openai == 'true' &&
-          (steps.claude_action.outcome != 'success') &&
-          (steps.fallback_anthropic.outputs.responded != 'true')
+          steps.claude_action.outcome != 'success' &&
+          steps.fallback_anthropic.outputs.responded != 'true'
         continue-on-error: true
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TITLE: ${{ steps.prompt.outputs.title }}
+          REQUEST: ${{ steps.prompt.outputs.prompt }}
+          MEMORY: ${{ steps.context.outputs.memory }}
+          PATTERNS: ${{ steps.context.outputs.patterns }}
         run: |
-          TITLE="${{ steps.prompt.outputs.title }}"
-          REQUEST="${{ steps.prompt.outputs.prompt }}"
-          MEMORY="${{ steps.context.outputs.memory }}"
-          PATTERNS="${{ steps.context.outputs.patterns }}"
-
-          ESCAPED_PROMPT=$(jq -Rs . <<PROMPT_EOF
-          You are an AI assistant for the Autopilot CI/CD control plane (lucassfreiree/autopilot on GitHub).
-          This is a release orchestration system with self-healing workflows.
-
-          Current state: $MEMORY
-          Resilience patterns: $PATTERNS
-
-          Issue title: $TITLE
-          User request: $REQUEST
-
-          Respond concisely and helpfully. If it's a CI failure, suggest checking resilience-patterns.json.
-          If it's a status question, report from the context above.
-          If code changes are needed, describe the specific files and changes required.
-          PROMPT_EOF
-          )
-
+          FULL_PROMPT="You are an AI assistant for Autopilot CI/CD (lucassfreiree/autopilot). State: $MEMORY. Patterns: $PATTERNS. Issue: $TITLE. Request: $REQUEST. Respond concisely."
+          ESCAPED=$(echo "$FULL_PROMPT" | jq -Rs .)
           RESPONSE=$(curl -s --max-time 30 -X POST "https://api.openai.com/v1/chat/completions" \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
-            -d "{\"model\":\"gpt-4o-mini\",\"max_tokens\":2048,\"messages\":[{\"role\":\"user\",\"content\":$ESCAPED_PROMPT}]}" \
-            2>/dev/null || echo "")
-
+            -d "{\"model\":\"gpt-4o-mini\",\"max_tokens\":2048,\"messages\":[{\"role\":\"user\",\"content\":$ESCAPED}]}" 2>/dev/null || echo "")
           AI_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty' 2>/dev/null || echo "")
-
           if [ -n "$AI_TEXT" ]; then
             echo "responded=true" >> "$GITHUB_OUTPUT"
-            {
-              echo "response<<EOF"
-              echo "$AI_TEXT"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
+            echo "response<<EOFRESPONSE" >> "$GITHUB_OUTPUT"
+            echo "$AI_TEXT" >> "$GITHUB_OUTPUT"
+            echo "EOFRESPONSE" >> "$GITHUB_OUTPUT"
           else
             echo "responded=false" >> "$GITHUB_OUTPUT"
             ERROR=$(echo "$RESPONSE" | jq -r '.error.message // "unknown"' 2>/dev/null || echo "unknown")
-            echo "::warning ::OpenAI API failed: $ERROR"
+            echo "error=$ERROR" >> "$GITHUB_OUTPUT"
           fi
 
       - name: "Post OpenAI response"
         if: steps.fallback_openai.outputs.responded == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          RESPONSE_TEXT: ${{ steps.fallback_openai.outputs.response }}
         run: |
           ISSUE_NUM="${{ github.event.issue.number || github.event.pull_request.number }}"
           [ -z "$ISSUE_NUM" ] && exit 0
-          BODY="${{ steps.fallback_openai.outputs.response }}
+          BODY=$(printf '%s\n\n---\n_Response by GPT-4o-mini (OpenAI fallback). Anthropic unavailable._' "$RESPONSE_TEXT")
+          gh api "repos/${{ github.repository }}/issues/$ISSUE_NUM/comments" --method POST -f "body=$BODY" 2>/dev/null || true
 
-          ---
-          _Response by GPT-4o-mini (OpenAI fallback). Anthropic API unavailable — using alternative provider._"
-          gh api "repos/${{ github.repository }}/issues/$ISSUE_NUM/comments" \
-            --method POST -f "body=$BODY" 2>/dev/null || true
-
-      # ── Level 4: Rule-based response (ZERO cost — no API needed) ──────────
+      # ── Level 4: Rule-based response (ZERO cost) ──────────────────────────
       - name: "Fallback L4: Rule-based response (zero cost)"
-        id: fallback_rules
         if: |
-          (steps.claude_action.outcome != 'success') &&
-          (steps.fallback_anthropic.outputs.responded != 'true') &&
-          (steps.fallback_openai.outputs.responded != 'true')
+          steps.claude_action.outcome != 'success' &&
+          steps.fallback_anthropic.outputs.responded != 'true' &&
+          steps.fallback_openai.outputs.responded != 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          TITLE: ${{ steps.prompt.outputs.title }}
+          REQUEST: ${{ steps.prompt.outputs.prompt }}
+          MEMORY: ${{ steps.context.outputs.memory }}
+          PATTERNS: ${{ steps.context.outputs.patterns }}
         run: |
+          set +e
           ISSUE_NUM="${{ github.event.issue.number || github.event.pull_request.number }}"
           [ -z "$ISSUE_NUM" ] && exit 0
 
-          TITLE="${{ steps.prompt.outputs.title }}"
-          REQUEST="${{ steps.prompt.outputs.prompt }}"
-          MEMORY="${{ steps.context.outputs.memory }}"
-          PATTERNS="${{ steps.context.outputs.patterns }}"
-
-          # ── Rule-based pattern matching from resilience-patterns.json ──
+          SEARCH_TEXT="$TITLE $REQUEST"
           MATCHED_PATTERN=""
           MATCHED_STRATEGY=""
           MATCHED_AUTOFIX=""
 
-          while IFS= read -r pattern; do
-            TRIGGER=$(echo "$pattern" | jq -r '.trigger')
-            PID=$(echo "$pattern" | jq -r '.id')
-            STRATEGY=$(echo "$pattern" | jq -r '.workaround.strategy')
-            AUTOFIX=$(echo "$pattern" | jq -r '.autoFix')
-
-            if echo "$TITLE $REQUEST" | grep -qiE "$TRIGGER" 2>/dev/null; then
+          PATTERN_IDS=$(jq -r '.patterns[].id' contracts/resilience-patterns.json 2>/dev/null || echo "")
+          for PID in $PATTERN_IDS; do
+            TRIGGER=$(jq -r --arg id "$PID" '.patterns[] | select(.id == $id) | .trigger' contracts/resilience-patterns.json 2>/dev/null || echo "")
+            [ -z "$TRIGGER" ] && continue
+            if echo "$SEARCH_TEXT" | grep -qiE "$TRIGGER" 2>/dev/null; then
               MATCHED_PATTERN="$PID"
-              MATCHED_STRATEGY="$STRATEGY"
-              MATCHED_AUTOFIX="$AUTOFIX"
+              MATCHED_STRATEGY=$(jq -r --arg id "$PID" '.patterns[] | select(.id == $id) | .workaround.strategy' contracts/resilience-patterns.json 2>/dev/null || echo "")
+              MATCHED_AUTOFIX=$(jq -r --arg id "$PID" '.patterns[] | select(.id == $id) | .autoFix' contracts/resilience-patterns.json 2>/dev/null || echo "")
               break
             fi
-          done < <(jq -c '.patterns[]' contracts/resilience-patterns.json 2>/dev/null)
+          done
 
-          # ── Build response ──
           if [ -n "$MATCHED_PATTERN" ]; then
             BODY="## Automated Response (Rule-Based)
 
@@ -284,52 +224,37 @@ jobs:
           **Auto-fixable**: $MATCHED_AUTOFIX
           **Recommended action**: $MATCHED_STRATEGY
 
-          ### Current System State
+          ### System State
           $MEMORY
 
           ### Resilience Coverage
           $PATTERNS
 
           ---
-          _This is a rule-based response from \`resilience-patterns.json\` (no AI API needed). The issue matched a known failure pattern._
-          _To enable full AI responses, add credits to Anthropic or OpenAI._"
+          _Rule-based response from resilience-patterns.json (no AI API needed)._"
           else
-            # Generic status response with project context
-            CONTROLLER_VER=$(jq -r '.currentState.controllerVersion // "unknown"' contracts/claude-session-memory.json 2>/dev/null)
-            AGENT_VER=$(jq -r '.currentState.agentVersion // "unknown"' contracts/claude-session-memory.json 2>/dev/null)
-            LAST_PR=$(jq -r '.currentState.lastMergedPR // "unknown"' contracts/claude-session-memory.json 2>/dev/null)
-            PATTERN_COUNT=$(jq '.patterns | length' contracts/resilience-patterns.json 2>/dev/null || echo "?")
-            ERROR_COUNT=$(jq '.commonPatterns.errorRecovery | keys | length' contracts/claude-session-memory.json 2>/dev/null || echo "?")
-            AUTOFIX_COUNT=$(jq '[.patterns[] | select(.autoFix == true)] | length' contracts/resilience-patterns.json 2>/dev/null || echo "?")
+            CONTROLLER_VER=$(jq -r '.currentState.controllerVersion // "unknown"' contracts/claude-session-memory.json 2>/dev/null || echo "?")
+            AGENT_VER=$(jq -r '.currentState.agentVersion // "unknown"' contracts/claude-session-memory.json 2>/dev/null || echo "?")
+            LAST_PR=$(jq -r '.currentState.lastMergedPR // "unknown"' contracts/claude-session-memory.json 2>/dev/null || echo "?")
+            PAT_COUNT=$(jq '.patterns | length' contracts/resilience-patterns.json 2>/dev/null || echo "?")
+            ERR_COUNT=$(jq '.commonPatterns.errorRecovery | keys | length' contracts/claude-session-memory.json 2>/dev/null || echo "?")
 
             BODY="## Automated Response (Rule-Based)
 
-          I could not match this request to a known pattern. Here is the current system status:
+          No known pattern matched. Current system status:
 
           | Metric | Value |
           |--------|-------|
-          | Controller version | \`$CONTROLLER_VER\` |
-          | Agent version | \`$AGENT_VER\` |
-          | Last merged PR | $LAST_PR |
-          | Resilience patterns | $PATTERN_COUNT ($AUTOFIX_COUNT auto-fixable) |
-          | Error recovery patterns | $ERROR_COUNT |
+          | Controller | \`$CONTROLLER_VER\` |
+          | Agent | \`$AGENT_VER\` |
+          | Last PR | $LAST_PR |
+          | Patterns | $PAT_COUNT |
+          | Error recoveries | $ERR_COUNT |
 
-          ### What I can help with (rule-based)
-          - CI failures → matched against \`contracts/resilience-patterns.json\`
-          - Deploy issues → version bumps, tag conflicts, CAP promotion
-          - Network errors → retry with backoff
-          - Workflow repairs → re-enable, cancel stuck, clear locks
-
-          ### For full AI analysis
-          This response was generated without AI (zero cost). For intelligent analysis:
-          1. Add Anthropic credits at [console.anthropic.com](https://console.anthropic.com)
-          2. Or ensure \`OPENAI_API_KEY\` is valid for GPT-4o-mini fallback
+          For full AI analysis, add credits to Anthropic or ensure OPENAI_API_KEY is valid.
 
           ---
-          _Rule-based response from \`claude-assistant.yml\` Level 4 fallback. No API credits were used._"
+          _Rule-based response (Level 4 fallback, zero cost)._"
           fi
 
-          gh api "repos/${{ github.repository }}/issues/$ISSUE_NUM/comments" \
-            --method POST -f "body=$BODY" 2>/dev/null || echo "::error ::Failed to post rule-based response"
-
-          echo "::notice ::Rule-based response posted (Level 4 fallback)"
+          gh api "repos/${{ github.repository }}/issues/$ISSUE_NUM/comments" --method POST -f "body=$BODY" 2>/dev/null || echo "::error ::Failed to post"
