@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 464,
+  "branch": "claude/fix-cronjob-callback-route-6qr6E",
+  "timestamp": "2026-04-02T14:35:21Z",
+  "runId": "23905801887",
+  "healthStatus": "degraded"
+}
