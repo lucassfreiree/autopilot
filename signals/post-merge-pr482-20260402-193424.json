@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 482,
+  "branch": "claude/smart-pr-manager",
+  "timestamp": "2026-04-02T19:34:24Z",
+  "runId": "23918363546",
+  "healthStatus": "degraded"
+}
