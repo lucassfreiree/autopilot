@@ -2,6 +2,6 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "controller",
-  "files": "src/routes/agentsRouter.ts,src/__tests__/agentsRouter.test.ts,src/__tests__/cronjob-result.controller.test.ts,src/controllers/cronjob-result.controller.ts,src/routes/index.ts",
-  "run": 26
+  "files": "src/__tests__/cronjob-result.controller.test.ts,src/__tests__/unit/cronjob-result.controller.test.ts,src/__tests__/integration/cronjob-result.controller.test.ts,src/controllers/cronjob-result.controller.ts,src/routes/index.ts,src/server.ts",
+  "run": 27
 }
