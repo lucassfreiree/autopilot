@@ -2,6 +2,6 @@
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
   "workspace_id": "ws-default",
   "component": "controller",
-  "files": "tsconfig.json,package.json",
-  "run": 25
+  "files": "src/routes/agentsRouter.ts,src/__tests__/agentsRouter.test.ts,src/__tests__/cronjob-result.controller.test.ts,src/controllers/cronjob-result.controller.ts,src/routes/index.ts",
+  "run": 26
 }
