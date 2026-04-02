@@ -1,1 +1,92 @@
-{"schemaVersion":1,"lastUpdated":"2026-04-01T18:47:09Z","sessionCount":7,"currentState":{"controllerVersion":"3.6.6","agentVersion":"2.2.9","lastTriggerRun":69,"lastSuccessfulRun":66,"workspace":"ws-default","pipelineStatus":"success"},"sessionsLog":[{"timestamp":"2026-04-01T18:45:04Z","topic":"dashboard-sync-pages","action":"Promoted the GitHub Pages redeploy fix for spark-sync-state to main and used this memory update to trigger a cloud-side sync run without touching local-only automation or corporate deploy triggers."},{"timestamp":"2026-04-01T18:47:09Z","topic":"dashboard-sync-race","action":"Confirmed spark-sync-state synced spark-dashboard successfully but failed to publish panel/dashboard/state.json because a git push back to main hit a non-fast-forward race."}],"decisions":[{"timestamp":"2026-04-01T18:45:04Z","decision":"Use explicit deploy-panel dispatch after spark-sync-state updates panel/dashboard/state.json on main.","reason":"Workflow-token commits do not trigger downstream push workflows, so GitHub Pages stayed stale while main already had fresh dashboard state."},{"timestamp":"2026-04-01T18:47:09Z","decision":"Replace panel/dashboard/state.json updates via git push with the GitHub Contents API plus retries.","reason":"A long-running sync job can start from an older main SHA; using git push makes the dashboard publish path fail on concurrent commits and prevents deploy-panel dispatch."}],"lessonsLearned":[{"timestamp":"2026-04-01T18:45:04Z","lesson":"autonomous-merge-direct can wait on queued third-party check suites such as Claude or Devin; for low-risk workflow fixes, a fast-forward promotion on the upstream branch can be the safer unblock path."},{"timestamp":"2026-04-01T18:47:09Z","lesson":"spark-sync-state must not rely on a local git commit and git push back to main for panel/dashboard/state.json. Use the Contents API on main and dispatch deploy-panel only after that update succeeds."}],"errorPatterns":{"pages_sync_gap":"spark-sync-state.yml can update panel/dashboard/state.json on main while GitHub Pages stays stale unless deploy-panel.yml is dispatched explicitly after the workflow-token push.","panel_state_non_fast_forward":"spark-sync-state can sync spark-dashboard successfully but still leave GitHub Pages stale when its final git push of panel/dashboard/state.json is rejected as non-fast-forward."}}
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-04-02T14:21:00Z",
+  "sessionCount": 8,
+  "currentState": {
+    "controllerVersion": "3.8.0-verifying",
+    "agentVersion": "2.2.9",
+    "lastTriggerRun": 93,
+    "lastSuccessfulRun": 66,
+    "workspace": "ws-default",
+    "pipelineStatus": "controller-run93-verification"
+  },
+  "sessionsLog": [
+    {
+      "timestamp": "2026-04-01T18:45:04Z",
+      "topic": "dashboard-sync-pages",
+      "action": "Promoted the GitHub Pages redeploy fix for spark-sync-state to main and used this memory update to trigger a cloud-side sync run without touching local-only automation or corporate deploy triggers."
+    },
+    {
+      "timestamp": "2026-04-01T18:47:09Z",
+      "topic": "dashboard-sync-race",
+      "action": "Confirmed spark-sync-state synced spark-dashboard successfully but failed to publish panel/dashboard/state.json because a git push back to main hit a non-fast-forward race."
+    },
+    {
+      "timestamp": "2026-04-02T14:21:00Z",
+      "topic": "controller-run93-verification",
+      "action": "Recorded that the valid mainline fix remains on controller 3.8.0 at autopilot commit 645f70c6, abandoned the 3.8.1 draft, and triggered fetch-files plus ci-diagnose to verify whether the corporate repo and pipeline actually moved after run 93."
+    }
+  ],
+  "decisions": [
+    {
+      "timestamp": "2026-04-01T18:45:04Z",
+      "decision": "Use explicit deploy-panel dispatch after spark-sync-state updates panel/dashboard/state.json on main.",
+      "reason": "Workflow-token commits do not trigger downstream push workflows, so GitHub Pages stayed stale while main already had fresh dashboard state."
+    },
+    {
+      "timestamp": "2026-04-01T18:47:09Z",
+      "decision": "Replace panel/dashboard/state.json updates via git push with the GitHub Contents API plus retries.",
+      "reason": "A long-running sync job can start from an older main SHA; using git push makes the dashboard publish path fail on concurrent commits and prevents deploy-panel dispatch."
+    },
+    {
+      "timestamp": "2026-04-02T14:21:00Z",
+      "decision": "Keep the controller follow-up on version 3.8.0 and do not open a new semver line while the mainline run93 fix is the authoritative path.",
+      "reason": "The user explicitly requires 3.8.0 without adding another version segment, and main already contains the corresponding source-change trigger."
+    }
+  ],
+  "lessonsLearned": [
+    {
+      "timestamp": "2026-04-01T18:45:04Z",
+      "lesson": "autonomous-merge-direct can wait on queued third-party check suites such as Claude or Devin; for low-risk workflow fixes, a fast-forward promotion on the upstream branch can be the safer unblock path."
+    },
+    {
+      "timestamp": "2026-04-01T18:47:09Z",
+      "lesson": "spark-sync-state must not rely on a local git commit and git push back to main for panel/dashboard/state.json. Use the Contents API on main and dispatch deploy-panel only after that update succeeds."
+    },
+    {
+      "timestamp": "2026-04-02T14:21:00Z",
+      "lesson": "Always fetch the current corporate file via fetch-files before preparing search-replace changes; whitespace differences in the search string can silently prevent the intended patch."
+    },
+    {
+      "timestamp": "2026-04-02T14:21:00Z",
+      "lesson": "For controller 3.8.0, removing explicit types:[\"node\"] is required both to avoid TS2688 when @types/node is absent and to restore Jest type auto-discovery for test compilation."
+    },
+    {
+      "timestamp": "2026-04-02T14:21:00Z",
+      "lesson": "If apply-source-change finishes with Setup and Apply success but skips CI Gate, Save State, and CI Monitor, do not trust release-state alone; immediately verify via fetch-files and a fresh ci-diagnose on the latest corporate head."
+    }
+  ],
+  "errorPatterns": {
+    "pages_sync_gap": "spark-sync-state.yml can update panel/dashboard/state.json on main while GitHub Pages stays stale unless deploy-panel.yml is dispatched explicitly after the workflow-token push.",
+    "panel_state_non_fast_forward": "spark-sync-state can sync spark-dashboard successfully but still leave GitHub Pages stale when its final git push of panel/dashboard/state.json is rejected as non-fast-forward.",
+    "controller_tsconfig_spacing_mismatch": {
+      "observedAt": "2026-04-02T14:03:00Z",
+      "symptoms": [
+        "apply-source-change completes and promotes, but ci-diagnose still shows the same tsconfig error",
+        "fetched-controller-tsconfig.json still contains types:[\"node\"]"
+      ],
+      "rootCause": "The tsconfig search string did not match the live corporate file because there are two spaces after \"compilerOptions\": {.",
+      "fix": "Use the exact search string \"compilerOptions\": {  \"types\": [\"node\"],"
+    },
+    "controller_apply_success_state_skipped": {
+      "observedAt": "2026-04-02T14:15:04Z",
+      "symptoms": [
+        "apply-source-change run 93 completes with success",
+        "CI Gate, Save State, and CI Monitor are skipped",
+        "controller-release-state.json remains on the previous SHA"
+      ],
+      "rootCause": "The workflow completed the source apply path but did not publish a tracked commit/output for the downstream state and monitoring stages.",
+      "fix": "Trigger fetch-files and ci-diagnose immediately to confirm the live corporate file contents and latest commit health."
+    }
+  }
+}
