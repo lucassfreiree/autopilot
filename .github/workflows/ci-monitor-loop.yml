@@ -272,24 +272,10 @@ jobs:
 
           echo "CI-diagnose dispatched for $COMPONENT (sha=$COMMIT_SHA)."
 
-      - name: "Trigger fix-corporate-ci (on failure)"
-        if: steps.poll.outputs.overall == 'failure'
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          WS_ID="${{ steps.inputs.outputs.ws_id }}"
-          COMPONENT="${{ steps.inputs.outputs.component }}"
-
-          echo "=== Triggering fix-corporate-ci for $COMPONENT ==="
-
-          gh workflow run fix-corporate-ci.yml \
-            --repo "$AUTOPILOT_REPO" \
-            --ref main \
-            --field workspace_id="$WS_ID" \
-            --field component="$COMPONENT"
-
-          echo "fix-corporate-ci dispatched for $COMPONENT."
-          echo "::notice ::Escalation chain: ci-diagnose → fix-corporate-ci → (if blocked) → claude-assistant via @claude issue"
+      # NOTE: fix-corporate-ci is now dispatched BY ci-diagnose (Step 10) AFTER
+      # diagnosis is saved to state. This ensures fix-corporate-ci can read the
+      # diagnosis and apply smarter fixes. Chain: ci-diagnose → fix-corporate-ci.
+      # Previous behavior: both dispatched in parallel (fix couldn't read diagnosis).
 
       # ── 3c. Create failure notification issue ─────────────────────────────────
       - name: "Create CI failure notification issue"
