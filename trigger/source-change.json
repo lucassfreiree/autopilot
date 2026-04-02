@@ -3,35 +3,35 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.8.0",
+  "version": "3.8.1",
   "changes": [
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.7.9\"",
-      "replace": "\"version\": \"3.8.0\""
+      "search": "\"version\": \"3.8.0\"",
+      "replace": "\"version\": \"3.8.1\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.7.9\"",
-      "replace": "\"version\": \"3.8.0\""
+      "search": "\"version\": \"3.8.0\"",
+      "replace": "\"version\": \"3.8.1\""
     },
     {
       "action": "search-replace",
       "target_path": "src/swagger/swagger.json",
-      "search": "\"version\": \"3.7.9\"",
-      "replace": "\"version\": \"3.8.0\""
+      "search": "\"version\": \"3.8.0\"",
+      "replace": "\"version\": \"3.8.1\""
     },
     {
       "action": "search-replace",
       "target_path": "tsconfig.json",
-      "search": "\"compilerOptions\": { \"types\": [\"node\"],",
-      "replace": "\"compilerOptions\": { \"ignoreDeprecations\": \"5.0\", \"types\": [\"node\"],"
+      "search": "\"compilerOptions\": {  \"types\": [\"node\"],",
+      "replace": "\"compilerOptions\": {  \"ignoreDeprecations\": \"5.0\","
     }
   ],
-  "commit_message": "fix(controller): restore valid tsconfig deprecation guard (v3.8.0)",
+  "commit_message": "fix(controller): remove explicit node types and restore valid tsconfig deprecation guard (v3.8.1)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 92
+  "run": 93
 }
