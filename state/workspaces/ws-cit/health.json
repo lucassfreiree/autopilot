@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "workspaceId": "ws-cit",
-  "checkedAt": "2026-04-03T10:01:20Z",
+  "checkedAt": "2026-04-03T10:59:58Z",
   "overall": "degraded",
   "checks": {
     "workspace": {
@@ -25,5 +25,5 @@
       "message": "1 active locks"
     }
   },
-  "summary": "degraded at 2026-04-03T10:01:20Z"
+  "summary": "degraded at 2026-04-03T10:59:58Z"
 }
