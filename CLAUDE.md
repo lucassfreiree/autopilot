@@ -365,7 +365,7 @@ All 4 repos below are on GitHub under `bbvinet` org. Access via `BBVINET_TOKEN`.
 
 | Repo | Role | Current Version | Stack | CI |
 |------|------|-----------------|-------|----|
-| [`bbvinet/psc-sre-automacao-controller`](https://github.com/bbvinet/psc-sre-automacao-controller) | Controller — orchestrates automations, dispatches to agents, manages execution logs | 3.7.4 | Node 22, TypeScript, Express, Jest | Esteira de Build NPM (corporate runner) |
+| [`bbvinet/psc-sre-automacao-controller`](https://github.com/bbvinet/psc-sre-automacao-controller) | Controller — orchestrates automations, dispatches to agents, manages execution logs | 3.8.2 | Node 22, TypeScript, Express, Jest | Esteira de Build NPM (corporate runner) |
 | [`bbvinet/psc-sre-automacao-agent`](https://github.com/bbvinet/psc-sre-automacao-agent) | Agent — executes automations on clusters, receives cronjob callbacks, pushes logs to controller | 2.3.3 | Node 22, TypeScript, Express, Jest, K8s client | Esteira de Build NPM (corporate runner) |
 
 **How to work with source repos:**
@@ -409,7 +409,7 @@ state/workspaces/ws-default/workspace.json
 - **CAP values path**: `releases/openshift/hml/deploy/values.yaml`
 - **Reference file**: `references/controller-cap/values.yaml`
 - **Image**: `docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller`
-- **Current deployed tag**: `3.7.8`
+- **Current deployed tag**: `3.8.2`
 - **Image line**: `image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:<TAG>`
 - **K8s Secret**: `psc-sre-automacao-controller-runtime` (11 keys: JWT_SECRET, AUTH_API_KEYS_SCOPES, SCOPE_*, AWS_REGION, OSS_*)
 - **K8s Secret**: `sre-controller-auth` (4 keys: OAS_TRUSTED_NAMESPACE, OAS_TRUSTED_SERVICE_ACCOUNT, OAS_ORIGIN_NAMESPACE_HEADERS, OAS_ORIGIN_SERVICE_ACCOUNT_HEADERS)
@@ -696,7 +696,7 @@ Disabled files (preserved for reference in `.github/workflows/*.yml.disabled`):
 ## Deploy Flow — Complete Guide (Claude Code only)
 
 This is the **official, tested, end-to-end deploy flow** for pushing code changes to corporate repos.
-Centralized in Claude Code. Last successful run: **#81 (controller 3.7.4)**. Agent 2.3.3 deployed.
+Centralized in Claude Code. Last successful run: **#103 (controller 3.8.2)**. Agent 2.3.3 deployed.
 
 ### Phase 1: Prepare
 ```
