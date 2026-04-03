@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 485,
+  "branch": "claude/universal-status-reporting",
+  "mergeSha": "f849124c639312e855942d9fc720b0b3043d0b15",
+  "timestamp": "2026-04-02T20:16:54Z",
+  "runId": "23920025936",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
