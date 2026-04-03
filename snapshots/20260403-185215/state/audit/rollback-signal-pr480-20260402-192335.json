@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 480,
+  "branch": "claude/fix-cronjob-callback-route-6qr6E",
+  "mergeSha": "d5e4ff9e924891557092d2ece9fcc9ded2d96067",
+  "timestamp": "2026-04-02T19:23:35Z",
+  "runId": "23917945000",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
