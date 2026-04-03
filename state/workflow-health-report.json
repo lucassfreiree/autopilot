@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-04-03T22:31:08Z",
-  "lookbackSince": "2026-04-03T16:31:05Z",
+  "timestamp": "2026-04-03T23:31:34Z",
+  "lookbackSince": "2026-04-03T17:31:30Z",
   "summary": {
     "totalWorkflows": 75,
-    "totalRuns": 73,
+    "totalRuns": 71,
     "workflowsWithFailures": 1,
     "critical": 1,
     "degraded": 0,
@@ -18,13 +18,13 @@
       "status": "critical",
       "runs": 8,
       "successes": 0,
-      "failures": 8,
+      "failures": 7,
       "cancelled": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "failRate": 100,
-      "consecutiveFailures": 8,
-      "lastConclusion": "failure",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23964608621"
+      "consecutiveFailures": 7,
+      "lastConclusion": "unknown",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23966063456"
     }
   ],
   "degradedWorkflows": [],
@@ -42,7 +42,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23963412318"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23965130129"
     },
     {
       "name": "[Core] Backup: State Snapshot",
@@ -72,15 +72,15 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23964518635"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23965373812"
     },
     {
       "name": "[Corp] Drift Correction",
       "path": ".github/workflows/drift-correction.yml",
       "workflow_id": 249785167,
       "status": "healthy",
-      "runs": 2,
-      "successes": 2,
+      "runs": 1,
+      "successes": 1,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
@@ -117,22 +117,22 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23963712029"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23965797985"
     },
     {
       "name": "[Core] Smart PR Manager",
       "path": ".github/workflows/auto-merge-sweeper.yml",
       "workflow_id": 253043557,
       "status": "healthy",
-      "runs": 9,
-      "successes": 9,
+      "runs": 8,
+      "successes": 8,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23964612819"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23965483418"
     },
     {
       "name": "[Core] Emergency Watchdog",
@@ -162,7 +162,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23962967246"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23964642282"
     },
     {
       "name": "[Core] Workflow Health Monitor",
@@ -177,7 +177,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "unknown",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23964634695"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23966072341"
     },
     {
       "name": "[Core] Workflow Sentinel",
@@ -201,13 +201,13 @@
       "status": "critical",
       "runs": 8,
       "successes": 0,
-      "failures": 8,
+      "failures": 7,
       "cancelled": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "failRate": 100,
-      "consecutiveFailures": 8,
-      "lastConclusion": "failure",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23964608621"
+      "consecutiveFailures": 7,
+      "lastConclusion": "unknown",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23966063456"
     },
     {
       "name": "[Core] Deploy Pipeline Monitor",
@@ -222,7 +222,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23964318266"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23965974621"
     }
   ]
 }
