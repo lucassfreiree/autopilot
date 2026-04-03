@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Rules engine for automatic token optimization. Applied by token-auto-optimize workflow and SessionStart hook.",
-  "lastOptimized": "2026-03-31T07:22:55Z",
+  "lastOptimized": "2026-04-03T07:16:17Z",
   "optimizationTargets": {
     "sessionMemoryMaxChars": 50000,
     "sessionMemoryWarningChars": 40000,
@@ -114,11 +114,18 @@
     "estimatedSaving": "50-70% fewer sync API calls"
   },
   "metrics": {
-    "lastMemorySize": 87863,
-    "lastCompactedSize": 84991,
-    "totalSavedChars": 47709,
-    "totalOptimizations": 2,
+    "lastMemorySize": 119246,
+    "lastCompactedSize": 112125,
+    "totalSavedChars": 54830,
+    "totalOptimizations": 3,
     "history": [
+      {
+        "date": "2026-04-03T07:16:17Z",
+        "before": 119246,
+        "after": 112125,
+        "saved": 7121,
+        "changes": 1
+      },
       {
         "date": "2026-03-31T07:22:55Z",
         "before": 87863,
