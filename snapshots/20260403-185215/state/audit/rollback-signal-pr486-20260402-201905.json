@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 486,
+  "branch": "claude/fix-wrapper-integers",
+  "mergeSha": "e89f5a854f51b14928d7e847bed1a83cd19c3939",
+  "timestamp": "2026-04-02T20:19:05Z",
+  "runId": "23920117709",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
