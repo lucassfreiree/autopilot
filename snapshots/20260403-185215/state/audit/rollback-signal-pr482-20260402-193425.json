@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 482,
+  "branch": "claude/smart-pr-manager",
+  "mergeSha": "ec4cc4d71aa6baf49ba14ab2ab3b3d0f85c37f35",
+  "timestamp": "2026-04-02T19:34:25Z",
+  "runId": "23918363546",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
