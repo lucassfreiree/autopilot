@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-04-03T15:33:17Z",
-  "lookbackSince": "2026-04-03T09:33:14Z",
+  "timestamp": "2026-04-03T16:29:51Z",
+  "lookbackSince": "2026-04-03T10:29:47Z",
   "summary": {
     "totalWorkflows": 75,
     "totalRuns": 61,
@@ -24,7 +24,7 @@
       "failRate": 100,
       "consecutiveFailures": 7,
       "lastConclusion": "failure",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950993160"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23952698121"
     }
   ],
   "degradedWorkflows": [],
@@ -34,15 +34,15 @@
       "path": ".github/workflows/auto-merge-sweeper.yml",
       "workflow_id": 253043557,
       "status": "healthy",
-      "runs": 7,
-      "successes": 7,
+      "runs": 6,
+      "successes": 6,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950722807"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23952410214"
     },
     {
       "name": "[Core] Backup: State Snapshot",
@@ -87,7 +87,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950929573"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23952608267"
     },
     {
       "name": "[Corp] Drift Correction",
@@ -132,7 +132,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950624071"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23952349948"
     },
     {
       "name": "[Core] Intelligent Orchestrator",
@@ -147,7 +147,7 @@
       "failRate": 100,
       "consecutiveFailures": 7,
       "lastConclusion": "failure",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950993160"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23952698121"
     },
     {
       "name": "Ops: Check Active Alerts",
@@ -192,7 +192,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950945896"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23952393098"
     },
     {
       "name": "[Core] Workflow Auto-Repair",
@@ -207,7 +207,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950063312"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23951764540"
     },
     {
       "name": "[Core] Workflow Health Monitor",
@@ -222,22 +222,22 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "unknown",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23951756581"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23953551206"
     },
     {
       "name": "[Core] Workflow Sentinel",
       "path": ".github/workflows/workflow-sentinel.yml",
       "workflow_id": 253550350,
       "status": "healthy",
-      "runs": 1,
+      "runs": 2,
       "successes": 1,
       "failures": 0,
       "cancelled": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "failRate": 0,
       "consecutiveFailures": 0,
-      "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23946502568"
+      "lastConclusion": "unknown",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23953551022"
     },
     {
       "name": "[Core] Lock GC",
@@ -252,7 +252,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23950289261"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23952827236"
     }
   ]
 }
