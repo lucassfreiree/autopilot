@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T17:11:17Z",
+  "runId": "23912330130",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23912330130",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): generate outbound JWT for agent dispatch + bump to 3.8.1 (v3.8.1)",
+  "commitSha": "f4fdc8a20e8b0dc2fd5ae7c6eafe14708c7f8025",
+  "ciResult": "failure",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
