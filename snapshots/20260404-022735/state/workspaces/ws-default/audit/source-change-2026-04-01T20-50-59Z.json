@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-01T20:50:59Z",
+  "runId": "23869637043",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23869637043",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(security): Checkmarx XSS/SSRF/DoS — encodeURIComponent on output, ALLOWED_AGENT_DOMAINS allowlist, eliminate for-loop (v3.7.8)",
+  "commitSha": "0e8dc8910ac48005f7f1397d09757282ff67e1c1",
+  "ciResult": "success",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
