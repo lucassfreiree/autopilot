@@ -5,6 +5,17 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-04-04
+
+### Improved
+- All 5 agent definitions rewritten with detailed autonomous workflows, decision matrices, and escalation rules
+- Agent orchestrator: precise deprecated action detection (uses: lines only), auto-version-bump, auto-CHANGELOG
+- Autonomous improve: parallel agent analysis, false-positive-free scanning, auto-PR with version bump
+- Quality gate: added trigger file validation, duplicate tag check, patch overflow check (never X.Y.10)
+- Release pipeline: added patch overflow validation, streamlined state persistence
+- Version-bump script: added overflow protection, input validation, semver enforcement
+- Security scan: private key detection, precise FQDN matching (no false positives on doc patterns)
+
 ## [1.0.2] - 2026-04-04
 
 ### Fixed

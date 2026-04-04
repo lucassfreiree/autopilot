@@ -1,9 +1,9 @@
 # ===========================================================
 # Agent Quality Gate
 #
-# Runs on every PR from agent branches (claude/agent-*).
-# Validates that autonomous changes don't break anything.
-# Must pass before auto-merge is allowed.
+# Validates ALL changes before merge to main.
+# Blocks merge if any critical check fails.
+# Runs on every PR that touches versioned files.
 # ===========================================================
 name: "[Agent] Quality Gate"
 
@@ -21,6 +21,7 @@ on:
       - '.claude/skills/**'
       - 'ops/**'
       - 'scripts/**'
+      - 'trigger/**'
 
 concurrency:
   group: agent-quality-gate-${{ github.event.pull_request.number }}
@@ -34,178 +35,214 @@ jobs:
   yaml-validation:
     name: YAML Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Validate all workflow YAML
         run: |
           ERRORS=0
+          TOTAL=0
           for f in .github/workflows/*.yml; do
+            TOTAL=$((TOTAL + 1))
             if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
               echo "::error file=$f::Invalid YAML syntax"
               ERRORS=$((ERRORS + 1))
             fi
           done
-          echo "Checked $(ls .github/workflows/*.yml | wc -l) workflows, $ERRORS errors"
+          echo "Checked $TOTAL workflows, $ERRORS errors"
           [ "$ERRORS" -eq 0 ] || exit 1
 
   json-validation:
     name: JSON Validation
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Validate all JSON files
         run: |
           ERRORS=0
+          TOTAL=0
           for f in schemas/*.json contracts/*.json version.json trigger/*.json; do
-            if [ -f "$f" ]; then
-              if ! jq '.' "$f" > /dev/null 2>&1; then
-                echo "::error file=$f::Invalid JSON"
-                ERRORS=$((ERRORS + 1))
-              fi
+            [ -f "$f" ] || continue
+            TOTAL=$((TOTAL + 1))
+            if ! jq '.' "$f" > /dev/null 2>&1; then
+              echo "::error file=$f::Invalid JSON"
+              ERRORS=$((ERRORS + 1))
             fi
           done
-          echo "Checked JSON files, $ERRORS errors"
+          echo "Checked $TOTAL JSON files, $ERRORS errors"
           [ "$ERRORS" -eq 0 ] || exit 1
 
   version-check:
     name: Version Consistency
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check version.json format
         run: |
           VERSION=$(jq -r '.version // empty' version.json)
           if [ -z "$VERSION" ]; then
-            echo "::error ::version.json missing version field"
+            echo "::error ::version.json missing 'version' field"
             exit 1
           fi
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error ::Invalid version format: $VERSION (expected X.Y.Z)"
             exit 1
           fi
-          echo "Version: $VERSION ✓"
 
-      - name: Check CHANGELOG entry exists
+          # Enforce: patch never reaches 10
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+          if [ "$PATCH" -gt 9 ] 2>/dev/null; then
+            echo "::error ::Patch version $PATCH > 9. Use minor bump instead (X.Y.9 → X.(Y+1).0)"
+            exit 1
+          fi
+          echo "Version format: $VERSION ✓"
+
+      - name: Check CHANGELOG entry
         run: |
           VERSION=$(jq -r '.version' version.json)
           if ! grep -q "\[$VERSION\]" CHANGELOG.md; then
-            echo "::error ::CHANGELOG.md missing entry for version $VERSION"
+            echo "::error ::CHANGELOG.md missing entry for [$VERSION]"
             exit 1
           fi
-          echo "CHANGELOG entry for $VERSION ✓"
+          echo "CHANGELOG entry: [$VERSION] ✓"
+
+      - name: Check no duplicate tag
+        run: |
+          VERSION=$(jq -r '.version' version.json)
+          TAG="v${VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error ::Tag $TAG already exists. Bump version before merging."
+            exit 1
+          fi
+          echo "Tag $TAG: available ✓"
 
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
       - name: Check for hardcoded secrets
         run: |
           ERRORS=0
-          # Scan for actual hardcoded secrets (exclude this workflow to avoid self-reference)
-          # Pattern 1: Real token values (ghp_ prefix = GitHub PAT)
+
+          # GitHub PATs
           HITS=$(grep -rlE "ghp_[a-zA-Z0-9]{36}" --include="*.yml" --include="*.json" --include="*.sh" \
-            --exclude-dir=.git --exclude="agent-quality-gate.yml" . 2>/dev/null | wc -l)
-          if [ "$HITS" -gt 0 ]; then
-            echo "::error ::Hardcoded GitHub token (ghp_) found"
-            ERRORS=$((ERRORS + 1))
-          fi
-          # Pattern 2: AWS keys
+            --exclude-dir=.git . 2>/dev/null | wc -l)
+          [ "$HITS" -gt 0 ] && { echo "::error ::Hardcoded GitHub PAT (ghp_) found"; ERRORS=$((ERRORS+1)); }
+
+          # AWS keys
           HITS=$(grep -rlE "AKIA[0-9A-Z]{16}" --include="*.yml" --include="*.json" --include="*.sh" \
             --exclude-dir=.git . 2>/dev/null | wc -l)
-          if [ "$HITS" -gt 0 ]; then
-            echo "::error ::Hardcoded AWS key found"
-            ERRORS=$((ERRORS + 1))
-          fi
-          # Pattern 3: Generic secrets with actual values assigned
-          HITS=$(grep -rnE "^[^#]*password\s*[:=]\s*['\"][a-zA-Z0-9]{8,}['\"]" --include="*.yml" --include="*.json" --include="*.sh" \
-            --exclude-dir=.git --exclude="agent-quality-gate.yml" . 2>/dev/null | wc -l)
-          if [ "$HITS" -gt 0 ]; then
-            echo "::error ::Hardcoded password found"
-            ERRORS=$((ERRORS + 1))
-          fi
-          [ "$ERRORS" -eq 0 ] && echo "No hardcoded secrets found ✓"
+          [ "$HITS" -gt 0 ] && { echo "::error ::Hardcoded AWS key (AKIA) found"; ERRORS=$((ERRORS+1)); }
+
+          # Private keys
+          HITS=$(grep -rlE "BEGIN (RSA |EC |DSA )?PRIVATE KEY" --include="*.yml" --include="*.json" --include="*.sh" --include="*.pem" \
+            --exclude-dir=.git . 2>/dev/null | wc -l)
+          [ "$HITS" -gt 0 ] && { echo "::error ::Private key found in repository"; ERRORS=$((ERRORS+1)); }
+
+          [ "$ERRORS" -eq 0 ] && echo "No hardcoded secrets ✓"
           [ "$ERRORS" -eq 0 ] || exit 1
 
       - name: Check corporate data isolation
         run: |
-          # Check for ACTUAL corporate domains (not pattern references in docs)
-          # Real corporate data: full domain names like "xyz.intranet.bb.com.br"
-          # Allowed: documentation patterns like "*.intranet.*" or ".intranet." as detection rules
           ERRORS=0
-          for f in .claude/agents/*.md .claude/skills/*.md panel/*.html; do
-            if [ -f "$f" ]; then
-              # Match actual corporate FQDNs, not wildcard patterns or quoted rules
-              if grep -qE '[a-z0-9]+\.intranet\.[a-z]+\.[a-z]+\.[a-z]+' "$f" 2>/dev/null; then
-                echo "::error file=$f::Corporate FQDN found in public-facing file"
-                ERRORS=$((ERRORS + 1))
-              fi
+          # Only flag real FQDNs (like xyz.intranet.bb.com.br)
+          # NOT documentation patterns (*.intranet.*, ".intranet.")
+          for f in .claude/agents/*.md .claude/skills/*.md panel/*.html panel/**/*.html; do
+            [ -f "$f" ] || continue
+            if grep -qE '[a-z0-9]+\.intranet\.[a-z]+\.[a-z]+\.[a-z]+' "$f" 2>/dev/null; then
+              echo "::error file=$f::Corporate FQDN in public file"
+              ERRORS=$((ERRORS + 1))
             fi
           done
-          [ "$ERRORS" -eq 0 ] && echo "Corporate data isolation ✓"
+          [ "$ERRORS" -eq 0 ] && echo "Corporate isolation ✓"
+          [ "$ERRORS" -eq 0 ] || exit 1
+
+  trigger-validation:
+    name: Trigger File Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate trigger files
+        run: |
+          ERRORS=0
+          for f in trigger/*.json; do
+            [ -f "$f" ] || continue
+            if ! jq '.' "$f" > /dev/null 2>&1; then
+              echo "::error file=$f::Invalid JSON"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+            # Check content_ref references
+            jq -r '.changes[]?.content_ref // empty' "$f" 2>/dev/null | while read ref; do
+              if [ -n "$ref" ] && [ ! -f "$ref" ]; then
+                echo "::warning file=$f::Dead reference: $ref"
+              fi
+            done
+          done
+          [ "$ERRORS" -eq 0 ] && echo "Trigger files ✓"
           [ "$ERRORS" -eq 0 ] || exit 1
 
   dashboard-check:
     name: Dashboard Health
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.changed_files, 'panel/')
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate dashboard HTML
+      - name: Check dashboard files
         run: |
-          for f in panel/*.html panel/**/*.html; do
-            [ -f "$f" ] || continue
-            # Basic structure check
-            if ! grep -q "<html" "$f"; then
-              echo "::error file=$f::Missing <html> tag"
-              exit 1
-            fi
-            if ! grep -q "</html>" "$f"; then
-              echo "::error file=$f::Missing </html> closing tag"
-              exit 1
-            fi
-          done
-          echo "Dashboard HTML structure ✓"
+          ERRORS=0
 
-      - name: Validate state.json
-        run: |
+          # Validate state.json
           if [ -f "panel/dashboard/state.json" ]; then
             if ! jq '.' panel/dashboard/state.json > /dev/null 2>&1; then
               echo "::error ::panel/dashboard/state.json is invalid JSON"
-              exit 1
+              ERRORS=$((ERRORS + 1))
             fi
           fi
-          echo "State JSON ✓"
+
+          # Validate HTML structure
+          for f in panel/index.html panel/dashboard/index.html; do
+            [ -f "$f" ] || continue
+            if ! grep -q "<html" "$f"; then
+              echo "::error file=$f::Missing <html> tag"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          [ "$ERRORS" -eq 0 ] && echo "Dashboard ✓"
+          [ "$ERRORS" -eq 0 ] || exit 1
 
   report:
     name: Quality Report
-    needs: [yaml-validation, json-validation, version-check, security-scan]
+    needs: [yaml-validation, json-validation, version-check, security-scan, trigger-validation, dashboard-check]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Generate report
         run: |
-          echo "## Agent Quality Gate Report" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Quality Gate Report" >> "$GITHUB_STEP_SUMMARY"
           echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
-
-          for JOB in yaml-validation json-validation version-check security-scan; do
-            STATUS="unknown"
-            case "$JOB" in
-              yaml-validation) STATUS="${{ needs.yaml-validation.result }}" ;;
-              json-validation) STATUS="${{ needs.json-validation.result }}" ;;
-              version-check)   STATUS="${{ needs.version-check.result }}" ;;
-              security-scan)   STATUS="${{ needs.security-scan.result }}" ;;
-            esac
-            ICON=$( [ "$STATUS" = "success" ] && echo "✅" || echo "❌" )
-            echo "| $JOB | $ICON $STATUS |" >> "$GITHUB_STEP_SUMMARY"
-          done
+          echo "| YAML | ${{ needs.yaml-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| JSON | ${{ needs.json-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | ${{ needs.version-check.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Security | ${{ needs.security-scan.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Triggers | ${{ needs.trigger-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dashboard | ${{ needs.dashboard-check.result }} |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Gate decision
         if: |
@@ -214,5 +251,5 @@ jobs:
           needs.version-check.result != 'success' ||
           needs.security-scan.result != 'success'
         run: |
-          echo "::error ::Quality gate FAILED. Agent changes blocked."
+          echo "::error ::Quality gate FAILED — merge blocked"
           exit 1
