@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-03T12:41:02Z",
+  "source": "workflow-health-monitor",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23946509257",
+  "repairs": [
+    {
+      "type": "alert-only",
+      "workflow_id": 253555059,
+      "workflow_name": "[Core] Intelligent Orchestrator",
+      "reason": "7 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23944932369"
+    }
+  ]
+}
