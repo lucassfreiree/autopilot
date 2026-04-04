@@ -63,19 +63,27 @@ When planning improvements:
    - CHANGELOG.md → recent changes
    - contracts/resilience-patterns.json → known failure patterns
    - state/workspaces/*/health.json → workspace health
-2. Identify gaps:
+2. CHECK FREE TOOLS FIRST:
+   - Read contracts/external-tools-registry.json
+   - Does GitHub-native feature solve this? (CodeQL, Dependabot, Actions, Pages)
+   - Does a free external tool solve this? (Snyk, UptimeRobot, Grafana Cloud)
+   - Can Claude Web / ChatGPT / Gemini research this faster?
+   - Can community patterns (anthropics/skills) help?
+   - COST CHECK: must be $0 — no paid tools ever
+3. Identify gaps:
    - Uncovered failure scenarios
    - Missing monitoring for critical paths
    - Outdated agent definitions
    - Dashboard data accuracy
-3. Create improvement plan:
+4. Create improvement plan:
    - Each task: what, who (which agent), why, acceptance criteria
+   - For each task: which free tool helps? (document in the Issue)
    - Prioritize: P0 (now), P1 (this cycle), P2 (next cycle)
    - Estimate risk: low/medium/high
-4. Execute via specialist agents:
+5. Execute via specialist agents:
    - Dispatch tasks to agents in parallel when independent
    - Sequential when dependent (e.g., schema change before dashboard update)
-5. Validate results:
+6. Validate results:
    - All changes pass quality gate
    - No regressions in existing functionality
    - CHANGELOG and version updated

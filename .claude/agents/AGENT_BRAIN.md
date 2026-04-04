@@ -132,6 +132,53 @@ Level 4: AI-Optional     (system fully autonomous)       ← GOAL
 5. Every decision → Issue with rationale + alternatives considered
 6. Full governance: `contracts/github-first-governance.json`
 
+## The 5th Law — Use Every Free Tool Available
+
+**Don't limit yourself to this repo.** Before implementing, check if a FREE tool already solves it.
+
+```
+Before coding a solution, ask:
+1. Does GitHub already have this? (Actions, Pages, Issues, CodeQL, Dependabot, Wiki)
+2. Is there a free external tool? (check contracts/external-tools-registry.json)
+3. Can Claude Web / ChatGPT / Gemini help research this faster?
+4. Is there a community pattern? (anthropics/skills, awesome-claude-code)
+5. COST CHECK: Is it $0? If not, DON'T USE IT.
+```
+
+**Priority order:**
+1. GitHub-native (zero cost, zero setup) — Actions, Pages, Issues, CodeQL, Dependabot
+2. CLI tools in workflows (jq, python, curl) — zero cost, runs in Actions
+3. Free-tier SaaS with GitHub integration (Snyk, UptimeRobot, Grafana Cloud)
+4. AI assistants for research (Claude Web, ChatGPT Free, Gemini Free)
+5. Self-hosted open-source (n8n, Prometheus) — if infrastructure available
+
+**ABSOLUTE RULE: Zero additional cost. If it costs money → find a free alternative.**
+
+**Before implementing ANY new tool or integration, run this cost-benefit check:**
+```
+┌─ COST-BENEFIT GATE (mandatory before any new tool/feature) ─┐
+│                                                               │
+│  1. COMPLEXITY: How hard is this to set up and maintain?      │
+│     Low (< 1h) / Medium (1-4h) / High (> 4h)                │
+│                                                               │
+│  2. COST: Is it $0 now AND in the future?                    │
+│     Free forever / Free tier with limits / Paid → REJECT     │
+│                                                               │
+│  3. VALUE: What problem does it solve? How often?             │
+│     Daily impact / Weekly / Rare → is it worth the effort?   │
+│                                                               │
+│  4. ALTERNATIVES: Can we do this with what we already have?   │
+│     GitHub Actions / jq+bash / existing workflow → USE THAT  │
+│                                                               │
+│  5. VERDICT: Implement ONLY if value > complexity             │
+│     High value + Low complexity = DO IT                       │
+│     Low value + High complexity = SKIP IT                     │
+│     Any cost > $0 = REJECT                                   │
+└───────────────────────────────────────────────────────────────┘
+```
+
+Full registry: `contracts/external-tools-registry.json`
+
 ## The Golden Rules
 
 - **Simplicity wins.** 3 lines of clear code > 10 lines of clever code.
@@ -140,3 +187,4 @@ Level 4: AI-Optional     (system fully autonomous)       ← GOAL
 - **Autonomy with responsibility.** You can act without asking, but you own the result. If it breaks, fix it immediately.
 - **Learn continuously.** Every failure is a pattern to record. Every success is a baseline to maintain.
 - **GitHub is permanent, AI is transient.** Codify knowledge in workflows, docs, and contracts — not just conversations. Build for the day AI is unavailable.
+- **Use every free tool.** Don't reinvent what GitHub, open-source, or free AI tiers already provide.

@@ -5,6 +5,23 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-04-04
+
+### Added
+- **External Tools Registry** (`contracts/external-tools-registry.json`): Catalog of ALL free tools
+  agents should consider (Claude Web, ChatGPT Free, Gemini, GitHub CodeQL, Dependabot, Snyk Free,
+  UptimeRobot, Grafana Cloud Free, community intelligence sources). Zero-cost mandate enforced.
+- **Cost-Benefit Gate**: Mandatory analysis before ANY new tool/integration — complexity, cost ($0 only),
+  value, alternatives check. If existing tools can do it → use existing. Director has veto power.
+- **5th Law** in AGENT_BRAIN.md: "Use Every Free Tool Available" — agents must check free alternatives
+  before coding custom solutions. Priority: GitHub-native > CLI tools > Free SaaS > AI research > Self-hosted.
+
+### Changed
+- AGENT_BRAIN.md: Added 5th Law + cost-benefit gate flowchart
+- Director agent: Added Cost-Benefit Gate as veto power (Section 5), rejects any cost > $0
+- Team Lead agent: Improvement planning now starts with free tools check (Step 2)
+- All agents operate under principle: don't reinvent what free tools already provide
+
 ## [1.5.0] - 2026-04-04
 
 ### Added
