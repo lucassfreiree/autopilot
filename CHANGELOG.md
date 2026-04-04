@@ -5,6 +5,13 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-04-04
+
+### Fixed
+- Added minimal `permissions:` blocks to 6 workflows (least privilege principle)
+  - check-repo-access, release-agent, release-controller, security-vuln-scanner, session-guard, sync-community-resources
+- Applied by: DevOps Agent (autonomous cycle)
+
 ## [1.0.1] - 2026-04-04
 
 ### Fixed

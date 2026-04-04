@@ -22,6 +22,9 @@ on:
         required: false
         default: "false"
 
+permissions:
+  contents: write
+
 concurrency:
   group: autopilot-controller-release
   cancel-in-progress: false

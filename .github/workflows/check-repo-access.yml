@@ -8,6 +8,9 @@ on:
     paths:
       - '.github/workflows/check-repo-access.yml'
 
+permissions:
+  contents: read
+
 concurrency:
   group: check-repo-access-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
