@@ -104,15 +104,29 @@
     <div class="auth-card">
       <div class="lock-icon">&#x1F512;</div>
       <h2>Autopilot Control Plane</h2>
-      <p class="subtitle">Authenticated access only. Enter your GitHub Personal Access Token.</p>
+      <p class="subtitle">Authenticated access only. Login with your GitHub account.</p>
       <div id="authUserInfo"></div>
       <div class="auth-error" id="authError"></div>
+
+      <!-- Primary: OAuth Login with GitHub -->
+      <button class="auth-btn" id="oauthBtn" onclick="loginWithGitHub()" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        Login with GitHub
+      </button>
+
+      <div style="display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted)">
+        <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+        <span style="font-size:12px">or use a Personal Access Token</span>
+        <hr style="flex:1;border:none;border-top:1px solid var(--border)">
+      </div>
+
+      <!-- Fallback: PAT Entry -->
       <input type="password" id="authTokenInput" placeholder="ghp_... (GitHub Personal Access Token)" autocomplete="off">
-      <button class="auth-btn" id="authBtn" onclick="authenticate()">Authenticate</button>
+      <button class="auth-btn" id="authBtn" onclick="authenticate()" style="background:var(--blue)">Authenticate with PAT</button>
       <div class="auth-info">
-        Token is stored in <strong>sessionStorage</strong> only (cleared on tab close).<br>
+        Session stored in <strong>sessionStorage</strong> only (cleared on tab close).<br>
         Only authorized GitHub users can access this dashboard.<br>
-        Required PAT scope: <code>repo</code> (read access).
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=Autopilot+Dashboard" target="_blank" rel="noopener" style="color:var(--blue)">Create a PAT here</a> (select <code>repo</code> scope).
       </div>
     </div>
   </div>
@@ -572,6 +586,15 @@
     const STATE_BRANCH = 'autopilot-state';
     const API = 'https://api.github.com';
 
+    // ═══ OAUTH CONFIG ═══
+    // To enable "Login with GitHub", set these values:
+    // 1. Create a GitHub OAuth App: https://github.com/settings/developers
+    // 2. Deploy the Cloudflare Worker from panel/oauth-proxy/worker.js
+    // 3. Set the values below:
+    const OAUTH_CLIENT_ID = '';  // Your GitHub OAuth App Client ID
+    const OAUTH_PROXY_URL = '';  // Your Cloudflare Worker URL (e.g. https://autopilot-oauth.yourname.workers.dev)
+    const OAUTH_REDIRECT_URI = window.location.origin + window.location.pathname;
+
     // ═══ ACCESS CONTROL ═══
     // Only these GitHub users can access the dashboard.
     // Add usernames here to grant access.
@@ -600,7 +623,110 @@
       return JSON.parse(atob(data.content));
     }
 
-    // ═══ AUTHENTICATION ═══
+    // ═══ OAUTH: LOGIN WITH GITHUB ═══
+    function loginWithGitHub() {
+      if (!OAUTH_CLIENT_ID || !OAUTH_PROXY_URL) {
+        showAuthError('OAuth not configured yet. Use a PAT to login, or deploy the OAuth proxy (see panel/oauth-proxy/README.md).');
+        return;
+      }
+      // Redirect to GitHub OAuth authorization page
+      const state = Math.random().toString(36).substring(2, 15);
+      sessionStorage.setItem('oauth_state', state);
+      const authUrl = `https://github.com/login/oauth/authorize?client_id=${OAUTH_CLIENT_ID}&redirect_uri=${encodeURIComponent(OAUTH_REDIRECT_URI)}&scope=repo&state=${state}`;
+      window.location.href = authUrl;
+    }
+
+    // Handle OAuth callback (when GitHub redirects back with ?code=)
+    async function handleOAuthCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+
+      if (!code) return false;
+
+      // Verify state to prevent CSRF
+      const savedState = sessionStorage.getItem('oauth_state');
+      if (state !== savedState) {
+        showAuthError('OAuth state mismatch. Please try again.');
+        window.history.replaceState({}, '', window.location.pathname);
+        return false;
+      }
+      sessionStorage.removeItem('oauth_state');
+
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+
+      if (!OAUTH_PROXY_URL) {
+        showAuthError('OAuth proxy not configured.');
+        return false;
+      }
+
+      // Exchange code for token via Cloudflare Worker
+      const btn = document.getElementById('oauthBtn');
+      btn.disabled = true;
+      btn.innerHTML = 'Authenticating...';
+
+      try {
+        const resp = await fetch(OAUTH_PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          showAuthError(err.error || 'Failed to exchange token.');
+          btn.disabled = false;
+          btn.innerHTML = 'Login with GitHub';
+          return false;
+        }
+
+        const { access_token } = await resp.json();
+
+        if (!access_token) {
+          showAuthError('No token received. Try again.');
+          btn.disabled = false;
+          btn.innerHTML = 'Login with GitHub';
+          return false;
+        }
+
+        // Validate user via GitHub API
+        const userResp = await fetch(`${API}/user`, {
+          headers: { 'Authorization': `Bearer ${access_token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        if (!userResp.ok) {
+          showAuthError('Token validation failed.');
+          btn.disabled = false;
+          btn.innerHTML = 'Login with GitHub';
+          return false;
+        }
+
+        const user = await userResp.json();
+
+        if (!ALLOWED_USERS.includes(user.login)) {
+          document.getElementById('authUserInfo').innerHTML = `<div class="auth-denied"><span>Access denied for <strong>@${user.login}</strong>.</span></div>`;
+          showAuthError('Unauthorized user.');
+          btn.disabled = false;
+          btn.innerHTML = 'Login with GitHub';
+          return false;
+        }
+
+        // Success!
+        setToken(access_token);
+        setUser(JSON.stringify({ login: user.login, avatar: user.avatar_url, name: user.name || user.login }));
+        showDashboard(user);
+        return true;
+
+      } catch (e) {
+        showAuthError('Network error during OAuth.');
+        btn.disabled = false;
+        btn.innerHTML = 'Login with GitHub';
+        return false;
+      }
+    }
+
+    // ═══ PAT AUTHENTICATION ═══
     async function authenticate() {
       const btn = document.getElementById('authBtn');
       const errorEl = document.getElementById('authError');
@@ -1042,6 +1168,13 @@
 
     // Auto-reconnect if valid session exists
     (async function autoReconnect() {
+      // First: check if this is an OAuth callback (GitHub redirected back with ?code=)
+      if (window.location.search.includes('code=')) {
+        const handled = await handleOAuthCallback();
+        if (handled) return;
+      }
+
+      // Second: check existing session
       const token = getToken();
       const userData = getUser();
       if (token && userData) {
@@ -1062,6 +1195,11 @@
         // Token expired or user no longer authorized
         clearToken();
         clearUser();
+      }
+
+      // Show OAuth button state based on config
+      if (!OAUTH_CLIENT_ID || !OAUTH_PROXY_URL) {
+        document.getElementById('oauthBtn').title = 'OAuth not configured — deploy the proxy first (see panel/oauth-proxy/README.md)';
       }
     })();
   </script>
