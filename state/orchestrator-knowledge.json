@@ -21,6 +21,11 @@
       "count": 5
     },
     {
+      "workflow": "Auto-Fix on Push",
+      "consecutiveAt": "2026-04-04T22:17:04Z",
+      "count": 4
+    },
+    {
       "workflow": "Security Scorecard",
       "consecutiveAt": "2026-04-04T21:20:25Z",
       "count": 4
@@ -136,14 +141,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-04T21:20:25Z",
-  "lastHealth": "degraded",
-  "runCount": 130,
+  "lastRun": "2026-04-04T22:17:04Z",
+  "lastHealth": "critical",
+  "runCount": 131,
   "healthHistory": [
-    {
-      "ts": "2026-04-04T05:48:01Z",
-      "health": "critical"
-    },
     {
       "ts": "2026-04-04T06:44:35Z",
       "health": "critical"
@@ -219,6 +220,10 @@
     {
       "ts": "2026-04-04T21:20:25Z",
       "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T22:17:04Z",
+      "health": "critical"
     }
   ]
 }
