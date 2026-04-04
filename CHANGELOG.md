@@ -5,6 +5,26 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-04-04
+
+### Added
+- **Security Scorecard** (`security-scorecard.yml`): OpenSSF Scorecard (`ossf/scorecard-action@v2`,
+  2k+ stars) runs 18 automated security checks — branch protection, pinned actions, token permissions.
+  Results uploaded to GitHub Security tab as SARIF. Weekly + on push to main.
+- **CI Hardening** (`harden-ci.yml`): Step Security Harden Runner (`step-security/harden-runner@v2`,
+  18M+ weekly runs) monitors runner network egress and process activity. Audits workflows using
+  BBVINET_TOKEN and RELEASE_TOKEN. Checks for unpinned 3rd-party actions, pull_request_target
+  injection risks, and curl|sh patterns. Weekly audit.
+- **Smart Path Filtering**: Integrated `dorny/paths-filter@v3` (3k+ stars) into Quality Gate.
+  Jobs now skip when irrelevant files changed — saves Actions minutes on every PR.
+
+### Changed
+- Quality Gate (`agent-quality-gate.yml`): Added `detect-changes` job with paths-filter.
+  YAML validation skips if no workflow changes, JSON skips if no schema/contract changes,
+  dashboard check skips if no panel changes, etc. Report shows "skipped" with reason.
+  Gate decision now checks for `failure` (not `!= success`) to allow skipped jobs.
+- Total workflows: 81 (was 79)
+
 ## [1.7.0] - 2026-04-04
 
 ### Added

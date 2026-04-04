@@ -32,8 +32,51 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Smart path detection — skip jobs when irrelevant files changed
+  # Uses dorny/paths-filter (3k+ stars) to save Actions minutes
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      workflows: ${{ steps.filter.outputs.workflows }}
+      schemas: ${{ steps.filter.outputs.schemas }}
+      contracts: ${{ steps.filter.outputs.contracts }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+      version: ${{ steps.filter.outputs.version }}
+      agents: ${{ steps.filter.outputs.agents }}
+      triggers: ${{ steps.filter.outputs.triggers }}
+      security: ${{ steps.filter.outputs.security }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            workflows:
+              - '.github/workflows/**'
+            schemas:
+              - 'schemas/**'
+            contracts:
+              - 'contracts/**'
+            dashboard:
+              - 'panel/**'
+            version:
+              - 'version.json'
+              - 'CHANGELOG.md'
+            agents:
+              - '.claude/agents/**'
+              - '.claude/skills/**'
+            triggers:
+              - 'trigger/**'
+            security:
+              - 'compliance/**'
+              - '.claude/agents/security-agent.md'
+
   yaml-validation:
     name: YAML Validation
+    needs: detect-changes
+    if: needs.detect-changes.outputs.workflows == 'true' || needs.detect-changes.outputs.agents == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -55,6 +98,8 @@ jobs:
 
   json-validation:
     name: JSON Validation
+    needs: detect-changes
+    if: needs.detect-changes.outputs.schemas == 'true' || needs.detect-changes.outputs.contracts == 'true' || needs.detect-changes.outputs.version == 'true' || needs.detect-changes.outputs.triggers == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -77,6 +122,8 @@ jobs:
 
   version-check:
     name: Version Consistency
+    needs: detect-changes
+    if: needs.detect-changes.outputs.version == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -125,6 +172,7 @@ jobs:
 
   security-scan:
     name: Security Scan
+    needs: detect-changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -170,6 +218,8 @@ jobs:
 
   trigger-validation:
     name: Trigger File Validation
+    needs: detect-changes
+    if: needs.detect-changes.outputs.triggers == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -197,6 +247,8 @@ jobs:
 
   dashboard-check:
     name: Dashboard Health
+    needs: detect-changes
+    if: needs.detect-changes.outputs.dashboard == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -228,7 +280,7 @@ jobs:
 
   report:
     name: Quality Report
-    needs: [yaml-validation, json-validation, version-check, security-scan, trigger-validation, dashboard-check]
+    needs: [detect-changes, yaml-validation, json-validation, version-check, security-scan, trigger-validation, dashboard-check]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -236,21 +288,21 @@ jobs:
       - name: Generate report
         run: |
           echo "## Quality Gate Report" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| YAML | ${{ needs.yaml-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| JSON | ${{ needs.json-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Version | ${{ needs.version-check.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Security | ${{ needs.security-scan.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Triggers | ${{ needs.trigger-validation.result }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Dashboard | ${{ needs.dashboard-check.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status | Note |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| YAML | ${{ needs.yaml-validation.result }} | ${{ needs.yaml-validation.result == 'skipped' && 'No workflow changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| JSON | ${{ needs.json-validation.result }} | ${{ needs.json-validation.result == 'skipped' && 'No JSON changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | ${{ needs.version-check.result }} | ${{ needs.version-check.result == 'skipped' && 'No version changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Security | ${{ needs.security-scan.result }} | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Triggers | ${{ needs.trigger-validation.result }} | ${{ needs.trigger-validation.result == 'skipped' && 'No trigger changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dashboard | ${{ needs.dashboard-check.result }} | ${{ needs.dashboard-check.result == 'skipped' && 'No dashboard changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Gate decision
         if: |
-          needs.yaml-validation.result != 'success' ||
-          needs.json-validation.result != 'success' ||
-          needs.version-check.result != 'success' ||
-          needs.security-scan.result != 'success'
+          needs.yaml-validation.result == 'failure' ||
+          needs.json-validation.result == 'failure' ||
+          needs.version-check.result == 'failure' ||
+          needs.security-scan.result == 'failure'
         run: |
           echo "::error ::Quality gate FAILED — merge blocked"
           exit 1
