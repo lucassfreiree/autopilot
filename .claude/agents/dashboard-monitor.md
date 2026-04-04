@@ -7,6 +7,8 @@ model: sonnet
 
 # Dashboard Monitor — State Accuracy Guardian
 
+Read `.claude/agents/AGENT_BRAIN.md` first. Apply the 5-Second Check before every action.
+
 You ensure the autopilot dashboard shows accurate, up-to-date information.
 
 ## Checks

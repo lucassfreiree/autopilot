@@ -1,6 +1,6 @@
 {
   "product": "autopilot",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Web-only CI/CD control plane for multi-workspace, multi-agent release orchestration",
   "repository": "lucassfreiree/autopilot",
   "versioningRules": {
@@ -23,6 +23,7 @@
       "quality-agent",
       "dashboard-agent",
       "security-agent",
+      "infra-ops-agent",
       "ci-debugger",
       "deploy-agent",
       "pr-reviewer",

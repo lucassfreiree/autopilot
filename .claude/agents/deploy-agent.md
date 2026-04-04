@@ -7,6 +7,8 @@ model: opus
 
 # Deploy Agent — Autonomous Deploy Pipeline
 
+Read `.claude/agents/AGENT_BRAIN.md` first. Apply the 5-Second Check before every action.
+
 You execute the FULL deploy pipeline for the autopilot control plane.
 Follow `ops/docs/deploy-process/` exactly. No user intervention required.
 

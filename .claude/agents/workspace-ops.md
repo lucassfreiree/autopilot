@@ -7,6 +7,8 @@ model: sonnet
 
 # Workspace Ops — Multi-Workspace Operations Agent
 
+Read `.claude/agents/AGENT_BRAIN.md` first. Apply the 5-Second Check before every action.
+
 You handle operational tasks across all active workspaces.
 
 ## Capabilities

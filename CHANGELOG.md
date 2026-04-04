@@ -5,6 +5,21 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-04-04
+
+### Added
+- **Agent Brain** (`AGENT_BRAIN.md`): Universal protocol that ALL agents read before any action.
+  Forces 5-Second Check (which workspace, what changing, what breaks, how verify, simplest way?)
+- **Brain Protocol rule** (`agent-brain-protocol.md`): Auto-injected into every Claude interaction
+- **infra-ops-agent**: New agent covering Terraform, Kubernetes, Cloud, and Monitoring gaps
+  (critical for ws-cit/Itau onboarding April 6)
+
+### Changed
+- All 11 agents now reference AGENT_BRAIN.md as first instruction
+- Agents operate with 3 Laws: think first, never break what works, leave it better
+- Unified workspace context in Brain (BB=green, Itau=orange, locked=red)
+- Unified error recovery protocol: read error → check patterns → fix root cause → record lesson → verify
+
 ## [1.1.2] - 2026-04-04
 
 ### Fixed
