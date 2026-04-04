@@ -1,0 +1,87 @@
+name: "Agent Finding"
+description: "Report a problem, bug, or gap found by an agent during analysis"
+labels: ["finding", "needs-review"]
+body:
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      description: Which agent found this?
+      options:
+        - director-agent
+        - team-lead-agent
+        - architect-agent
+        - devops-agent
+        - quality-agent
+        - security-agent
+        - dashboard-agent
+        - infra-ops-agent
+        - ci-debugger
+        - deploy-agent
+        - pr-reviewer
+        - workspace-ops
+        - dashboard-monitor
+        - feature-validation-sweep
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "P0 - Critical (fix NOW)"
+        - "P1 - High (fix this cycle)"
+        - "P2 - Medium (plan fix)"
+        - "P3 - Low (backlog)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: workspace
+    attributes:
+      label: Workspace
+      description: Which workspace is affected?
+      options:
+        - "ws-default (Getronics → BB)"
+        - "ws-cit (CIT → Itau)"
+        - "All workspaces"
+        - "Autopilot control plane"
+    validations:
+      required: true
+
+  - type: textarea
+    id: finding
+    attributes:
+      label: Finding
+      description: What was found?
+      placeholder: "Describe the problem, bug, or gap clearly"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What breaks or degrades if not fixed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: Recommended Fix
+      description: How should this be fixed?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: auto_fixable
+    attributes:
+      label: Auto-fixable?
+      options:
+        - "Yes - agent can fix autonomously"
+        - "No - needs human review"
+        - "Partial - agent can fix part of it"
+    validations:
+      required: true

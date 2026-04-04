@@ -1,0 +1,74 @@
+# Configuration for actions/labeler — auto-labels PRs based on changed files
+# Used by pr-auto-label.yml workflow
+
+# Agent definitions
+agent:
+  - changed-files:
+    - any-glob-to-any-file: '.claude/agents/**'
+
+# Skills
+skill:
+  - changed-files:
+    - any-glob-to-any-file: '.claude/skills/**'
+
+# Workflows
+workflow:
+  - changed-files:
+    - any-glob-to-any-file: '.github/workflows/**'
+
+# Dashboard
+dashboard:
+  - changed-files:
+    - any-glob-to-any-file: 'panel/**'
+
+# Contracts
+contract:
+  - changed-files:
+    - any-glob-to-any-file: 'contracts/**'
+
+# Schemas
+schema:
+  - changed-files:
+    - any-glob-to-any-file: 'schemas/**'
+
+# Patches (corporate code changes)
+patch:
+  - changed-files:
+    - any-glob-to-any-file: 'patches/**'
+
+# Trigger files
+trigger:
+  - changed-files:
+    - any-glob-to-any-file: 'trigger/**'
+
+# Operations
+ops:
+  - changed-files:
+    - any-glob-to-any-file: 'ops/**'
+
+# Security
+security:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'compliance/**'
+      - '.claude/skills/security-expert.md'
+      - '.claude/agents/security-agent.md'
+
+# Documentation
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.md'
+      - 'ops/docs/**'
+
+# Version bump
+version:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'version.json'
+      - 'CHANGELOG.md'
+
+# Integrations
+integration:
+  - changed-files:
+    - any-glob-to-any-file: 'integrations/**'

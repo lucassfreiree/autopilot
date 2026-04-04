@@ -1,0 +1,77 @@
+name: "Agent Improvement"
+description: "Propose an improvement identified by an agent"
+labels: ["improvement", "needs-review"]
+body:
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Proposing Agent
+      options:
+        - director-agent
+        - team-lead-agent
+        - architect-agent
+        - devops-agent
+        - quality-agent
+        - security-agent
+        - dashboard-agent
+        - infra-ops-agent
+        - ci-debugger
+        - deploy-agent
+        - pr-reviewer
+        - workspace-ops
+        - dashboard-monitor
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - "Workflow optimization"
+        - "Security hardening"
+        - "Dashboard enhancement"
+        - "Monitoring coverage"
+        - "Agent capability"
+        - "Documentation"
+        - "Performance"
+        - "Architecture"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current State
+      description: What exists today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed Improvement
+      description: What should change?
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Expected Benefit
+      description: What improves? (measurable if possible)
+    validations:
+      required: true
+
+  - type: textarea
+    id: cost_benefit
+    attributes:
+      label: Cost-Benefit Analysis
+      description: "Complexity (Low/Medium/High), Cost ($0?), Value (Daily/Weekly/Rare)"
+      placeholder: |
+        Complexity: Low (< 1h setup)
+        Cost: $0
+        Value: Daily impact — reduces CI failures by ~30%
+        Alternative checked: No existing tool does this
+    validations:
+      required: true
