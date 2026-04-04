@@ -153,7 +153,7 @@
   </style>
 </head>
 <body>
-<div class="layout" id="mainApp">
+<div class="layout">
   <nav class="sidebar">
     <div class="sidebar-logo"><h1>Autopilot</h1><p>Intelligence Dashboard v2</p></div>
     <div style="padding:8px 12px;border-bottom:1px solid var(--border)">
@@ -313,12 +313,6 @@
   </main>
 </div>
 <script>
-  const GHAPI = 'https://api.github.com';
-  const REPO = 'lucassfreiree/autopilot';
-
-  // Auto-init on load
-  init();
-
   let state = {};
   // Smart refresh: 30s during business hours (8h-17h BRT Mon-Fri), 60s off-hours
   function isBusinessHours(){const now=new Date();const utcH=now.getUTCHours();const brtH=(utcH-3+24)%24;const dow=now.getUTCDay();return dow>=1&&dow<=5&&brtH>=8&&brtH<17}
@@ -775,7 +769,7 @@
         {label:'Agent CI',url:'https://github.com/bbvinet/psc-sre-automacao-agent/actions'},
         {label:'Dashboard',url:'https://lucassfreiree.github.io/autopilot/dashboard/'}
       ],
-      infra:{'Cluster HML':'k8shmlbb111b','Controller NS':'psc-sre-aut-controller','Registry':'***REDACTED***/bb/psc','CI':'Esteira de Build NPM (corp runner)','Auth':'OAS internal-origin + JWT','Deploy':'apply-source-change (7 stages)','CAP Promote':'Auto after CI green'}
+      infra:{'Cluster HML':'k8shmlbb111b','Controller NS':'psc-sre-aut-controller','Registry':'***REDACTED***','CI':'Esteira de Build NPM (corp runner)','Auth':'OAS internal-origin + JWT','Deploy':'apply-source-change (7 stages)','CAP Promote':'Auto after CI green'}
     },
     'ws-cit':{
       company:'CIT',client:'Itau Unibanco',clientShort:'Itau',
@@ -1696,9 +1690,9 @@
     return parts[0]+'.'+parts[1]+'.'+(parts[2]+1);
   }
 
-  // Init (called by auth gate after successful authentication)
-  let _initialized = false;
-  async function init(){ if(_initialized) return; _initialized=true; await fetchState(); scheduleRefresh(); }
+  // Init
+  async function init(){await fetchState();scheduleRefresh()}
+  init();
 </script>
 </body>
 </html>

@@ -5,6 +5,14 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.6] - 2026-04-04
+
+### Reverted
+- **Removed OAuth authentication from both dashboards** — rolled back to pre-auth state (public dashboards)
+- **Removed Vercel OAuth proxy** (`api/oauth.js`, `vercel.json`)
+- **Removed Cloudflare Worker OAuth proxy** (`panel/oauth-proxy/`)
+- Dashboards restored to original v1.8.2 state (security redactions preserved)
+
 ## [1.8.5] - 2026-04-04
 
 ### Security
