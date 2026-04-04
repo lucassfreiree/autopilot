@@ -79,14 +79,20 @@
   </style>
 </head>
 <body>
-  <div class="container" id="mainApp">
+  <div class="container">
     <header>
       <h1>Autopilot Control Plane</h1>
       <div class="auth-section">
-        <input type="password" id="tokenInput" placeholder="GitHub PAT (optional)">
-        <button class="btn" onclick="connectToken()">Connect</button>
+        <input type="password" id="tokenInput" placeholder="GitHub PAT (sessionStorage only)">
+        <button class="btn" onclick="connect()">Connect</button>
+        <button class="btn btn-danger" onclick="disconnect()" style="display:none" id="disconnectBtn">Disconnect</button>
       </div>
     </header>
+
+    <div class="warning-box" id="securityNote">
+      Token is stored in <strong>sessionStorage</strong> only (cleared on tab close). Never use localStorage.
+      For editing, use <a href="https://github.dev/lucassfreiree/autopilot" style="color:var(--blue)">github.dev</a>.
+    </div>
 
     <div class="tabs">
       <div class="tab active" onclick="showTab('pipeline')">Pipeline & Tools</div>
@@ -535,14 +541,6 @@
     function setToken(t) { sessionStorage.setItem('autopilot_token', t); }
     function clearToken() { sessionStorage.removeItem('autopilot_token'); }
 
-    function connectToken() {
-      const t = document.getElementById('tokenInput').value.trim();
-      if (t) { setToken(t); document.getElementById('tokenInput').value = ''; }
-      loadWorkspaces();
-      populateSelectors();
-      loadPipelineStatus();
-    }
-
     async function ghGet(path) {
       const token = getToken();
       if (!token) return null;
@@ -557,6 +555,24 @@
       const data = await ghGet(`repos/${REPO}/contents/${filePath}?ref=${STATE_BRANCH}`);
       if (!data || !data.content) return null;
       return JSON.parse(atob(data.content));
+    }
+
+    async function connect() {
+      const token = document.getElementById('tokenInput').value.trim();
+      if (!token) return;
+      setToken(token);
+      document.getElementById('tokenInput').value = '';
+      document.getElementById('disconnectBtn').style.display = '';
+      await loadWorkspaces();
+      await populateSelectors();
+      await loadPipelineStatus();
+    }
+
+    function disconnect() {
+      clearToken();
+      document.getElementById('disconnectBtn').style.display = 'none';
+      document.getElementById('workspaceList').innerHTML = '<div class="empty">Connect to load workspaces</div>';
+      document.getElementById('wsSelect').innerHTML = '<option value="">Select...</option>';
     }
 
     function showTab(name) {
@@ -901,12 +917,13 @@
       }
     }
 
-    // Auto-load on page open
-    (function() {
+    // Auto-connect if token exists in session
+    if (getToken()) {
+      document.getElementById('disconnectBtn').style.display = '';
       loadWorkspaces();
       populateSelectors();
       loadPipelineStatus();
-    })();
+    }
   </script>
 </body>
 </html>
