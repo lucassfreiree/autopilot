@@ -107,13 +107,12 @@
       <p class="subtitle">Authenticate with your GitHub account.</p>
       <div id="authUserInfo"></div>
       <div class="auth-error" id="authError"></div>
-      <input type="password" id="authTokenInput" placeholder="GitHub Personal Access Token" autocomplete="off">
-      <button class="auth-btn" id="authBtn" onclick="authenticate()" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px">
+      <button class="auth-btn" id="authBtn" onclick="loginWithGitHub()" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px">
         <svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         Login with GitHub
       </button>
-      <div class="auth-info">
-        <a href="https://github.com/settings/tokens/new?scopes=repo&description=Autopilot+Dashboard" target="_blank" rel="noopener" style="color:var(--blue)">Create a token here</a> (select <code>repo</code> scope)
+      <div class="auth-info" style="margin-top:16px">
+        Only authorized GitHub users can access this dashboard.
       </div>
     </div>
   </div>
@@ -574,7 +573,9 @@
     const API = 'https://api.github.com';
 
     // ═══ OAUTH CONFIG ═══
-    // ═══ ACCESS CONTROL ═══
+    const OAUTH_CLIENT_ID = 'Ov23liNwCfMBsdPGXoyv';
+    const OAUTH_PROXY_URL = 'https://autopilot-oauth.lucassfreiree.workers.dev';
+    const OAUTH_REDIRECT_URI = window.location.origin + window.location.pathname;
     const ALLOWED_USERS = ['lucassfreiree'];
 
     function getToken() { return sessionStorage.getItem('autopilot_token'); }
@@ -600,69 +601,58 @@
       return JSON.parse(atob(data.content));
     }
 
-    // ═══ AUTHENTICATION VIA GITHUB API ═══
-    async function authenticate() {
+    // ═══ GITHUB OAUTH AUTHENTICATION ═══
+    const GH_ICON = '<svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+
+    function loginWithGitHub() {
+      const state = Math.random().toString(36).substring(2, 15);
+      sessionStorage.setItem('oauth_state', state);
+      window.location.href = `https://github.com/login/oauth/authorize?client_id=${OAUTH_CLIENT_ID}&redirect_uri=${encodeURIComponent(OAUTH_REDIRECT_URI)}&scope=repo&state=${state}`;
+    }
+
+    function resetBtn() {
       const btn = document.getElementById('authBtn');
-      const errorEl = document.getElementById('authError');
-      const infoEl = document.getElementById('authUserInfo');
-      const tokenInput = document.getElementById('authTokenInput');
-      const token = tokenInput.value.trim();
+      btn.disabled = false;
+      btn.innerHTML = GH_ICON + ' Login with GitHub';
+    }
 
-      if (!token) { showAuthError('Please enter a token.'); return; }
+    async function handleOAuthCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      if (!code) return false;
 
+      const savedState = sessionStorage.getItem('oauth_state');
+      if (state !== savedState) { showAuthError('State mismatch. Try again.'); window.history.replaceState({}, '', window.location.pathname); return false; }
+      sessionStorage.removeItem('oauth_state');
+      window.history.replaceState({}, '', window.location.pathname);
+
+      const btn = document.getElementById('authBtn');
       btn.disabled = true;
-      btn.innerHTML = 'Verifying...';
-      errorEl.style.display = 'none';
-      infoEl.innerHTML = '';
+      btn.innerHTML = 'Authenticating...';
 
       try {
-        // Step 1: Validate token by calling GitHub API
-        const resp = await fetch(`${API}/user`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
+        const resp = await fetch(OAUTH_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+        if (!resp.ok) { showAuthError('Authentication failed.'); resetBtn(); return false; }
+        const { access_token } = await resp.json();
+        if (!access_token) { showAuthError('No token received.'); resetBtn(); return false; }
 
-        if (!resp.ok) {
-          showAuthError('Invalid token. Check your GitHub PAT and try again.');
-          btn.disabled = false;
-          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Login with GitHub';
-          return;
-        }
+        const userResp = await fetch(`${API}/user`, { headers: { 'Authorization': `Bearer ${access_token}`, 'Accept': 'application/vnd.github.v3+json' } });
+        if (!userResp.ok) { showAuthError('GitHub validation failed.'); resetBtn(); return false; }
+        const user = await userResp.json();
 
-        const user = await resp.json();
-
-        // Step 2: Check if user is in the allowed list
         if (!ALLOWED_USERS.includes(user.login)) {
-          infoEl.innerHTML = `<div class="auth-denied"><span>Access denied for <strong>@${user.login}</strong>. You are not authorized to access this dashboard.</span></div>`;
-          showAuthError('Unauthorized user. Contact the repository owner.');
-          btn.disabled = false;
-          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Login with GitHub';
-          tokenInput.value = '';
-          return;
+          document.getElementById('authUserInfo').innerHTML = `<div class="auth-denied"><span>Access denied for <strong>@${user.login}</strong>.</span></div>`;
+          showAuthError('Unauthorized user.');
+          resetBtn();
+          return false;
         }
 
-        // Step 3: Verify token has access to the repo
-        const repoResp = await fetch(`${API}/repos/${REPO}`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-
-        if (!repoResp.ok) {
-          showAuthError('Token lacks access to the autopilot repository. Ensure PAT has "repo" scope.');
-          btn.disabled = false;
-          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Login with GitHub';
-          return;
-        }
-
-        // Step 4: Auth passed — save and show dashboard
-        setToken(token);
+        setToken(access_token);
         setUser(JSON.stringify({ login: user.login, avatar: user.avatar_url, name: user.name || user.login }));
-        tokenInput.value = '';
         showDashboard(user);
-
-      } catch (e) {
-        showAuthError('Network error. Check your connection and try again.');
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Login with GitHub';
-      }
+        return true;
+      } catch (e) { showAuthError('Network error.'); resetBtn(); return false; }
     }
 
     function showAuthError(msg) {
@@ -685,18 +675,12 @@
       clearUser();
       document.getElementById('mainApp').style.display = 'none';
       document.getElementById('authOverlay').style.display = 'flex';
-      document.getElementById('authBtn').disabled = false;
-      document.getElementById('authBtn').innerHTML = '<svg width="20" height="20" viewBox="0 0 16 16" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Login with GitHub';
+      resetBtn();
       document.getElementById('authError').style.display = 'none';
       document.getElementById('authUserInfo').innerHTML = '';
       document.getElementById('workspaceList').innerHTML = '<div class="empty">Connect to load workspaces</div>';
       document.getElementById('wsSelect').innerHTML = '<option value="">Select...</option>';
     }
-
-    // Allow Enter key to submit
-    document.getElementById('authTokenInput').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') authenticate();
-    });
 
     function showTab(name) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1040,8 +1024,13 @@
       }
     }
 
-    // Auto-reconnect if valid session exists
+    // Auto-reconnect or handle OAuth callback
     (async function autoReconnect() {
+      // Check if returning from GitHub OAuth
+      if (window.location.search.includes('code=')) {
+        if (await handleOAuthCallback()) return;
+      }
+      // Check existing session
       const token = getToken();
       const userData = getUser();
       if (token && userData) {
