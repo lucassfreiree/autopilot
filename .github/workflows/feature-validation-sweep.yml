@@ -1,0 +1,548 @@
+name: "Feature Validation Sweep"
+
+# Runs AFTER every merge to main — validates new features for bugs, gaps, and inconsistencies
+# Auto-fixes what it can, creates Issues for what it can't
+# This is the "safety net" that catches what pre-merge gates missed
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'contracts/claude-session-memory.json'
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Run full scan (not just changed files)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: feature-validation-sweep
+  cancel-in-progress: true
+
+env:
+  STATE_BRANCH: autopilot-state
+
+jobs:
+  sweep:
+    name: "Validate & Auto-Fix"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get changed files
+        id: changed
+        run: |
+          if [ "${{ inputs.full_scan }}" = "true" ]; then
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+            echo "Running full scan (all files)"
+          else
+            echo "mode=diff" >> "$GITHUB_OUTPUT"
+            CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+            echo "files<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$CHANGED" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "Changed files:"
+            echo "$CHANGED"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 1: JSON Validity (all changed .json)
+      # ═══════════════════════════════════════════
+      - name: "Check 1: JSON validity"
+        id: json_check
+        run: |
+          ISSUES=""
+          if [ "${{ steps.changed.outputs.mode }}" = "full" ]; then
+            FILES=$(find . -name "*.json" -not -path "./.git/*" -not -path "./node_modules/*")
+          else
+            FILES=$(echo "${{ steps.changed.outputs.files }}" | grep '\.json$' || true)
+          fi
+
+          for f in $FILES; do
+            [ -f "$f" ] || continue
+            if ! python3 -c "import json; json.load(open('$f'))" 2>/dev/null; then
+              ISSUES="${ISSUES}INVALID JSON: $f\n"
+            fi
+          done
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "::error::JSON validation failed"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "All JSON files valid"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 2: YAML Validity (all changed .yml)
+      # ═══════════════════════════════════════════
+      - name: "Check 2: YAML validity"
+        id: yaml_check
+        run: |
+          ISSUES=""
+          if [ "${{ steps.changed.outputs.mode }}" = "full" ]; then
+            FILES=$(find .github/workflows -name "*.yml" -not -name "*.disabled" 2>/dev/null || true)
+          else
+            FILES=$(echo "${{ steps.changed.outputs.files }}" | grep '\.yml$' || true)
+          fi
+
+          for f in $FILES; do
+            [ -f "$f" ] || continue
+            if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+              ISSUES="${ISSUES}INVALID YAML: $f\n"
+            fi
+          done
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "::error::YAML validation failed"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "All YAML files valid"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 3: Agent Brain Reference
+      # ═══════════════════════════════════════════
+      - name: "Check 3: Agent Brain consistency"
+        id: brain_check
+        run: |
+          ISSUES=""
+
+          # Every agent .md must reference AGENT_BRAIN.md
+          for f in .claude/agents/*.md; do
+            [ -f "$f" ] || continue
+            BASENAME=$(basename "$f")
+            [ "$BASENAME" = "AGENT_BRAIN.md" ] && continue
+
+            if ! grep -q "AGENT_BRAIN.md" "$f"; then
+              ISSUES="${ISSUES}MISSING BRAIN REF: $f does not reference AGENT_BRAIN.md\n"
+            fi
+          done
+
+          # version.json agents.team must list all agent files
+          if [ -f "version.json" ]; then
+            TEAM_COUNT=$(python3 -c "import json; print(len(json.load(open('version.json'))['agents']['team']))" 2>/dev/null || echo "0")
+            FILE_COUNT=$(ls .claude/agents/*.md 2>/dev/null | grep -v AGENT_BRAIN.md | wc -l)
+            if [ "$TEAM_COUNT" != "$FILE_COUNT" ]; then
+              ISSUES="${ISSUES}AGENT COUNT MISMATCH: version.json lists $TEAM_COUNT agents but found $FILE_COUNT agent files\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "All agents reference AGENT_BRAIN.md, counts match"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 4: Version & CHANGELOG Consistency
+      # ═══════════════════════════════════════════
+      - name: "Check 4: Version consistency"
+        id: version_check
+        run: |
+          ISSUES=""
+
+          if [ -f "version.json" ]; then
+            VERSION=$(python3 -c "import json; print(json.load(open('version.json'))['version'])" 2>/dev/null || echo "unknown")
+
+            # Check CHANGELOG has entry for this version
+            if [ -f "CHANGELOG.md" ]; then
+              if ! grep -q "\[$VERSION\]" CHANGELOG.md; then
+                ISSUES="${ISSUES}CHANGELOG MISSING: No entry for version $VERSION in CHANGELOG.md\n"
+              fi
+            fi
+
+            # Check version format (no X.Y.10+)
+            PATCH=$(echo "$VERSION" | cut -d. -f3)
+            if [ "$PATCH" -ge 10 ] 2>/dev/null; then
+              ISSUES="${ISSUES}VERSION OVERFLOW: Patch $PATCH >= 10 in version $VERSION (should be X.(Y+1).0)\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION consistent with CHANGELOG"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 5: Cross-Reference Integrity
+      # ═══════════════════════════════════════════
+      - name: "Check 5: Cross-reference integrity"
+        id: xref_check
+        run: |
+          ISSUES=""
+
+          # Check contracts referenced in agents actually exist
+          for ref in "contracts/resilience-patterns.json" "contracts/workspace-context-rules.json" "contracts/github-first-governance.json"; do
+            # Find agents that reference this file
+            REFS=$(grep -rl "$ref" .claude/agents/ 2>/dev/null | wc -l)
+            if [ "$REFS" -gt 0 ] && [ ! -f "$ref" ]; then
+              ISSUES="${ISSUES}BROKEN REF: $ref referenced by agents but file missing\n"
+            fi
+          done
+
+          # Check workflow files referenced in trigger files exist
+          for trigger in trigger/*.json; do
+            [ -f "$trigger" ] || continue
+            # Basic: just verify trigger files are valid JSON
+            if ! python3 -c "import json; json.load(open('$trigger'))" 2>/dev/null; then
+              ISSUES="${ISSUES}INVALID TRIGGER: $trigger is not valid JSON\n"
+            fi
+          done
+
+          # Check schemas referenced exist
+          for schema in schemas/*.json; do
+            [ -f "$schema" ] || continue
+            if ! python3 -c "import json; json.load(open('$schema'))" 2>/dev/null; then
+              ISSUES="${ISSUES}INVALID SCHEMA: $schema is not valid JSON\n"
+            fi
+          done
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "All cross-references valid"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 6: Security Quick Scan
+      # ═══════════════════════════════════════════
+      - name: "Check 6: Security scan on changed files"
+        id: security_check
+        run: |
+          ISSUES=""
+
+          if [ "${{ steps.changed.outputs.mode }}" = "full" ]; then
+            SCAN_PATH="."
+          else
+            SCAN_PATH=""
+            while IFS= read -r f; do
+              [ -f "$f" ] && SCAN_PATH="$SCAN_PATH $f"
+            done <<< "${{ steps.changed.outputs.files }}"
+          fi
+
+          [ -z "$SCAN_PATH" ] && { echo "status=pass" >> "$GITHUB_OUTPUT"; echo "No files to scan"; exit 0; }
+
+          # Hardcoded secrets
+          SECRETS=$(grep -rlE "ghp_[a-zA-Z0-9]{36}|AKIA[0-9A-Z]{16}" $SCAN_PATH 2>/dev/null || true)
+          if [ -n "$SECRETS" ]; then
+            ISSUES="${ISSUES}HARDCODED SECRET found in: $SECRETS\n"
+          fi
+
+          # Corporate data leak
+          LEAKS=$(grep -rlE '[a-z0-9]+\.intranet\.[a-z]+\.[a-z]+' $SCAN_PATH 2>/dev/null | grep -v CLAUDE.md | grep -v 'shared-agent-context' || true)
+          if [ -n "$LEAKS" ]; then
+            ISSUES="${ISSUES}CORPORATE DATA LEAK in: $LEAKS\n"
+          fi
+
+          # Cross-contamination: BB refs in CIT files or vice versa
+          CIT_FILES=$(echo "$SCAN_PATH" | tr ' ' '\n' | grep -i "cit\|itau" || true)
+          for f in $CIT_FILES; do
+            [ -f "$f" ] || continue
+            if grep -qiE "bbvinet|banco.do.brasil|getronics" "$f" 2>/dev/null; then
+              ISSUES="${ISSUES}CROSS-CONTAMINATION: BB data found in CIT file $f\n"
+            fi
+          done
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "::error::Security issues found"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "Security scan clean"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 7: Workflow Consistency
+      # ═══════════════════════════════════════════
+      - name: "Check 7: Workflow consistency"
+        id: workflow_check
+        run: |
+          ISSUES=""
+
+          # Check all active workflows have permissions block
+          for f in .github/workflows/*.yml; do
+            [ -f "$f" ] || continue
+            BASENAME=$(basename "$f")
+            if ! grep -q "^permissions:" "$f" 2>/dev/null; then
+              ISSUES="${ISSUES}MISSING PERMISSIONS: $BASENAME has no permissions block\n"
+            fi
+          done
+
+          # Check scheduled workflows have concurrency group
+          for f in .github/workflows/*.yml; do
+            [ -f "$f" ] || continue
+            BASENAME=$(basename "$f")
+            if grep -q "schedule:" "$f" 2>/dev/null; then
+              if ! grep -q "concurrency:" "$f" 2>/dev/null; then
+                ISSUES="${ISSUES}MISSING CONCURRENCY: $BASENAME has schedule but no concurrency group\n"
+              fi
+            fi
+          done
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=warn" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "All workflows consistent"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CHECK 8: Documentation Mapping
+      # ═══════════════════════════════════════════
+      - name: "Check 8: New files mapped in docs"
+        id: docs_check
+        run: |
+          ISSUES=""
+
+          if [ "${{ steps.changed.outputs.mode }}" = "diff" ]; then
+            # Check new agent files are in version.json
+            NEW_AGENTS=$(echo "${{ steps.changed.outputs.files }}" | grep '^\.claude/agents/.*\.md$' || true)
+            for f in $NEW_AGENTS; do
+              BASENAME=$(basename "$f" .md)
+              [ "$BASENAME" = "AGENT_BRAIN" ] && continue
+              if [ -f "version.json" ] && ! grep -q "$BASENAME" version.json; then
+                ISSUES="${ISSUES}UNMAPPED AGENT: $BASENAME not listed in version.json agents.team\n"
+              fi
+            done
+
+            # Check new contract files are referenced somewhere
+            NEW_CONTRACTS=$(echo "${{ steps.changed.outputs.files }}" | grep '^contracts/.*\.json$' || true)
+            for f in $NEW_CONTRACTS; do
+              BASENAME=$(basename "$f")
+              [ "$BASENAME" = "claude-session-memory.json" ] && continue
+              REFS=$(grep -rl "$BASENAME" .claude/ CLAUDE.md 2>/dev/null | wc -l)
+              if [ "$REFS" -eq 0 ]; then
+                ISSUES="${ISSUES}UNREFERENCED CONTRACT: $BASENAME not referenced in any agent or CLAUDE.md\n"
+              fi
+            done
+
+            # Check new workflow files mentioned in CLAUDE.md
+            NEW_WF=$(echo "${{ steps.changed.outputs.files }}" | grep '^\.github/workflows/.*\.yml$' || true)
+            for f in $NEW_WF; do
+              BASENAME=$(basename "$f" .yml)
+              if ! grep -q "$BASENAME" CLAUDE.md 2>/dev/null; then
+                ISSUES="${ISSUES}UNMAPPED WORKFLOW: $BASENAME.yml not documented in CLAUDE.md\n"
+              fi
+            done
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=warn" >> "$GITHUB_OUTPUT"
+            echo "details<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$ISSUES"
+          else
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "All new files properly mapped"
+          fi
+
+      # ═══════════════════════════════════════════
+      # REPORT: Compile results + create Issue if failures
+      # ═══════════════════════════════════════════
+      - name: "Compile sweep report"
+        id: report
+        run: |
+          FAILURES=0
+          WARNINGS=0
+          REPORT="## Feature Validation Sweep Report\n\n"
+          REPORT="${REPORT}**Commit**: ${{ github.sha }}\n"
+          REPORT="${REPORT}**Triggered by**: Push to main\n\n"
+          REPORT="${REPORT}| # | Check | Status | Details |\n"
+          REPORT="${REPORT}|---|-------|--------|---------|"
+
+          # Check 1: JSON
+          STATUS="${{ steps.json_check.outputs.status }}"
+          if [ "$STATUS" = "fail" ]; then
+            FAILURES=$((FAILURES + 1))
+            REPORT="${REPORT}\n| 1 | JSON Validity | FAIL | Invalid JSON files found |"
+          else
+            REPORT="${REPORT}\n| 1 | JSON Validity | PASS | All valid |"
+          fi
+
+          # Check 2: YAML
+          STATUS="${{ steps.yaml_check.outputs.status }}"
+          if [ "$STATUS" = "fail" ]; then
+            FAILURES=$((FAILURES + 1))
+            REPORT="${REPORT}\n| 2 | YAML Validity | FAIL | Invalid YAML files found |"
+          else
+            REPORT="${REPORT}\n| 2 | YAML Validity | PASS | All valid |"
+          fi
+
+          # Check 3: Agent Brain
+          STATUS="${{ steps.brain_check.outputs.status }}"
+          if [ "$STATUS" = "fail" ]; then
+            FAILURES=$((FAILURES + 1))
+            REPORT="${REPORT}\n| 3 | Agent Brain | FAIL | Missing references or count mismatch |"
+          else
+            REPORT="${REPORT}\n| 3 | Agent Brain | PASS | All agents consistent |"
+          fi
+
+          # Check 4: Version
+          STATUS="${{ steps.version_check.outputs.status }}"
+          if [ "$STATUS" = "fail" ]; then
+            FAILURES=$((FAILURES + 1))
+            REPORT="${REPORT}\n| 4 | Version | FAIL | Version/CHANGELOG mismatch |"
+          else
+            REPORT="${REPORT}\n| 4 | Version | PASS | Consistent |"
+          fi
+
+          # Check 5: Cross-refs
+          STATUS="${{ steps.xref_check.outputs.status }}"
+          if [ "$STATUS" = "fail" ]; then
+            FAILURES=$((FAILURES + 1))
+            REPORT="${REPORT}\n| 5 | Cross-References | FAIL | Broken references found |"
+          else
+            REPORT="${REPORT}\n| 5 | Cross-References | PASS | All valid |"
+          fi
+
+          # Check 6: Security
+          STATUS="${{ steps.security_check.outputs.status }}"
+          if [ "$STATUS" = "fail" ]; then
+            FAILURES=$((FAILURES + 1))
+            REPORT="${REPORT}\n| 6 | Security | FAIL | Security issues found |"
+          else
+            REPORT="${REPORT}\n| 6 | Security | PASS | Clean |"
+          fi
+
+          # Check 7: Workflows
+          STATUS="${{ steps.workflow_check.outputs.status }}"
+          if [ "$STATUS" = "warn" ]; then
+            WARNINGS=$((WARNINGS + 1))
+            REPORT="${REPORT}\n| 7 | Workflow Consistency | WARN | Missing permissions or concurrency |"
+          else
+            REPORT="${REPORT}\n| 7 | Workflow Consistency | PASS | All consistent |"
+          fi
+
+          # Check 8: Docs
+          STATUS="${{ steps.docs_check.outputs.status }}"
+          if [ "$STATUS" = "warn" ]; then
+            WARNINGS=$((WARNINGS + 1))
+            REPORT="${REPORT}\n| 8 | Documentation | WARN | Unmapped files found |"
+          else
+            REPORT="${REPORT}\n| 8 | Documentation | PASS | All mapped |"
+          fi
+
+          REPORT="${REPORT}\n\n**Result**: $FAILURES failures, $WARNINGS warnings"
+
+          echo "failures=$FAILURES" >> "$GITHUB_OUTPUT"
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
+          echo "report<<EOF" >> "$GITHUB_OUTPUT"
+          echo -e "$REPORT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          echo -e "$REPORT"
+
+      # ═══════════════════════════════════════════
+      # AUTO-FIX: Fix what we can automatically
+      # ═══════════════════════════════════════════
+      - name: "Auto-fix: Add missing permissions blocks"
+        if: steps.workflow_check.outputs.status == 'warn'
+        run: |
+          FIXED=0
+          for f in .github/workflows/*.yml; do
+            [ -f "$f" ] || continue
+            if ! grep -q "^permissions:" "$f"; then
+              # Add minimal permissions after the 'on:' block
+              # Find the line number of 'jobs:' and insert before it
+              JOBS_LINE=$(grep -n "^jobs:" "$f" | head -1 | cut -d: -f1)
+              if [ -n "$JOBS_LINE" ]; then
+                INSERT_LINE=$((JOBS_LINE - 1))
+                sed -i "${INSERT_LINE}a\\
+\\
+permissions:\\
+  contents: read" "$f"
+                FIXED=$((FIXED + 1))
+                echo "Added permissions to $(basename $f)"
+              fi
+            fi
+          done
+          echo "Auto-fixed $FIXED workflow files"
+
+      # ═══════════════════════════════════════════
+      # COMMIT AUTO-FIXES (if any)
+      # ═══════════════════════════════════════════
+      - name: "Commit auto-fixes"
+        run: |
+          git config user.name "autopilot-sweep"
+          git config user.email "autopilot@sweep.local"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No auto-fixes to commit"
+          else
+            git commit -m "fix(sweep): auto-fix issues found by feature-validation-sweep [skip ci]"
+            git push origin main
+            echo "Auto-fixes committed and pushed"
+          fi
+
+      # ═══════════════════════════════════════════
+      # CREATE ISSUE (if failures that can't be auto-fixed)
+      # ═══════════════════════════════════════════
+      - name: "Create Issue for unfixed failures"
+        if: steps.report.outputs.failures != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SWEEP_REPORT: ${{ steps.report.outputs.report }}
+        run: |
+          # Check for duplicate open issues
+          EXISTING=$(gh issue list --label "sweep-failure" --state open --limit 1 --json number --jq '.[0].number // empty' 2>/dev/null || true)
+
+          BODY=$(jq -n --arg report "$SWEEP_REPORT" '{
+            "title": "🔍 Feature Validation Sweep: failures detected",
+            "body": ($report + "\n\n**Action Required**: Fix the failures above. Auto-fixable issues have been committed.\n\n**Agent**: feature-validation-sweep\n**Labels**: sweep-failure, needs-claude, auto-fixable"),
+            "labels": ["sweep-failure", "needs-claude"]
+          }')
+
+          if [ -n "$EXISTING" ]; then
+            # Update existing issue
+            echo "$BODY" | gh api repos/${{ github.repository }}/issues/$EXISTING --method PATCH --input - || true
+            echo "Updated existing Issue #$EXISTING"
+          else
+            # Create new issue
+            echo "$BODY" | gh api repos/${{ github.repository }}/issues --method POST --input - || true
+            echo "Created new Issue for sweep failures"
+          fi

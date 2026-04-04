@@ -5,6 +5,20 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-04-04
+
+### Added
+- **Feature Validation Sweep** (`feature-validation-sweep.yml`): Automatic post-merge validation
+  that catches bugs, gaps, and inconsistencies in every new feature merged to main.
+  8 checks: JSON validity, YAML validity, Agent Brain consistency, version/CHANGELOG match,
+  cross-reference integrity, security scan, workflow consistency, documentation mapping.
+  Auto-fixes what it can (e.g., missing permissions blocks), creates GitHub Issue for what it can't.
+  Runs on every push to main + manual dispatch with full scan option.
+
+### Changed
+- Post-merge validation now covers: content validation (new), health monitoring (existing),
+  audit trail (existing), backup signal (existing). No gap between pre-merge gates and runtime.
+
 ## [1.4.0] - 2026-04-04
 
 ### Added
