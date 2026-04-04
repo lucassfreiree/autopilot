@@ -4,12 +4,55 @@
 Web-only CI/CD control plane for multi-workspace, multi-agent release orchestration.
 Zero local dependencies. 100% GitHub-native.
 
+**Current Product Version**: See `version.json` (semver, tagged as `vX.Y.Z`)
+
 ## Architecture
 - **Repo**: `lucassfreiree/autopilot` (personal product / control plane)
 - **State**: `autopilot-state` branch (runtime state, locks, audit, handoffs)
 - **Backups**: `autopilot-backups` branch (snapshots for rollback)
 - **Panel**: GitHub Pages (`panel/`) — deployed via `deploy-panel.yml`
 - **Corporate repos**: Configured per workspace in `workspace.json`
+
+## Product Versioning
+- **Version file**: `version.json` (source of truth for product version)
+- **Changelog**: `CHANGELOG.md` (all releases documented)
+- **Tags**: `vX.Y.Z` git tags created by `release-autopilot-product.yml`
+- **Bump script**: `scripts/version-bump.sh <patch|minor|major>`
+- **Release workflow**: Triggers on `version.json` changes to main → validates → tags → GitHub Release
+- **Quality gate**: `agent-quality-gate.yml` validates all agent PRs before merge
+- **Versioning rules**: Same as controller/agent — patch 0-9, then minor+1 (never X.Y.10)
+
+## Autonomous Agent Team
+Specialized agents work as a team, continuously improving the autopilot product and dashboard.
+
+| Agent | File | Specialty | Autonomy |
+|-------|------|-----------|----------|
+| **architect-agent** | `.claude/agents/architect-agent.md` | Architecture analysis, schema consistency, pattern consolidation | High |
+| **devops-agent** | `.claude/agents/devops-agent.md` | CI/CD optimization, workflow fixes, pipeline efficiency | High |
+| **quality-agent** | `.claude/agents/quality-agent.md` | Validation, testing, regression prevention | High |
+| **dashboard-agent** | `.claude/agents/dashboard-agent.md` | Dashboard UI/UX, data sync, visualizations | High |
+| **security-agent** | `.claude/agents/security-agent.md` | Vulnerability scanning, policy enforcement, hardening | High |
+| **ci-debugger** | `.claude/agents/ci-debugger.md` | CI failure diagnosis and auto-fix | High |
+| **deploy-agent** | `.claude/agents/deploy-agent.md` | Full deploy pipeline execution | High |
+| **pr-reviewer** | `.claude/agents/pr-reviewer.md` | Automated PR review (security, quality, compliance) | High |
+| **workspace-ops** | `.claude/agents/workspace-ops.md` | Health checks, locks, state management | High |
+| **dashboard-monitor** | `.claude/agents/dashboard-monitor.md` | Dashboard sync validation and repair | High |
+
+### Agent Team Workflows
+| Workflow | Schedule | Purpose |
+|----------|----------|---------|
+| `agent-team-orchestrator.yml` | Weekdays 06:00 UTC | Coordinate full team analysis and improvement cycle |
+| `agent-autonomous-improve.yml` | Weekdays 07:00 UTC + Wed 12:00 | OBSERVE→THINK→PLAN→ACT→LEARN autonomous loop |
+| `agent-quality-gate.yml` | On PR (agent branches) | Validate agent changes before merge |
+| `release-autopilot-product.yml` | On version.json change | Tag and release new product version |
+
+### Agent Autonomy Rules
+1. Agents analyze, plan, implement, validate, and ship **without human intervention**
+2. Auto-fix is allowed for: deprecated actions, missing configs, invalid JSON/YAML, simple optimizations
+3. Escalation required for: risk score >7/10, critical security findings, cross-domain conflicts
+4. Every change must pass the quality gate (YAML, JSON, version, security checks)
+5. Every release must have a CHANGELOG entry
+6. Agents must never break existing workflows, dashboard, or corporate repo integrations
 
 ## Key Files
 - `schemas/` — JSON schemas for all state objects (release-state, health, lock, audit, etc.)

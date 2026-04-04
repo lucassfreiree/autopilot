@@ -1,0 +1,49 @@
+{
+  "product": "autopilot",
+  "version": "1.0.0",
+  "description": "Web-only CI/CD control plane for multi-workspace, multi-agent release orchestration",
+  "repository": "lucassfreiree/autopilot",
+  "versioningRules": {
+    "scheme": "semver",
+    "tagPrefix": "v",
+    "branches": {
+      "main": "production releases",
+      "claude/*": "feature/fix branches"
+    },
+    "bumpRules": {
+      "patch": "Bug fixes, small improvements, agent auto-fixes",
+      "minor": "New features, new agents, new workflows, dashboard enhancements",
+      "major": "Breaking changes to contracts, state schema, or workflow interfaces"
+    }
+  },
+  "agents": {
+    "team": [
+      "architect-agent",
+      "devops-agent",
+      "quality-agent",
+      "dashboard-agent",
+      "security-agent",
+      "ci-debugger",
+      "deploy-agent",
+      "pr-reviewer",
+      "workspace-ops",
+      "dashboard-monitor"
+    ],
+    "autonomyLevel": "high",
+    "approvalRequired": false,
+    "constraints": [
+      "Must not break existing workflows",
+      "Must not break dashboard functionality",
+      "Must pass all validation gates before merge",
+      "Must version bump on every release",
+      "Must update CHANGELOG.md"
+    ]
+  },
+  "releaseGates": {
+    "workflowValidation": true,
+    "schemaValidation": true,
+    "dashboardHealthCheck": true,
+    "securityScan": true,
+    "changelogRequired": true
+  }
+}

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-03T12:00:00Z",
+  "lastUpdated": "2026-04-04T10:00:00Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1555,6 +1555,34 @@
       "nextVersion": {
         "controller": "3.8.3",
         "agent": "2.3.4"
+      }
+    },
+    "autopilotProduct": {
+      "version": "1.0.0",
+      "versionFile": "version.json",
+      "changelog": "CHANGELOG.md",
+      "tagPrefix": "v",
+      "releaseWorkflow": "release-autopilot-product.yml",
+      "qualityGate": "agent-quality-gate.yml",
+      "agentTeam": {
+        "orchestrator": "agent-team-orchestrator.yml",
+        "autonomousImprove": "agent-autonomous-improve.yml",
+        "agents": [
+          "architect-agent",
+          "devops-agent",
+          "quality-agent",
+          "dashboard-agent",
+          "security-agent"
+        ],
+        "existingAgents": [
+          "ci-debugger",
+          "deploy-agent",
+          "pr-reviewer",
+          "workspace-ops",
+          "dashboard-monitor"
+        ],
+        "autonomyLevel": "high",
+        "approvalRequired": false
       }
     }
   },

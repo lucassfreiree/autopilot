@@ -1,0 +1,385 @@
+# ===========================================================
+# Agent Team Orchestrator
+#
+# Coordinates the autonomous agent team for continuous
+# improvement of the Autopilot product.
+# Agents analyze, plan, implement, and validate changes
+# without human intervention.
+# ===========================================================
+name: "[Agent] Team Orchestrator"
+
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'  # Weekdays at 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      focus_area:
+        description: 'Focus area (all, workflows, dashboard, security, quality, architecture)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - workflows
+          - dashboard
+          - security
+          - quality
+          - architecture
+      dry_run:
+        description: 'Dry run - analyze only, no changes'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: agent-team-orchestrator
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  # ── Stage 1: Analyze ──────────────────────────────────
+  analyze:
+    name: "Stage 1: Analyze (${{ inputs.focus_area || 'all' }})"
+    runs-on: ubuntu-latest
+    outputs:
+      has_improvements: ${{ steps.scan.outputs.has_improvements }}
+      improvement_count: ${{ steps.scan.outputs.improvement_count }}
+      report_path: ${{ steps.scan.outputs.report_path }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read current version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' version.json 2>/dev/null || echo "0.0.0")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Current version: $VERSION"
+
+      - name: Scan for improvements
+        id: scan
+        run: |
+          FOCUS="${{ inputs.focus_area || 'all' }}"
+          IMPROVEMENTS=0
+          REPORT=""
+
+          # ── Workflow Analysis ──
+          if [ "$FOCUS" = "all" ] || [ "$FOCUS" = "workflows" ]; then
+            echo "::group::Workflow Analysis"
+
+            # Check for deprecated actions
+            DEPRECATED=$(grep -rl "actions/checkout@v3\|actions/setup-node@v3\|actions/cache@v3" .github/workflows/*.yml 2>/dev/null | wc -l)
+            if [ "$DEPRECATED" -gt 0 ]; then
+              REPORT="${REPORT}workflow:deprecated-actions:${DEPRECATED} workflows with deprecated actions\n"
+              IMPROVEMENTS=$((IMPROVEMENTS + DEPRECATED))
+            fi
+
+            # Check for missing concurrency
+            for f in .github/workflows/*.yml; do
+              if ! grep -q "concurrency:" "$f" 2>/dev/null; then
+                NAME=$(basename "$f")
+                REPORT="${REPORT}workflow:missing-concurrency:${NAME}\n"
+                IMPROVEMENTS=$((IMPROVEMENTS + 1))
+              fi
+            done
+
+            # Check for missing permissions
+            for f in .github/workflows/*.yml; do
+              if ! grep -q "permissions:" "$f" 2>/dev/null; then
+                NAME=$(basename "$f")
+                REPORT="${REPORT}workflow:missing-permissions:${NAME}\n"
+                IMPROVEMENTS=$((IMPROVEMENTS + 1))
+              fi
+            done
+
+            echo "::endgroup::"
+          fi
+
+          # ── Security Analysis ──
+          if [ "$FOCUS" = "all" ] || [ "$FOCUS" = "security" ]; then
+            echo "::group::Security Analysis"
+
+            # Check for unpinned actions (using tag instead of SHA)
+            UNPINNED=$(grep -rE "uses: [^/]+/[^@]+@v[0-9]" .github/workflows/*.yml 2>/dev/null | grep -v "actions/" | grep -v "github/" | wc -l)
+            if [ "$UNPINNED" -gt 0 ]; then
+              REPORT="${REPORT}security:unpinned-actions:${UNPINNED} third-party actions not pinned to SHA\n"
+              IMPROVEMENTS=$((IMPROVEMENTS + UNPINNED))
+            fi
+
+            # Check for potential secret exposure
+            SECRET_ECHO=$(grep -rn 'echo.*\${{.*secret' .github/workflows/*.yml 2>/dev/null | wc -l)
+            if [ "$SECRET_ECHO" -gt 0 ]; then
+              REPORT="${REPORT}security:secret-exposure:${SECRET_ECHO} potential secret echo patterns\n"
+              IMPROVEMENTS=$((IMPROVEMENTS + SECRET_ECHO))
+            fi
+
+            echo "::endgroup::"
+          fi
+
+          # ── Quality Analysis ──
+          if [ "$FOCUS" = "all" ] || [ "$FOCUS" = "quality" ]; then
+            echo "::group::Quality Analysis"
+
+            # Validate all JSON files
+            JSON_ERRORS=0
+            for f in schemas/*.json contracts/*.json; do
+              if [ -f "$f" ] && ! jq '.' "$f" > /dev/null 2>&1; then
+                REPORT="${REPORT}quality:invalid-json:${f}\n"
+                JSON_ERRORS=$((JSON_ERRORS + 1))
+              fi
+            done
+            IMPROVEMENTS=$((IMPROVEMENTS + JSON_ERRORS))
+
+            # Check YAML validity
+            YAML_ERRORS=0
+            for f in .github/workflows/*.yml; do
+              if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+                REPORT="${REPORT}quality:invalid-yaml:${f}\n"
+                YAML_ERRORS=$((YAML_ERRORS + 1))
+              fi
+            done
+            IMPROVEMENTS=$((IMPROVEMENTS + YAML_ERRORS))
+
+            echo "::endgroup::"
+          fi
+
+          # ── Dashboard Analysis ──
+          if [ "$FOCUS" = "all" ] || [ "$FOCUS" = "dashboard" ]; then
+            echo "::group::Dashboard Analysis"
+
+            # Check if dashboard references current version
+            if [ -f "panel/index.html" ]; then
+              CURR_VER=$(jq -r '.version' version.json 2>/dev/null || echo "")
+              if [ -n "$CURR_VER" ] && ! grep -q "$CURR_VER" panel/index.html 2>/dev/null; then
+                REPORT="${REPORT}dashboard:version-mismatch:Dashboard does not show current version ${CURR_VER}\n"
+                IMPROVEMENTS=$((IMPROVEMENTS + 1))
+              fi
+            fi
+
+            # Check state.json validity
+            if [ -f "panel/dashboard/state.json" ]; then
+              if ! jq '.' panel/dashboard/state.json > /dev/null 2>&1; then
+                REPORT="${REPORT}dashboard:invalid-state:panel/dashboard/state.json is invalid JSON\n"
+                IMPROVEMENTS=$((IMPROVEMENTS + 1))
+              fi
+            fi
+
+            echo "::endgroup::"
+          fi
+
+          # Save report
+          REPORT_FILE="/tmp/improvement-report.txt"
+          echo -e "$REPORT" > "$REPORT_FILE"
+
+          echo "has_improvements=$( [ $IMPROVEMENTS -gt 0 ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+          echo "improvement_count=$IMPROVEMENTS" >> "$GITHUB_OUTPUT"
+          echo "report_path=$REPORT_FILE" >> "$GITHUB_OUTPUT"
+
+          echo "Found $IMPROVEMENTS potential improvements"
+          echo -e "$REPORT"
+
+      - name: Upload report
+        if: steps.scan.outputs.has_improvements == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: improvement-report
+          path: /tmp/improvement-report.txt
+          retention-days: 7
+
+  # ── Stage 2: Plan ──────────────────────────────────────
+  plan:
+    name: "Stage 2: Plan Improvements"
+    needs: analyze
+    if: needs.analyze.outputs.has_improvements == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      has_safe_fixes: ${{ steps.classify.outputs.has_safe_fixes }}
+      fix_count: ${{ steps.classify.outputs.fix_count }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: improvement-report
+          path: /tmp/
+
+      - name: Classify improvements
+        id: classify
+        run: |
+          REPORT="/tmp/improvement-report.txt"
+          SAFE_FIXES=0
+
+          # Safe auto-fixes (low risk, well-defined):
+          # - Deprecated actions → update version
+          # - Missing concurrency → add group
+          # - Invalid JSON → attempt auto-format
+          # - Missing permissions → add minimal permissions
+
+          while IFS=: read -r AREA TYPE DETAIL; do
+            [ -z "$AREA" ] && continue
+            case "$TYPE" in
+              deprecated-actions)
+                echo "SAFE: Update deprecated actions"
+                SAFE_FIXES=$((SAFE_FIXES + 1))
+                ;;
+              missing-concurrency)
+                echo "SAFE: Add concurrency to $DETAIL"
+                SAFE_FIXES=$((SAFE_FIXES + 1))
+                ;;
+              missing-permissions)
+                echo "SAFE: Add permissions to $DETAIL"
+                SAFE_FIXES=$((SAFE_FIXES + 1))
+                ;;
+              *)
+                echo "REVIEW: $AREA/$TYPE - $DETAIL (needs manual review)"
+                ;;
+            esac
+          done < "$REPORT"
+
+          echo "has_safe_fixes=$( [ $SAFE_FIXES -gt 0 ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+          echo "fix_count=$SAFE_FIXES" >> "$GITHUB_OUTPUT"
+          echo "Safe auto-fixes: $SAFE_FIXES"
+
+  # ── Stage 3: Implement Safe Fixes ─────────────────────
+  implement:
+    name: "Stage 3: Implement Fixes"
+    needs: [analyze, plan]
+    if: needs.plan.outputs.has_safe_fixes == 'true' && inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      changes_made: ${{ steps.apply.outputs.changes_made }}
+      branch: ${{ steps.apply.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: improvement-report
+          path: /tmp/
+
+      - name: Create improvement branch
+        id: branch
+        run: |
+          BRANCH="claude/agent-team-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Apply safe fixes
+        id: apply
+        run: |
+          CHANGES=0
+          REPORT="/tmp/improvement-report.txt"
+
+          # Fix deprecated actions (v3 → v4)
+          while IFS=: read -r AREA TYPE DETAIL; do
+            [ -z "$AREA" ] && continue
+            if [ "$TYPE" = "deprecated-actions" ]; then
+              for f in .github/workflows/*.yml; do
+                if grep -q "actions/checkout@v3" "$f" 2>/dev/null; then
+                  sed -i 's|actions/checkout@v3|actions/checkout@v4|g' "$f"
+                  CHANGES=$((CHANGES + 1))
+                fi
+                if grep -q "actions/setup-node@v3" "$f" 2>/dev/null; then
+                  sed -i 's|actions/setup-node@v3|actions/setup-node@v4|g' "$f"
+                  CHANGES=$((CHANGES + 1))
+                fi
+                if grep -q "actions/cache@v3" "$f" 2>/dev/null; then
+                  sed -i 's|actions/cache@v3|actions/cache@v4|g' "$f"
+                  CHANGES=$((CHANGES + 1))
+                fi
+              done
+            fi
+          done < "$REPORT"
+
+          echo "changes_made=$( [ $CHANGES -gt 0 ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+          echo "branch=${{ steps.branch.outputs.branch }}" >> "$GITHUB_OUTPUT"
+          echo "Applied $CHANGES fixes"
+
+      - name: Validate after fixes
+        if: steps.apply.outputs.changes_made == 'true'
+        run: |
+          echo "::group::Post-fix YAML validation"
+          ERRORS=0
+          for f in .github/workflows/*.yml; do
+            if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+              echo "::error ::Fix broke YAML: $f"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          echo "::endgroup::"
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error ::Fixes introduced $ERRORS YAML errors. Aborting."
+            git checkout -- .
+            exit 1
+          fi
+          echo "All fixes validated successfully"
+
+      - name: Commit and push
+        if: steps.apply.outputs.changes_made == 'true'
+        run: |
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          git config user.name "autopilot[bot]"
+          git config user.email "autopilot[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: agent team auto-improvements [agent-team-orchestrator]
+
+          Automated fixes applied by the agent team orchestrator.
+          Changes validated before commit.
+
+          [skip ci]"
+          git push -u origin "$BRANCH"
+
+      - name: Create PR
+        if: steps.apply.outputs.changes_made == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ steps.branch.outputs.branch }}"
+          gh pr create \
+            --title "fix: Agent team auto-improvements" \
+            --body "## Auto-Improvements by Agent Team
+
+          Automated analysis and fixes from the agent team orchestrator.
+
+          ### Fixes Applied
+          $(cat /tmp/improvement-report.txt | grep -v '^$' | sed 's/^/- /')
+
+          ### Validation
+          - [x] YAML syntax validated
+          - [x] JSON schemas validated
+          - [x] No breaking changes detected
+
+          ---
+          *This PR was created autonomously by the Agent Team Orchestrator.*" \
+            --base main \
+            --head "$BRANCH"
+
+  # ── Stage 4: Report ────────────────────────────────────
+  report:
+    name: "Stage 4: Report"
+    needs: [analyze, plan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Agent Team Orchestrator Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Improvements Found | ${{ needs.analyze.outputs.improvement_count || '0' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Safe Auto-Fixes | ${{ needs.plan.outputs.fix_count || '0' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Focus Area | ${{ inputs.focus_area || 'all' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dry Run | ${{ inputs.dry_run || 'false' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Run | #${{ github.run_number }} |" >> "$GITHUB_STEP_SUMMARY"

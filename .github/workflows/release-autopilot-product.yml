@@ -1,0 +1,210 @@
+# ===========================================================
+# Autopilot Product Release Pipeline
+#
+# Validates, tags, and releases new autopilot versions.
+# Triggered by version.json changes on main branch.
+# Creates git tags (v1.0.0) and GitHub releases.
+# ===========================================================
+name: "[Release] Autopilot Product"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'version.json'
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release even if version unchanged'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: autopilot-product-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' version.json)
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "::error ::version.json missing version field"
+            exit 1
+          fi
+          TAG="v${VERSION}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION | Tag: $TAG"
+
+      - name: Check if tag already exists
+        id: check
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            if [ "${{ inputs.force_release }}" = "true" ]; then
+              echo "::warning ::Tag $TAG exists but force_release=true"
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::notice ::Tag $TAG already exists. Skipping release."
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate CHANGELOG has entry
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! grep -q "\[${VERSION}\]" CHANGELOG.md; then
+            echo "::error ::CHANGELOG.md missing entry for version ${VERSION}"
+            exit 1
+          fi
+          echo "CHANGELOG entry found for $VERSION"
+
+      - name: Validate YAML workflows
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          ERRORS=0
+          for f in .github/workflows/*.yml; do
+            if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+              echo "::error ::Invalid YAML: $f"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error ::$ERRORS workflow(s) have invalid YAML"
+            exit 1
+          fi
+          echo "All workflows valid"
+
+      - name: Validate JSON schemas
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          ERRORS=0
+          for f in schemas/*.json contracts/*.json version.json; do
+            if [ -f "$f" ]; then
+              if ! jq '.' "$f" > /dev/null 2>&1; then
+                echo "::error ::Invalid JSON: $f"
+                ERRORS=$((ERRORS + 1))
+              fi
+            fi
+          done
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error ::$ERRORS file(s) have invalid JSON"
+            exit 1
+          fi
+          echo "All JSON files valid"
+
+  release:
+    name: Create Release
+    needs: validate
+    if: needs.validate.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "autopilot[bot]"
+          git config user.email "autopilot[bot]@users.noreply.github.com"
+
+      - name: Create and push tag
+        run: |
+          TAG="${{ needs.validate.outputs.tag }}"
+          VERSION="${{ needs.validate.outputs.version }}"
+          git tag -a "$TAG" -m "Release $TAG - Autopilot Product v${VERSION}"
+          git push origin "$TAG"
+          echo "Tag $TAG created and pushed"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          # Extract section between this version and the next version header (or EOF)
+          NOTES=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES="Release v${VERSION}"
+          fi
+          # Write to file to preserve formatting
+          echo "$NOTES" > /tmp/release-notes.md
+          echo "Release notes extracted"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.validate.outputs.tag }}"
+          gh release create "$TAG" \
+            --title "Autopilot $TAG" \
+            --notes-file /tmp/release-notes.md \
+            --latest
+
+      - name: Update state on autopilot-state branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.validate.outputs.tag }}"
+          VERSION="${{ needs.validate.outputs.version }}"
+          SHA="${{ github.sha }}"
+          STATE=$(jq -n \
+            --arg version "$VERSION" \
+            --arg tag "$TAG" \
+            --arg sha "$SHA" \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg run "${{ github.run_id }}" \
+            '{
+              schemaVersion: 1,
+              product: "autopilot",
+              currentVersion: $version,
+              currentTag: $tag,
+              releaseSha: $sha,
+              releasedAt: $ts,
+              releaseRunId: $run
+            }')
+
+          ENCODED=$(echo "$STATE" | base64 -w0)
+          FILE="state/autopilot-product-release.json"
+          BRANCH="autopilot-state"
+
+          # Get existing file SHA if it exists
+          FILE_SHA=$(gh api "repos/${{ github.repository }}/contents/$FILE?ref=$BRANCH" \
+            --jq '.sha' 2>/dev/null || echo "")
+
+          ARGS=(-X PUT -f "branch=$BRANCH" \
+            -f "message=chore: autopilot release $TAG [skip ci]" \
+            -f "content=$ENCODED")
+          [ -n "$FILE_SHA" ] && ARGS+=(-f "sha=$FILE_SHA")
+
+          gh api "repos/${{ github.repository }}/contents/$FILE" "${ARGS[@]}"
+          echo "Release state persisted for $TAG"
+
+      - name: Summary
+        run: |
+          echo "## Autopilot Product Release" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | ${{ needs.validate.outputs.version }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tag | ${{ needs.validate.outputs.tag }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| SHA | ${GITHUB_SHA:0:7} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Release | [${{ needs.validate.outputs.tag }}](https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}) |" >> "$GITHUB_STEP_SUMMARY"
