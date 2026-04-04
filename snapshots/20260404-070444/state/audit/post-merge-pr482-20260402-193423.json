@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr482-20260402-193423",
+  "event": "post-merge-monitor",
+  "prNumber": 482,
+  "branch": "claude/smart-pr-manager",
+  "mergeSha": "ec4cc4d71aa6baf49ba14ab2ab3b3d0f85c37f35",
+  "timestamp": "2026-04-02T19:34:23Z",
+  "runId": "23918363546",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
