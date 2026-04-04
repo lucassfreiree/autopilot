@@ -277,7 +277,6 @@ jobs:
       - name: "1. Register PR in session memory"
         id: memory
         run: |
-          set -e
           PR_NUMBER="${{ needs.check-merged.outputs.pr_number }}"
           BRANCH="${{ needs.check-merged.outputs.branch }}"
           SHA="${{ needs.check-merged.outputs.sha }}"
@@ -287,16 +286,19 @@ jobs:
           # Get PR title from the merge commit message (use HEAD — SHA may not be in shallow clone)
           PR_TITLE=$(git log -1 --format="%s" HEAD 2>/dev/null || echo "PR #$PR_NUMBER")
 
-          # Get changed files in this merge
+          # Get changed files in this merge (grep -c returns exit 1 on 0 matches, use || true)
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-          NEW_WORKFLOWS=$(echo "$CHANGED_FILES" | grep -c '\.github/workflows/.*\.yml$' || echo "0")
-          NEW_CONTRACTS=$(echo "$CHANGED_FILES" | grep -c 'contracts/.*\.json$' || echo "0")
-          NEW_TRIGGERS=$(echo "$CHANGED_FILES" | grep -c 'trigger/.*\.json$' || echo "0")
-          NEW_SCHEMAS=$(echo "$CHANGED_FILES" | grep -c 'schemas/.*\.json$' || echo "0")
+          NEW_WORKFLOWS=$(echo "$CHANGED_FILES" | grep -c '\.github/workflows/.*\.yml$' 2>/dev/null || true)
+          NEW_CONTRACTS=$(echo "$CHANGED_FILES" | grep -c 'contracts/.*\.json$' 2>/dev/null || true)
+          NEW_TRIGGERS=$(echo "$CHANGED_FILES" | grep -c 'trigger/.*\.json$' 2>/dev/null || true)
+          NEW_SCHEMAS=$(echo "$CHANGED_FILES" | grep -c 'schemas/.*\.json$' 2>/dev/null || true)
+          # Ensure values are numeric
+          NEW_WORKFLOWS="${NEW_WORKFLOWS:-0}"; NEW_CONTRACTS="${NEW_CONTRACTS:-0}"
+          NEW_TRIGGERS="${NEW_TRIGGERS:-0}"; NEW_SCHEMAS="${NEW_SCHEMAS:-0}"
 
           # Update session memory: add PR to latest session or create entry
           if [ -f contracts/claude-session-memory.json ]; then
-            jq --arg ts "$NOW" \
+            if jq --arg ts "$NOW" \
                --arg pr "#$PR_NUMBER" \
                --arg title "$PR_TITLE" \
                --arg health "$HEALTH" \
@@ -304,9 +306,14 @@ jobs:
                 .currentState.lastMergedPR = $pr |
                 .currentState.lastMergedTitle = $title |
                 .currentState.lastMergedHealth = $health' \
-               contracts/claude-session-memory.json > /tmp/mem-updated.json && \
-               mv /tmp/mem-updated.json contracts/claude-session-memory.json
-            echo "::notice ::Session memory updated with PR #$PR_NUMBER"
+               contracts/claude-session-memory.json > /tmp/mem-updated.json 2>/dev/null; then
+              mv /tmp/mem-updated.json contracts/claude-session-memory.json
+              echo "::notice ::Session memory updated with PR #$PR_NUMBER"
+            else
+              echo "::warning ::Could not update session memory (jq failed) — continuing"
+            fi
+          else
+            echo "::warning ::Session memory file not found — skipping"
           fi
 
           echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
@@ -321,7 +328,6 @@ jobs:
       - name: "2. Detect undocumented artifacts in CLAUDE.md"
         id: scan
         run: |
-          set -e
           MISSING_ITEMS=""
           MISSING_COUNT=0
 
@@ -378,7 +384,6 @@ jobs:
 
       - name: "3. Commit memory update"
         run: |
-          set -e
           git config user.name "autopilot-bot"
           git config user.email "autopilot@users.noreply.github.com"
 
