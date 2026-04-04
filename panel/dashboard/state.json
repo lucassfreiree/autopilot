@@ -29,7 +29,7 @@
     "component": "controller",
     "version": "3.8.2",
     "promote": true,
-    "workspace": "GETRONICS | ws-default | BBVINET_TOKEN",
+    "workspace": "GETRONICS | ws-default | ***REDACTED***",
     "changeType": "multi-file",
     "commitMessage": "fix(controller): fix TS2769 expiresIn type — use numeric seconds for jwt.sign (v3.8.2)",
     "changesCount": 9
@@ -197,7 +197,7 @@
       "company": "Getronics",
       "status": "active",
       "stack": "Node/TypeScript (NestJS, Jest, ESLint)",
-      "token": "BBVINET_TOKEN",
+      "token": "***REDACTED***",
       "controllerVersion": "3.8.2",
       "agentVersion": "2.3.3",
       "pipelineStatus": "success",
@@ -213,7 +213,7 @@
       "company": "CIT",
       "status": "setup",
       "stack": "DevOps (K8s, Docker, Terraform, Helm, ArgoCD)",
-      "token": "CIT_TOKEN",
+      "token": "***REDACTED***",
       "controllerVersion": null,
       "agentVersion": null,
       "pipelineStatus": "not-configured",
@@ -531,8 +531,8 @@
         "source": "contracts/copilot-mega-prompt.md — Secao 11"
       },
       {
-        "lesson": "copilot-post-deploy-sync.yml git push to main FAILS with branch protection — MUST use RELEASE_TOKEN or branch+PR flow",
-        "fix": "Use RELEASE_TOKEN for git push, or create branch copilot/auto-sync-{version} → PR → squash merge",
+        "lesson": "copilot-post-deploy-sync.yml git push to main FAILS with branch protection — MUST use ***REDACTED*** or branch+PR flow",
+        "fix": "Use ***REDACTED*** for git push, or create branch copilot/auto-sync-{version} → PR → squash merge",
         "source": "session 2026-03-28 — 4+ consecutive workflow failures observed"
       },
       {

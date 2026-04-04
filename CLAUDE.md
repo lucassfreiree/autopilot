@@ -30,13 +30,12 @@ Specialized agents work as a team, continuously improving the autopilot product 
 | **architect-agent** | `.claude/agents/architect-agent.md` | Architecture analysis, schema consistency, pattern consolidation | High |
 | **devops-agent** | `.claude/agents/devops-agent.md` | CI/CD optimization, workflow fixes, pipeline efficiency | High |
 | **quality-agent** | `.claude/agents/quality-agent.md` | Validation, testing, regression prevention | High |
-| **dashboard-agent** | `.claude/agents/dashboard-agent.md` | Dashboard UI/UX, data sync, visualizations | High |
+| **dashboard-agent** | `.claude/agents/dashboard-agent.md` | Full dashboard ownership: UI, data sync, state accuracy, visualizations, deploy | High |
 | **security-agent** | `.claude/agents/security-agent.md` | Vulnerability scanning, policy enforcement, hardening | High |
 | **ci-debugger** | `.claude/agents/ci-debugger.md` | CI failure diagnosis and auto-fix | High |
 | **deploy-agent** | `.claude/agents/deploy-agent.md` | Full deploy pipeline execution | High |
 | **pr-reviewer** | `.claude/agents/pr-reviewer.md` | Automated PR review (security, quality, compliance) | High |
 | **workspace-ops** | `.claude/agents/workspace-ops.md` | Health checks, locks, state management | High |
-| **dashboard-monitor** | `.claude/agents/dashboard-monitor.md` | Dashboard sync validation and repair | High |
 
 ### Agent Team Workflows
 | Workflow | Schedule | Purpose |
@@ -1058,7 +1057,7 @@ Specialized agents that Claude Code can delegate to for focused tasks:
 |-------|------|-------|---------|
 | **deploy-agent** | `.claude/agents/deploy-agent.md` | Opus | Full deploy pipeline execution (10-step autonomous) |
 | **ci-debugger** | `.claude/agents/ci-debugger.md` | Sonnet | CI failure diagnosis and auto-fix |
-| **dashboard-monitor** | `.claude/agents/dashboard-monitor.md` | Sonnet | Dashboard sync validation and repair |
+| **dashboard-agent** | `.claude/agents/dashboard-agent.md` | Sonnet | Full dashboard ownership: UI, data sync, state accuracy, visualizations |
 | **workspace-ops** | `.claude/agents/workspace-ops.md` | Sonnet | Health checks, locks, state management |
 | **pr-reviewer** | `.claude/agents/pr-reviewer.md` | Sonnet | Automated PR review (security, quality, compliance) |
 

@@ -19,7 +19,6 @@ body:
         - deploy-agent
         - pr-reviewer
         - workspace-ops
-        - dashboard-monitor
     validations:
       required: true
 

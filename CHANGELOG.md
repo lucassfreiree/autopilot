@@ -5,6 +5,37 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.3] - 2026-04-04
+
+### Added
+- **GitHub authentication gate on both dashboards** (panel/index.html + panel/dashboard/index.html)
+  - Login screen with GitHub PAT validation via GitHub API (`/user` endpoint)
+  - User verification against `ALLOWED_USERS` whitelist (only `lucassfreiree`)
+  - Repo access verification (ensures PAT has `repo` scope)
+  - Zero dashboard content visible without authentication
+  - Session shared via `sessionStorage` between both panels (login once, access both)
+  - Auto-reconnect on page refresh if session still valid
+  - Re-validates token on every reconnect (expired tokens are rejected)
+  - Logout button clears session and returns to login screen
+  - Enter key submits login form
+  - Professional dark theme login card with lock icon
+
+### Security
+- Dashboard HTML no longer exposes any data without valid GitHub authentication
+- Only whitelisted GitHub users can access — all others see "Access denied"
+- Token stored in sessionStorage only (cleared on tab close, never persisted)
+- Token re-validated on every page load via GitHub API
+
+## [1.8.2] - 2026-04-04
+
+### Changed
+- **Consolidated dashboard-agent + dashboard-monitor into single specialist agent**
+  - `dashboard-agent.md` now owns all dashboard layers: UI, data sync, state accuracy, deploy pipeline
+  - Removed `dashboard-monitor.md` (functionality absorbed into dashboard-agent)
+  - Eliminates overlap between two agents that both checked state.json
+  - Agent team reduced from 13 to 12 (10 specialists + Team Lead + Director)
+  - Updated all references: AGENT_BRAIN, team-lead, version.json, CLAUDE.md, issue templates, governance contract
+
 ## [1.8.1] - 2026-04-04
 
 ### Improved

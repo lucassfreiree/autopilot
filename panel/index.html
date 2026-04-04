@@ -76,23 +76,58 @@
     .action-target { font-size: 12px; color: var(--muted); margin-top: 4px; }
     #loading { text-align: center; padding: 60px; color: var(--muted); }
     footer { text-align: center; padding: 24px 0; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); margin-top: 40px; }
+    /* Auth Gate Styles */
+    .auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 40px; max-width: 420px; width: 90%; text-align: center; }
+    .auth-card h2 { font-size: 24px; margin-bottom: 8px; }
+    .auth-card .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .auth-card .lock-icon { font-size: 48px; margin-bottom: 16px; }
+    .auth-card input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
+    .auth-card input:focus { border-color: var(--blue); outline: none; }
+    .auth-card .auth-btn { width: 100%; background: var(--blue); color: #fff; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    .auth-card .auth-btn:hover { opacity: 0.9; }
+    .auth-card .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .auth-error { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+    .auth-info { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .auth-user { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); border-radius: 6px; margin-bottom: 12px; }
+    .auth-user img { width: 24px; height: 24px; border-radius: 50%; }
+    .auth-user span { font-size: 13px; color: var(--green); }
+    .auth-denied { padding: 8px 12px; background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); border-radius: 6px; margin-bottom: 12px; }
+    .auth-denied span { font-size: 13px; color: var(--red); }
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- AUTH GATE — Nothing loads until verified   -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="lock-icon">&#x1F512;</div>
+      <h2>Autopilot Control Plane</h2>
+      <p class="subtitle">Authenticated access only. Enter your GitHub Personal Access Token.</p>
+      <div id="authUserInfo"></div>
+      <div class="auth-error" id="authError"></div>
+      <input type="password" id="authTokenInput" placeholder="ghp_... (GitHub Personal Access Token)" autocomplete="off">
+      <button class="auth-btn" id="authBtn" onclick="authenticate()">Authenticate</button>
+      <div class="auth-info">
+        Token is stored in <strong>sessionStorage</strong> only (cleared on tab close).<br>
+        Only authorized GitHub users can access this dashboard.<br>
+        Required PAT scope: <code>repo</code> (read access).
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- MAIN APP — Hidden until auth passes        -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="container" id="mainApp" style="display:none">
     <header>
       <h1>Autopilot Control Plane</h1>
       <div class="auth-section">
-        <input type="password" id="tokenInput" placeholder="GitHub PAT (sessionStorage only)">
-        <button class="btn" onclick="connect()">Connect</button>
-        <button class="btn btn-danger" onclick="disconnect()" style="display:none" id="disconnectBtn">Disconnect</button>
+        <div id="userBadge" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--green)"></div>
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
       </div>
     </header>
-
-    <div class="warning-box" id="securityNote">
-      Token is stored in <strong>sessionStorage</strong> only (cleared on tab close). Never use localStorage.
-      For editing, use <a href="https://github.dev/lucassfreiree/autopilot" style="color:var(--blue)">github.dev</a>.
-    </div>
 
     <div class="tabs">
       <div class="tab active" onclick="showTab('pipeline')">Pipeline & Tools</div>
@@ -537,9 +572,17 @@
     const STATE_BRANCH = 'autopilot-state';
     const API = 'https://api.github.com';
 
+    // ═══ ACCESS CONTROL ═══
+    // Only these GitHub users can access the dashboard.
+    // Add usernames here to grant access.
+    const ALLOWED_USERS = ['lucassfreiree'];
+
     function getToken() { return sessionStorage.getItem('autopilot_token'); }
     function setToken(t) { sessionStorage.setItem('autopilot_token', t); }
     function clearToken() { sessionStorage.removeItem('autopilot_token'); }
+    function getUser() { return sessionStorage.getItem('autopilot_user'); }
+    function setUser(u) { sessionStorage.setItem('autopilot_user', u); }
+    function clearUser() { sessionStorage.removeItem('autopilot_user'); }
 
     async function ghGet(path) {
       const token = getToken();
@@ -557,23 +600,103 @@
       return JSON.parse(atob(data.content));
     }
 
-    async function connect() {
-      const token = document.getElementById('tokenInput').value.trim();
-      if (!token) return;
-      setToken(token);
-      document.getElementById('tokenInput').value = '';
-      document.getElementById('disconnectBtn').style.display = '';
-      await loadWorkspaces();
-      await populateSelectors();
-      await loadPipelineStatus();
+    // ═══ AUTHENTICATION ═══
+    async function authenticate() {
+      const btn = document.getElementById('authBtn');
+      const errorEl = document.getElementById('authError');
+      const infoEl = document.getElementById('authUserInfo');
+      const tokenInput = document.getElementById('authTokenInput');
+      const token = tokenInput.value.trim();
+
+      if (!token) { showAuthError('Please enter a token.'); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      errorEl.style.display = 'none';
+      infoEl.innerHTML = '';
+
+      try {
+        // Step 1: Validate token by calling GitHub API
+        const resp = await fetch(`${API}/user`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        if (!resp.ok) {
+          showAuthError('Invalid token. Check your GitHub PAT and try again.');
+          btn.disabled = false;
+          btn.textContent = 'Authenticate';
+          return;
+        }
+
+        const user = await resp.json();
+
+        // Step 2: Check if user is in the allowed list
+        if (!ALLOWED_USERS.includes(user.login)) {
+          infoEl.innerHTML = `<div class="auth-denied"><span>Access denied for <strong>@${user.login}</strong>. You are not authorized to access this dashboard.</span></div>`;
+          showAuthError('Unauthorized user. Contact the repository owner.');
+          btn.disabled = false;
+          btn.textContent = 'Authenticate';
+          tokenInput.value = '';
+          return;
+        }
+
+        // Step 3: Verify token has access to the repo
+        const repoResp = await fetch(`${API}/repos/${REPO}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        if (!repoResp.ok) {
+          showAuthError('Token lacks access to the autopilot repository. Ensure PAT has "repo" scope.');
+          btn.disabled = false;
+          btn.textContent = 'Authenticate';
+          return;
+        }
+
+        // Step 4: Auth passed — save and show dashboard
+        setToken(token);
+        setUser(JSON.stringify({ login: user.login, avatar: user.avatar_url, name: user.name || user.login }));
+        tokenInput.value = '';
+        showDashboard(user);
+
+      } catch (e) {
+        showAuthError('Network error. Check your connection and try again.');
+        btn.disabled = false;
+        btn.textContent = 'Authenticate';
+      }
     }
 
-    function disconnect() {
+    function showAuthError(msg) {
+      const el = document.getElementById('authError');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function showDashboard(user) {
+      document.getElementById('authOverlay').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('userBadge').innerHTML = `<img src="${user.avatar_url || user.avatar}" width="24" height="24" style="border-radius:50%"> <span>@${user.login || user.name}</span>`;
+      loadWorkspaces();
+      populateSelectors();
+      loadPipelineStatus();
+    }
+
+    function logout() {
       clearToken();
-      document.getElementById('disconnectBtn').style.display = 'none';
+      clearUser();
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('authOverlay').style.display = 'flex';
+      document.getElementById('authBtn').disabled = false;
+      document.getElementById('authBtn').textContent = 'Authenticate';
+      document.getElementById('authError').style.display = 'none';
+      document.getElementById('authUserInfo').innerHTML = '';
       document.getElementById('workspaceList').innerHTML = '<div class="empty">Connect to load workspaces</div>';
       document.getElementById('wsSelect').innerHTML = '<option value="">Select...</option>';
     }
+
+    // Allow Enter key to submit
+    document.getElementById('authTokenInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') authenticate();
+    });
 
     function showTab(name) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -917,13 +1040,30 @@
       }
     }
 
-    // Auto-connect if token exists in session
-    if (getToken()) {
-      document.getElementById('disconnectBtn').style.display = '';
-      loadWorkspaces();
-      populateSelectors();
-      loadPipelineStatus();
-    }
+    // Auto-reconnect if valid session exists
+    (async function autoReconnect() {
+      const token = getToken();
+      const userData = getUser();
+      if (token && userData) {
+        try {
+          const user = JSON.parse(userData);
+          // Re-validate token is still valid
+          const resp = await fetch(`${API}/user`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          if (resp.ok) {
+            const freshUser = await resp.json();
+            if (ALLOWED_USERS.includes(freshUser.login)) {
+              showDashboard(freshUser);
+              return;
+            }
+          }
+        } catch (e) { /* network error, show login */ }
+        // Token expired or user no longer authorized
+        clearToken();
+        clearUser();
+      }
+    })();
   </script>
 </body>
 </html>

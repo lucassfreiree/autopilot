@@ -150,10 +150,39 @@
     .tag { font-size:10px; padding:1px 5px; border-radius:4px; font-weight:500; }
     @media(max-width:768px) { .sidebar{display:none} .layout{flex-direction:column} .main{padding:14px} .mobile-nav{display:flex} .grid-4,.grid-3{grid-template-columns:1fr 1fr} .ws-grid,.agent-grid{grid-template-columns:1fr} }
     @media(max-width:480px) { .grid-4,.grid-3{grid-template-columns:1fr} }
+    /* Auth Gate */
+    .auth-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:var(--bg); z-index:9999; display:flex; align-items:center; justify-content:center; }
+    .auth-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:40px; max-width:420px; width:90%; text-align:center; }
+    .auth-card h2 { font-size:24px; margin-bottom:8px; }
+    .auth-card .subtitle { color:var(--muted); font-size:14px; margin-bottom:24px; }
+    .auth-card .lock-icon { font-size:48px; margin-bottom:16px; }
+    .auth-card input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:10px 14px; border-radius:6px; font-size:14px; margin-bottom:12px; }
+    .auth-card input:focus { border-color:var(--blue); outline:none; }
+    .auth-card .auth-btn { width:100%; background:var(--blue); color:#fff; border:none; padding:10px; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600; margin-bottom:12px; }
+    .auth-card .auth-btn:hover { opacity:.9; }
+    .auth-card .auth-btn:disabled { opacity:.5; cursor:not-allowed; }
+    .auth-error { color:var(--red); font-size:13px; margin-bottom:12px; display:none; }
+    .auth-info { color:var(--muted); font-size:12px; line-height:1.6; }
   </style>
 </head>
 <body>
-<div class="layout">
+<!-- AUTH GATE -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="lock-icon">&#x1F512;</div>
+    <h2>Autopilot Dashboard</h2>
+    <p class="subtitle">Authenticated access only. Enter your GitHub PAT or <a href="../" style="color:var(--blue)">login on the main panel</a> first.</p>
+    <div class="auth-error" id="authError"></div>
+    <input type="password" id="authTokenInput" placeholder="ghp_... (GitHub Personal Access Token)" autocomplete="off">
+    <button class="auth-btn" id="authBtn" onclick="dashAuth()">Authenticate</button>
+    <div class="auth-info">
+      Token is stored in <strong>sessionStorage</strong> only (cleared on tab close).<br>
+      Only authorized GitHub users can access this dashboard.
+    </div>
+  </div>
+</div>
+
+<div class="layout" id="mainApp" style="display:none">
   <nav class="sidebar">
     <div class="sidebar-logo"><h1>Autopilot</h1><p>Intelligence Dashboard v2</p></div>
     <div style="padding:8px 12px;border-bottom:1px solid var(--border)">
@@ -313,6 +342,52 @@
   </main>
 </div>
 <script>
+  // ═══ AUTH GATE (shared with main panel via sessionStorage) ═══
+  const ALLOWED_USERS = ['lucassfreiree'];
+  const GHAPI = 'https://api.github.com';
+  const REPO = 'lucassfreiree/autopilot';
+
+  async function dashAuth() {
+    const btn = document.getElementById('authBtn');
+    const errEl = document.getElementById('authError');
+    const input = document.getElementById('authTokenInput');
+    const token = input.value.trim();
+    if (!token) { errEl.textContent='Enter a token.'; errEl.style.display='block'; return; }
+    btn.disabled = true; btn.textContent = 'Verifying...'; errEl.style.display = 'none';
+    try {
+      const resp = await fetch(`${GHAPI}/user`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+      if (!resp.ok) { errEl.textContent='Invalid token.'; errEl.style.display='block'; btn.disabled=false; btn.textContent='Authenticate'; return; }
+      const user = await resp.json();
+      if (!ALLOWED_USERS.includes(user.login)) { errEl.textContent=`Access denied for @${user.login}.`; errEl.style.display='block'; btn.disabled=false; btn.textContent='Authenticate'; input.value=''; return; }
+      sessionStorage.setItem('autopilot_token', token);
+      sessionStorage.setItem('autopilot_user', JSON.stringify({ login: user.login, avatar: user.avatar_url }));
+      input.value = '';
+      unlockDashboard();
+    } catch(e) { errEl.textContent='Network error.'; errEl.style.display='block'; btn.disabled=false; btn.textContent='Authenticate'; }
+  }
+
+  function unlockDashboard() {
+    document.getElementById('authOverlay').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    init();
+  }
+
+  // Auto-unlock if already authenticated on main panel
+  (async function checkExistingAuth() {
+    const token = sessionStorage.getItem('autopilot_token');
+    const userData = sessionStorage.getItem('autopilot_user');
+    if (token && userData) {
+      try {
+        const resp = await fetch(`${GHAPI}/user`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+        if (resp.ok) { const u = await resp.json(); if (ALLOWED_USERS.includes(u.login)) { unlockDashboard(); return; } }
+      } catch(e) {}
+      sessionStorage.removeItem('autopilot_token');
+      sessionStorage.removeItem('autopilot_user');
+    }
+  })();
+
+  document.getElementById('authTokenInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') dashAuth(); });
+
   let state = {};
   // Smart refresh: 30s during business hours (8h-17h BRT Mon-Fri), 60s off-hours
   function isBusinessHours(){const now=new Date();const utcH=now.getUTCHours();const brtH=(utcH-3+24)%24;const dow=now.getUTCDay();return dow>=1&&dow<=5&&brtH>=8&&brtH<17}
@@ -1690,9 +1765,9 @@
     return parts[0]+'.'+parts[1]+'.'+(parts[2]+1);
   }
 
-  // Init
-  async function init(){await fetchState();scheduleRefresh()}
-  init();
+  // Init (called by auth gate after successful authentication)
+  let _initialized = false;
+  async function init(){ if(_initialized) return; _initialized=true; await fetchState(); scheduleRefresh(); }
 </script>
 </body>
 </html>

@@ -20,7 +20,6 @@ body:
         - deploy-agent
         - pr-reviewer
         - workspace-ops
-        - dashboard-monitor
         - feature-validation-sweep
     validations:
       required: true

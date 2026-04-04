@@ -63,8 +63,7 @@ Every change MUST pass before merge:
 │  │  ├─ devops       ─ security       │    │
 │  │  ├─ dashboard    ─ infra-ops      │    │
 │  │  ├─ ci-debugger  ─ deploy         │    │
-│  │  ├─ pr-reviewer  ─ workspace-ops  │    │
-│  │  └─ dashboard-monitor             │    │
+│  │  └─ pr-reviewer  ─ workspace-ops  │    │
 │  └─────────────────────────────────────┘    │
 └─────────────────────────────────────────────┘
 ```
@@ -77,13 +76,12 @@ Every change MUST pass before merge:
 | Quality | quality-agent | Validation, testing, regression prevention |
 | DevOps | devops-agent | Workflow optimization, pipeline efficiency |
 | Security | security-agent | Vulnerability scanning, policy enforcement |
-| Dashboard | dashboard-agent | UI/UX, data sync, visualizations |
+| Dashboard | dashboard-agent | Full dashboard ownership: UI, data sync, state accuracy, visualizations |
 | Infra-Ops | infra-ops-agent | Terraform, K8s, Cloud, Monitoring |
 | CI Debugger | ci-debugger | CI failure diagnosis and auto-fix |
 | Deploy | deploy-agent | Full deploy pipeline execution |
 | PR Reviewer | pr-reviewer | Automated PR review |
 | Workspace Ops | workspace-ops | Health checks, locks, state management |
-| Dashboard Monitor | dashboard-monitor | Dashboard sync validation and repair |
 
 **Coordination rule:** Report to Team Lead. Team Lead reports to Director. If your change touches another agent's domain, mention it in the PR description. The quality gate validates everything — trust the process.
 
