@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "lastReleasedSha": "b95c34708dfa9d3656e2715bbbc0f92c0af01fb4",
+  "lastTag": "3.8.2",
+  "updatedAt": "2026-04-02T17:40:58Z",
+  "runId": "23913111241",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23913111241",
+  "ciResult": "success",
+  "status": "promoted",
+  "changeType": "source-code",
+  "commitMessage": "fix(controller): fix TS2769 expiresIn type — use numeric seconds for jwt.sign (v3.8.2)",
+  "promoted": true,
+  "preExistingFailure": false,
+  "gateDecision": "pass"
+}
