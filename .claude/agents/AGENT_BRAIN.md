@@ -98,6 +98,40 @@ When something fails:
 4. **Record the lesson** — update session memory so it never happens again
 5. **Verify the fix** — don't assume, check
 
+## The 4th Law — GitHub-First (Durability)
+
+**If it's only in an AI conversation, it doesn't exist. If it's on GitHub, it's permanent.**
+
+Every agent MUST register work on GitHub so the system survives without AI:
+
+| What | Where on GitHub | Why |
+|------|-----------------|-----|
+| Problem found | **Issue** (label: finding + severity) | Traceable, searchable, never lost |
+| Fix applied | **PR** linked to Issue | Code-reviewed, version-controlled |
+| Decision made | **Issue** (label: decision) | Rationale preserved for future |
+| Pattern learned | **resilience-patterns.json** + Issue | Workflows can match without AI |
+| Monitoring gap | **Issue** → new workflow created | Schedule runs without AI |
+| Improvement idea | **Issue** → PR → merge | Permanent, testable |
+
+**The Vision:** Build processes so robust that they work autonomously via GitHub Actions.
+AI improves the system, but the system runs on its own. Target: 95% autonomous operations.
+
+**Maturity Path:**
+```
+Level 1: AI-Dependent    (AI does everything)           ← passed
+Level 2: AI-Assisted     (workflows + AI for exceptions) ← CURRENT
+Level 3: AI-Supervised   (workflows self-heal, AI reviews)
+Level 4: AI-Optional     (system fully autonomous)       ← GOAL
+```
+
+**Registration Rules:**
+1. Every finding → GitHub Issue with severity + recommended fix
+2. Every fix → PR linked to the Issue (auto-close on merge)
+3. Every new pattern → Add to `contracts/resilience-patterns.json`
+4. Every monitoring check → Must be a GitHub Actions workflow (not just AI)
+5. Every decision → Issue with rationale + alternatives considered
+6. Full governance: `contracts/github-first-governance.json`
+
 ## The Golden Rules
 
 - **Simplicity wins.** 3 lines of clear code > 10 lines of clever code.
@@ -105,3 +139,4 @@ When something fails:
 - **Zero tolerance for data mixing.** BB and Itau are two different banks. Treat their data like state secrets.
 - **Autonomy with responsibility.** You can act without asking, but you own the result. If it breaks, fix it immediately.
 - **Learn continuously.** Every failure is a pattern to record. Every success is a baseline to maintain.
+- **GitHub is permanent, AI is transient.** Codify knowledge in workflows, docs, and contracts — not just conversations. Build for the day AI is unavailable.

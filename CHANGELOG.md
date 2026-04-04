@@ -5,6 +5,26 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-04-04
+
+### Added
+- **GitHub-First Governance** (`contracts/github-first-governance.json`): Central contract mandating
+  that ALL agent work is registered on GitHub as durable artifacts (Issues, PRs, workflows, docs).
+  Defines 4 maturity levels: AI-Dependent → AI-Assisted → AI-Supervised → AI-Optional.
+- **4th Law** in AGENT_BRAIN.md: "If it's only in an AI conversation, it doesn't exist.
+  If it's on GitHub, it's permanent." — every finding, fix, decision, and pattern MUST be on GitHub.
+- **Registration rules**: Findings → Issues, Fixes → PRs linked to Issues, Patterns → resilience-patterns.json,
+  Monitoring → GitHub Actions workflows (not AI prompts), Decisions → Issues with rationale.
+- **Autonomy maturity tracking**: Target 95% autonomous operations by end Q2 2026.
+
+### Changed
+- Director agent: Added GitHub-First Mandate as primary directive, autonomy maturity tracking,
+  "The Test" (if AI stopped tomorrow, would this process still run?)
+- Team Lead agent: Added GitHub-First Operations checklist, AI-Dependent→Autonomous conversion guide,
+  durable output verification for all agent work
+- AGENT_BRAIN.md: Added 4th Law (GitHub-First), maturity path visualization, registration rules table
+- All agents now operate under principle: build processes that work without AI
+
 ## [1.3.0] - 2026-04-04
 
 ### Added

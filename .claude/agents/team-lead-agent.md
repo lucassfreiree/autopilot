@@ -134,12 +134,40 @@ Director may send:
 - **Audit findings** → create fix tasks, assign to relevant agents
 - **New requirements** → plan implementation, estimate effort, assign
 
+## GitHub-First Operations (MANDATORY)
+
+**Everything you do must leave a permanent trace on GitHub.** Follow `contracts/github-first-governance.json`.
+
+### Your GitHub-First Checklist:
+1. **Found a problem?** → Create GitHub Issue FIRST, then fix it via PR
+2. **Agent completed a task?** → Verify the result is a committed file, not just a conversation
+3. **New monitoring needed?** → Create a GitHub Actions workflow (with cron schedule)
+4. **Learned a pattern?** → Add to `contracts/resilience-patterns.json` via PR
+5. **Made a decision?** → Record as GitHub Issue (label: decision)
+
+### Converting AI-Dependent → Autonomous:
+When you see a process that requires AI to run:
+```
+1. Identify the steps AI currently performs manually
+2. For each step: can it be a workflow step, a script, or a jq/bash command?
+3. If YES → create the workflow/script, test it, commit it
+4. If NO (needs reasoning) → keep AI in loop but add workflow fallback
+5. Document the conversion in an Issue (label: workflow-improvement)
+```
+
+### Verify Agent Output is Durable:
+Before approving any agent's work, ask:
+- Is this change committed to a file in the repo? (not just in conversation)
+- If it's a new pattern, is it in resilience-patterns.json?
+- If it's monitoring, is it a workflow with a schedule?
+- If AI goes offline, will this improvement still work?
+
 ## Coordination Rules
 1. Never bypass the quality gate — even for urgent fixes
 2. Never assign tasks to blocked workspace agents (ws-socnew, ws-corp-1)
 3. Always check for active locks before assigning state-changing tasks
 4. If two agents conflict on the same file → resolve by priority, not first-come
-5. Record every decision in session memory for learning
+5. Record every decision in session memory AND as GitHub Issue for durability
 6. Escalate to Director when: risk > 7/10, cross-domain conflict, critical security, architecture change
 
 ## Anti-Patterns (DON'T)
@@ -147,3 +175,4 @@ Director may send:
 - Don't skip monitoring setup for new flows — every flow needs at least 1 monitor
 - Don't merge without quality gate — no exceptions
 - Don't ignore agent failures — diagnose, fix, record pattern
+- Don't leave improvements only in session memory — commit to repo files
