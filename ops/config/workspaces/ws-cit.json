@@ -1,14 +1,20 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "description": "Visual index for CIT workspace — quick reference for agents",
   "workspace_id": "ws-cit",
   "company": "CIT",
-  "status": "setup",
+  "client": "Itau Unibanco",
+  "clientShortName": "Itau",
+  "serviceType": "DevOps Engineering & Cloud Infrastructure",
+  "status": "onboarding",
+  "startDate": "2026-04-06",
+  "colorTheme": "orange",
   "identification": {
     "token_secret": "CIT_TOKEN",
     "data_classification": "Internal",
     "stack": "DevOps (K8s, Docker, Terraform, Ansible, Helm, ArgoCD, CI/CD)",
-    "machine": "CIT workstation"
+    "machine": "CIT workstation",
+    "keywords": ["cit", "itau", "itaú", "unibanco", "devops", "terraform", "helm", "argocd", "ansible", "k8s", "kubernetes", "docker", "cloud", "aws", "azure", "gcp", "iac", "monitoring"]
   },
   "repos": [],
   "state_path": "state/workspaces/ws-cit/",
@@ -24,12 +30,20 @@
   "corporate_workflows_blocked_by": [
     "CIT_TOKEN not configured",
     "No repos registered in workspace.json",
-    "[Corp] workflows hardcode BBVINET_TOKEN — need dynamic token selection"
+    "[Corp] workflows need dynamic token selection"
   ],
   "current_state": {
     "repos_configured": 0,
     "token_available": false,
     "cloud_credentials": "pending",
-    "ops_environment": "ready"
+    "ops_environment": "ready",
+    "onboarding_date": "2026-04-06",
+    "onboarding_tasks": [
+      "Receive CIT repo access and credentials",
+      "Configure CIT_TOKEN secret",
+      "Register repos in workspace.json",
+      "Map CI/CD pipelines",
+      "Set up monitoring integrations"
+    ]
   }
 }

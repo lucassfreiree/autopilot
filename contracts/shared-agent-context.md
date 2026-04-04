@@ -1,29 +1,63 @@
 # Autopilot Shared Agent Context
 > This file is injected into ALL agent prompts (Claude, Codex, Copilot).
 > It contains the essential context every agent needs to operate correctly.
-> Last updated: 2026-03-25
+> Last updated: 2026-04-04
 
 ## What is Autopilot
 Web-only CI/CD control plane for multi-workspace, multi-agent release orchestration.
-Repo: `lucassfreiree/autopilot` (personal product). State stored on `autopilot-state` branch.
+Repo: `lucassfreiree/autopilot` (personal product / future SaaS). State stored on `autopilot-state` branch.
 
 ## Multi-Company Model (CRITICAL)
-Autopilot manages MULTIPLE COMPANIES from a single repo. Each company is COMPLETELY ISOLATED.
+Autopilot manages MULTIPLE COMPANIES from a single repo. Each workspace = one consultancy engagement (company + client). COMPLETELY ISOLATED.
 
-| Company | Workspace | Stack | Token | Repos | Status |
-|---------|-----------|-------|-------|-------|--------|
-| Getronics | ws-default | Node/TypeScript (NestJS) | BBVINET_TOKEN | bbvinet/psc-sre-automacao-controller, agent, cap | Active (v3.6.3) |
-| CIT | ws-cit | DevOps (K8s, Terraform, Docker) | CIT_TOKEN | TBD | Setup |
+### Consultancy Model
+The owner (lucassfreiree) works as a consultant for multiple companies, each serving a different end-client (bank/financial institution).
 
-**RULES**: Never mix data between companies. Always identify workspace before acting. Each company uses its own token exclusively.
+| Company | Client (End-Customer) | Workspace | Stack | Token | Status | Start |
+|---------|----------------------|-----------|-------|-------|--------|-------|
+| **Getronics** | **Banco do Brasil** | `ws-default` | Node/TypeScript (NestJS) | `BBVINET_TOKEN` | **Active** (ctrl 3.8.2, agent 2.3.3) | 2025 |
+| **CIT** | **Itau Unibanco** | `ws-cit` | DevOps (K8s, Terraform, Docker, IaC) | `CIT_TOKEN` | **Onboarding** (starts 2026-04-06) | Apr 2026 |
 
-## Current State
-- **Controller version**: 3.6.3 (last confirmed deployed)
-- **Target release prepared**: 3.6.6 (trigger payload + CAP image tag updated)
-- **Last successful deploy run**: #53
-- **Last trigger run prepared**: 54
-- **Pipeline status**: IN_PROGRESS (aguardando execução/monitoramento remoto dos checks)
-- **Esteira corporativa**: monitorar via PR checks/API até conclusão
+### Blocked Workspaces (Third-Party — DO NOT OPERATE)
+| Workspace | Owner | Policy |
+|-----------|-------|--------|
+| `ws-socnew` | Third-party | LOCKED — requires explicit authorization |
+| `ws-corp-1` | Third-party | LOCKED — requires explicit authorization |
+
+### Context Identification Rules
+Agents MUST identify workspace from conversation context BEFORE any operation:
+- **Getronics/BB keywords**: getronics, banco do brasil, bb, bbvinet, controller, agent, nestjs, psc-sre, automacao, esteira, cap, hml
+- **CIT/Itau keywords**: cit, itau, itaú, unibanco, devops, terraform, helm, argocd, ansible, k8s, kubernetes, docker, cloud, aws, azure, gcp
+- **Ambiguous?** → ASK the user. Never assume.
+- **Full rules**: `contracts/workspace-context-rules.json`
+
+### Corporate Environment Rules (CRITICAL — Owner Directive)
+**NEVER mention AI, artificial intelligence, Claude, GPT, LLM, or any AI tool in corporate-facing content.**
+This includes: commit messages, PR titles/descriptions, issue titles, branch names, code comments pushed to corporate repos.
+All work pushed to corporate repos (bbvinet/*, CIT repos) must appear as regular developer work.
+Internal autopilot references (CLAUDE.md, session memory, contracts) are OK — they stay in the autopilot repo.
+
+### Cross-Contamination Prevention
+- NEVER reference BB data/repos in CIT context or vice-versa
+- NEVER use BBVINET_TOKEN for CIT or CIT_TOKEN for Getronics
+- NEVER mention AI in any corporate-facing content
+- Dashboard uses color coding: green=Getronics/BB, orange=CIT/Itau, red=locked
+- Every commit, issue, and PR for workspace-specific work MUST include workspace_id
+
+## Current State (ws-default — Getronics/BB)
+- **Controller version**: 3.8.2 (deployed and verified)
+- **Agent version**: 2.3.3 (deployed and verified)
+- **Last successful deploy run**: #103
+- **Last trigger run**: 103
+- **Pipeline status**: operational
+- **Autopilot product version**: 1.0.3
+
+## Current State (ws-cit — CIT/Itau)
+- **Status**: Onboarding (starts 2026-04-06)
+- **Repos**: Not yet configured
+- **Token**: CIT_TOKEN (not yet available)
+- **Ops environment**: Ready (scripts, runbooks, templates in ops/)
+- **First tasks**: Receive repo access, configure token, map CI/CD pipelines
 
 ## Key Architecture
 - **State branch**: `autopilot-state` (source of truth for all runtime state)

@@ -1,19 +1,26 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "description": "Visual index for Getronics workspace — quick reference for agents",
   "workspace_id": "ws-default",
   "company": "Getronics",
+  "client": "Banco do Brasil",
+  "clientShortName": "BB",
+  "serviceType": "Application Development & SRE",
   "status": "active",
+  "startDate": "2025-01-01",
+  "colorTheme": "green",
   "identification": {
     "token_secret": "BBVINET_TOKEN",
     "data_classification": "Confidential",
     "stack": "Node/TypeScript (NestJS, Jest, ESLint)",
-    "machine": "Getronics workstation"
+    "machine": "Getronics workstation",
+    "keywords": ["getronics", "banco do brasil", "bb", "bbvinet", "controller", "agent", "nestjs", "psc-sre", "automacao", "esteira", "cap", "hml"]
   },
   "repos": {
     "controller": "bbvinet/psc-sre-automacao-controller",
     "agent": "bbvinet/psc-sre-automacao-agent",
-    "cap": "bbvinet/psc_releases_cap_sre-aut-agent"
+    "cap_controller": "bbvinet/psc_releases_cap_sre-aut-controller",
+    "cap_agent": "bbvinet/psc_releases_cap_sre-aut-agent"
   },
   "state_path": "state/workspaces/ws-default/",
   "trigger_files": [
@@ -24,7 +31,8 @@
     "trigger/fix-and-validate.json",
     "trigger/full-test.json",
     "trigger/e2e-test.json",
-    "trigger/agent-sync.json",
+    "trigger/promote-cap.json",
+    "trigger/ci-status.json",
     "trigger/improvement.json"
   ],
   "workflows_that_use_this_workspace": [
@@ -34,15 +42,18 @@
     "fetch-files.yml",
     "drift-correction.yml",
     "fix-and-validate.yml",
-    "agent-sync.yml",
     "check-repo-access.yml",
     "test-full-flow.yml",
-    "test-corporate-flow.yml"
+    "test-corporate-flow.yml",
+    "ci-status-check.yml",
+    "ci-monitor-loop.yml",
+    "promote-cap.yml"
   ],
   "current_state": {
-    "controller_version": "3.5.12",
-    "last_successful_deploy_run": 38,
-    "last_trigger_run": 44,
+    "controller_version": "3.8.2",
+    "agent_version": "2.3.3",
+    "last_successful_deploy_run": 103,
+    "last_trigger_run": 103,
     "pipeline_status": "operational"
   }
 }

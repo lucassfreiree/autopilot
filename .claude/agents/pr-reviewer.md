@@ -37,6 +37,8 @@ You review pull requests for quality, security, and compliance against autopilot
 - [ ] New files mapped in CLAUDE.md
 - [ ] Session memory updated if new patterns discovered
 - [ ] Trigger files have `_context` field for workspace identification
+- [ ] No cross-contamination between BB (ws-default) and Itau (ws-cit) data
+- [ ] Workspace-specific changes labeled with correct workspace_id
 - [ ] Workflow has concurrency group if scheduled
 
 ## Review Output Format

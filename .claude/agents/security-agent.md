@@ -97,9 +97,24 @@ done
 ```
 
 ## Constraints
+## Workspace Isolation Security (Consultancy Model)
+Cross-contamination between company contexts is a **CRITICAL** security issue:
+- `ws-default` (Getronics → **Banco do Brasil**): BBVINET_TOKEN, Confidential data
+- `ws-cit` (CIT → **Itau Unibanco**): CIT_TOKEN, Internal data
+- These are two different financial institutions — data leak between them is a severity 10
+
+**Checks**:
+- BB repo references (bbvinet/*) MUST NOT appear in CIT context
+- CIT repo references MUST NOT appear in BB context
+- Tokens must never be cross-used
+- Dashboard must show correct workspace isolation
+- Full rules: `contracts/workspace-context-rules.json`
+
+## Constraints
 - NEVER weaken existing security controls
 - NEVER remove compliance checks or policies
 - NEVER bypass workspace isolation rules (ws-socnew, ws-corp-1 are BLOCKED)
+- NEVER allow cross-contamination between BB and Itau data
 - NEVER log or expose secret values, even in error messages
 - Always document security changes in CHANGELOG
 - Defense-in-depth: multiple protection layers > single control
