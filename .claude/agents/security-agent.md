@@ -42,7 +42,7 @@ grep -rnE "^[^#]*password\s*[:=]\s*['\"][a-zA-Z0-9]{8,}['\"]" --include="*.yml" 
 ### 2. Corporate Data Isolation
 ```bash
 # Real FQDNs (NOT documentation patterns like "*.intranet.*")
-# Only flag actual domain names like "xyz.intranet.bb.com.br"
+# Only flag actual domain names (not doc patterns like *.intranet.*)
 for f in .claude/agents/*.md .claude/skills/*.md panel/*.html; do
   grep -qE '[a-z0-9]+\.intranet\.[a-z]+\.[a-z]+\.[a-z]+' "$f" && echo "LEAK: $f"
 done

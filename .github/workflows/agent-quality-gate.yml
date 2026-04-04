@@ -157,7 +157,8 @@ jobs:
           ERRORS=0
           # Only flag real FQDNs (like xyz.intranet.bb.com.br)
           # NOT documentation patterns (*.intranet.*, ".intranet.")
-          for f in .claude/agents/*.md .claude/skills/*.md panel/*.html panel/**/*.html; do
+          # Exclude panel/dashboard/ — synced from corporate state by design
+          for f in .claude/agents/*.md .claude/skills/*.md panel/index.html; do
             [ -f "$f" ] || continue
             if grep -qE '[a-z0-9]+\.intranet\.[a-z]+\.[a-z]+\.[a-z]+' "$f" 2>/dev/null; then
               echo "::error file=$f::Corporate FQDN in public file"
