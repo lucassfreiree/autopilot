@@ -101,6 +101,26 @@ npm audit --json | jq '.vulnerabilities | to_entries[] | select(.value.severity 
 | Injection | Template literals in SQL/queries | Parameterized queries |
 | Auth bypass | Missing JWT validation | Middleware check |
 
+### JWT Best Practices (from daianepepes-lab/claude-skills)
+```
+- Sign with strong secret or RS256 (never HS256 with weak key)
+- Short expiry: 15min access token, 7d refresh token
+- Store refresh tokens in httpOnly cookies (never localStorage)
+- Validate on EVERY request — no skipping for "internal" routes
+- Include iss, aud, exp, iat claims
+- Controller uses: payload.scope (singular, not scopes)
+- See contracts/interface-contract.json for JWT claim spec
+```
+
+### Password & Auth Hardening
+```
+- Hash with bcrypt (cost factor 12+) or argon2id
+- Account lockout after 5 failed attempts
+- Log ALL authentication events (success + failure)
+- API keys: cryptographically random, hash in DB, scope permissions
+- Never commit secrets to version control (even test tokens)
+```
+
 ### Compliance Gate Integration
 Rules 10-13 in `compliance-gate.yml` enforce:
 - Rule 10: security-xss (input reflected without sanitize)
