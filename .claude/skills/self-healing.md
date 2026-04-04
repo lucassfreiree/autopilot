@@ -143,7 +143,41 @@ jq '.patterns += [{"id":"new-pattern","category":"...","trigger":"...","workarou
 # Record in commonPatterns.errorRecovery
 ```
 
-## 5. Measuring Self-Healing Effectiveness
+## 5. Runtime Failure Patterns (from daianepepes-lab/claude-skills)
+
+Patterns for Node.js applications (ws-default controller/agent):
+
+### Memory Leak Detection
+- **Symptom**: RSS/heap grows steadily, never released
+- **Causes**: Event listeners not removed, circular references, global cache without eviction
+- **Detection**: `process.memoryUsage().heapUsed` trends upward over time
+- **Fix**: Add eviction to caches (LRU), remove listeners when done, set heap threshold + restart
+
+### Connection Pool Exhaustion
+- **Symptom**: Requests timeout, "connection pool exhausted" errors
+- **Causes**: Connections not released after errors, pool too small for load
+- **Detection**: Pool wait time increasing, active connections at max
+- **Fix**: Always release in finally block, increase pool size, add circuit breaker
+
+### Cascading Failures
+- **Symptom**: One service failure causes others to fail
+- **Causes**: Missing circuit breakers, no timeouts, retry storms
+- **Detection**: Error rate spikes propagating across services
+- **Fix**: Add circuit breakers, set timeouts on all external calls, exponential backoff
+
+### Disk Space Exhaustion
+- **Symptom**: Write failures, app crashes
+- **Causes**: Log accumulation, temp files not cleaned, unbounded data growth
+- **Detection**: `df -h` shows >90% usage
+- **Fix**: Log rotation, temp file cleanup cron, bounded data retention
+
+### CPU Starvation
+- **Symptom**: Event loop lag, slow responses, timeouts
+- **Causes**: Blocking sync operations, infinite loops, CPU-bound on main thread
+- **Detection**: Event loop delay >100ms, CPU at 100%
+- **Fix**: Move heavy work to worker threads, add timeout guards
+
+## 6. Measuring Self-Healing Effectiveness
 
 ### Key Metrics
 | Metric | Target | Tracked By |

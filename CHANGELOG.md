@@ -5,6 +5,18 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-04-04
+
+### Improved
+- **Skills enriched with original source content** from `daianepepes-lab/claude-skills` repo:
+  - self-healing: Added 5 runtime failure patterns (memory leak, connection pool, cascading,
+    disk exhaustion, CPU starvation) with symptoms, causes, detection, and fix for each
+  - security-hardening: Added JWT best practices (RS256, short expiry, httpOnly cookies),
+    password hardening (bcrypt cost 12+, argon2id), API key management
+  - cost-reducer: Added 12 cloud cost quick wins table (spot instances up to 90% savings,
+    storage tiering, NAT Gateway audit, K8s optimization, reserved instances)
+- All enriched skills include attribution to original source
+
 ## [1.8.0] - 2026-04-04
 
 ### Added

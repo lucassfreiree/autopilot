@@ -4,6 +4,8 @@ description: Analyze and reduce costs across cloud infrastructure, code efficien
 
 # Cost Reducer Skill
 
+> Inspired by `daianepepes-lab/claude-skills/cost-reducer`, adapted for autopilot context.
+
 Autonomous cost reduction specialist. Activates when discussing costs, optimization, billing,
 resource usage, or efficiency improvements.
 
@@ -41,6 +43,22 @@ ALWAYS check before provisioning:
 - Layer caching in CI (don't rebuild unchanged layers)
 - Image cleanup policy (keep last 5 tags, delete old ones)
 ```
+
+### Cloud Cost Quick Wins (from daianepepes-lab/claude-skills)
+| Area | Optimization | Saving |
+|------|-------------|--------|
+| Compute | Spot/preemptible for CI runners and batch | Up to 90% |
+| Compute | Right-size: compare actual CPU/RAM vs provisioned | 20-40% |
+| Compute | ARM instances (Graviton/Ampere) | 20% cheaper |
+| Storage | Cold data to S3 Glacier / Archive tier | 70-90% |
+| Storage | Delete orphaned EBS volumes and old snapshots | Immediate |
+| Network | Colocate services (avoid cross-region transfer) | Variable |
+| Network | Audit NAT Gateway usage (hidden cost ~$32/mo/AZ) | $32+/mo |
+| Database | Reserved instances for steady workloads | Up to 60% |
+| Database | Auto-pause dev/staging databases when idle | 50-80% |
+| K8s | Set resource requests/limits properly | Prevent overprovisioning |
+| K8s | Cluster autoscaler + image cleanup policy | Variable |
+| K8s | Fargate Spot for batch workloads | Up to 70% |
 
 ## 2. Code-Level Savings
 
