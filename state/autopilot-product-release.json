@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "product": "autopilot",
-  "currentVersion": "1.1.0",
-  "currentTag": "v1.1.0",
-  "releaseSha": "7485641589d54b141b6aba060fcdec9a8b749a1e",
-  "releasedAt": "2026-04-04T14:25:55Z",
-  "releaseRunId": "23980804243"
+  "currentVersion": "1.1.1",
+  "currentTag": "v1.1.1",
+  "releaseSha": "52ca8a3d02e42ad572f4961c70ae755aba4dfae2",
+  "releasedAt": "2026-04-04T14:44:57Z",
+  "releaseRunId": "23981119325"
 }
