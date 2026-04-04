@@ -126,7 +126,7 @@ Se usar search-replace com `"3.6.6"` e o swagger estiver com `"3.5.14"`, o sed n
 
 Alem disso, a tag da imagem Docker dentro do values.yaml:
 ```yaml
-image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:3.6.6
+image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.6
 #                                                                              ^^^^^ tag
 ```
 

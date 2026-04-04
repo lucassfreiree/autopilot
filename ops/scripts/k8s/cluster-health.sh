@@ -21,8 +21,11 @@ NS="${1:---all-namespaces}"
 NS_FLAG=""
 if [ "$NS" = "--all-namespaces" ] || [ "$NS" = "-A" ]; then
   NS_FLAG="--all-namespaces"
-else
+elif [[ "$NS" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
   NS_FLAG="-n $NS"
+else
+  error "Invalid namespace: '$NS' — must match [a-zA-Z0-9][a-zA-Z0-9._-]*"
+  exit 1
 fi
 
 header "Cluster Info"

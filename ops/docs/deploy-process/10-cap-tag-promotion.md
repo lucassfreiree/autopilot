@@ -12,7 +12,7 @@ O arquivo chave e o `values.yaml` que contem a tag da imagem Docker:
 
 ```yaml
 # Linha relevante no values.yaml:
-image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:3.6.7
+image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 #                                                                              ^^^^^
 #                                                                              Esta tag
 ```
@@ -138,7 +138,7 @@ Apos promote confirmado, atualizar a referencia local no autopilot:
 
 E a linha da imagem:
 ```yaml
-image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:3.6.7
+image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 ```
 
 ## Fluxo Completo: Do Push ao Deploy no Cluster
@@ -150,7 +150,7 @@ image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:3.
 
 2. Esteira de Build NPM roda (CI corporativo)
    → npm ci → build → lint → test → Docker build → Docker push
-   → Imagem: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:3.6.7
+   → Imagem: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 
 3. CI Gate detecta success (Stage 3)
    → check-runs: all completed, all success
