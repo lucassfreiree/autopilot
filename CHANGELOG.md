@@ -5,6 +5,23 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.5] - 2026-04-04
+
+### Security
+- **CRITICAL fix**: GCP service account key in `ops-k8s-health.yml` no longer echoed to stdout;
+  uses `mktemp` + `chmod 600` temp file pattern instead
+- **Fixed 11 broken workflows**: `actions/upload-artifact@v7` (non-existent) → `@v4` (current stable)
+  across ops-k8s-health, ops-workflow-observability, ops-pipeline-diagnose, backup-state, ops-tf-plan,
+  health-check, ci-failure-analysis, bootstrap, security-vuln-scanner, ops-cloud-diagnose, ops-monitor-alerts
+- **Redacted internal IP** (`172.17.229.129`) from `contracts/claude-session-memory.json`
+- **Redacted internal FQDNs** (`docker.binarios.intranet.*`, `fontes.intranet.*`) from:
+  - `panel/dashboard/index.html` (public-facing dashboard)
+  - `state/workspaces/ws-default/fetched-agent-package.json`
+  - `state/workspaces/ws-default/fetched-controller-package.json`
+  - `ops/docs/deploy-process/05-version-bump.md`
+  - `ops/docs/deploy-process/10-cap-tag-promotion.md`
+- **Added namespace input validation** in `ops/scripts/k8s/cluster-health.sh` to prevent command injection
+
 ## [1.8.4] - 2026-04-04
 
 ### Added

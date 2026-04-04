@@ -4,7 +4,7 @@
   "description": "psc-sre-automacao-agent in node with expressjs",
   "repository": {
     "type": "git",
-    "url": "https://fontes.intranet.bb.com.br/psc/psc-sre-automacao-agent/psc-sre-automacao-agent.git"
+    "url": "https://***REDACTED***/psc/psc-sre-automacao-agent/psc-sre-automacao-agent.git"
   },
   "license": "ISC",
   "author": "Equipe DS",
