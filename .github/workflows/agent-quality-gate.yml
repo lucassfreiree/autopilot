@@ -133,12 +133,17 @@ jobs:
 
       - name: Check corporate data isolation
         run: |
-          # Files that should NOT contain corporate identifiers
+          # Check for ACTUAL corporate domains (not pattern references in docs)
+          # Real corporate data: full domain names like "xyz.intranet.bb.com.br"
+          # Allowed: documentation patterns like "*.intranet.*" or ".intranet." as detection rules
           ERRORS=0
           for f in .claude/agents/*.md .claude/skills/*.md panel/*.html; do
-            if [ -f "$f" ] && grep -qE "\.intranet\." "$f" 2>/dev/null; then
-              echo "::error file=$f::Corporate identifier found in public-facing file"
-              ERRORS=$((ERRORS + 1))
+            if [ -f "$f" ]; then
+              # Match actual corporate FQDNs, not wildcard patterns or quoted rules
+              if grep -qE '[a-z0-9]+\.intranet\.[a-z]+\.[a-z]+\.[a-z]+' "$f" 2>/dev/null; then
+                echo "::error file=$f::Corporate FQDN found in public-facing file"
+                ERRORS=$((ERRORS + 1))
+              fi
             fi
           done
           [ "$ERRORS" -eq 0 ] && echo "Corporate data isolation ✓"
