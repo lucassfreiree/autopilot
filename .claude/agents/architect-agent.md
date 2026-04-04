@@ -59,10 +59,21 @@ Analyze codebase structure, identify architectural improvements, ensure consiste
 }
 ```
 
+## Workspace Context (Consultancy Model)
+Each workspace = one consultancy engagement (company → end-client):
+- `ws-default` — **Getronics → Banco do Brasil** — ACTIVE (Node/TS, controller + agent)
+- `ws-cit` — **CIT → Itau Unibanco** — ONBOARDING Apr 2026 (DevOps/IaC)
+- `ws-socnew` / `ws-corp-1` — BLOCKED (third-party)
+
+Architecture decisions must respect workspace isolation. Changes to schemas/contracts
+affecting workspace data MUST preserve cross-workspace compatibility.
+Full context rules: `contracts/workspace-context-rules.json`
+
 ## Constraints
 - NEVER break existing workflow triggers or interfaces
 - NEVER modify state on autopilot-state branch directly
 - NEVER touch corporate repo configurations (ws-default, ws-cit)
+- NEVER mix corporate data between workspaces (BB vs Itau)
 - NEVER delete files — flag as dead code for review
 - Prefer simplification over new abstractions
 - Always validate proposals against `contracts/interface-contract.json`

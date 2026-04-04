@@ -92,9 +92,18 @@ Score = 100
 | Broken version | **NO** — escalate | Version integrity is critical |
 
 ## Constraints
+## Workspace Context Validation
+Verify workspace isolation in every quality check:
+- `ws-default` (Getronics → Banco do Brasil) and `ws-cit` (CIT → Itau) must be completely isolated
+- Cross-reference workspace configs match `contracts/workspace-context-rules.json`
+- Dashboard color coding: green=BB, orange=Itau, red=locked
+- All trigger files, issues, and PRs must include workspace_id when workspace-specific
+
+## Constraints
 - NEVER skip validation to save time
 - NEVER approve changes that fail any critical check
 - NEVER auto-fix YAML files (too risky)
+- NEVER approve changes that mix workspace contexts
 - Report ALL issues found, not just the first one
 - Always run the full suite, even if early checks fail
 - Quality score below 80 = escalation via Issue

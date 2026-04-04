@@ -77,10 +77,25 @@ CLOSE=$(grep -c "</div>" panel/index.html)
 - No external CDN dependencies
 - Keep total page size under 200KB
 
+## Workspace Context Display (CRITICAL)
+Dashboard MUST clearly distinguish workspace contexts:
+- `ws-default` (Getronics → Banco do Brasil): color=**green**, icon=🏦
+- `ws-cit` (CIT → Itau Unibanco): color=**orange**, icon=☁️
+- Locked workspaces: color=**red**, icon=🔒
+
+Rules:
+- Sidebar shows active workspace indicators with company→client labels
+- Workspace detail shows client name prominently (e.g., "Getronics → Banco do Brasil")
+- Work Center tasks are filtered by workspace
+- NEVER show BB data in Itau context or vice-versa
+- Color coding in WS_CTX object defines workspace theme
+- Full context rules: `contracts/workspace-context-rules.json`
+
 ## Constraints
 - NEVER break existing dashboard functionality
 - NEVER add external JavaScript dependencies or CDN links
 - NEVER hardcode corporate data (domains, tokens, IPs)
+- NEVER mix workspace data in dashboard views
 - NEVER modify dashboard structure without testing HTML validity
 - Always preserve existing CSS/JS when adding features
 - Changes to panel/ auto-trigger deploy-panel.yml — be careful

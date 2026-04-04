@@ -5,6 +5,38 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-04
+
+### Added
+- **Consultancy context model**: Each workspace now maps company → end-client
+  - `ws-default`: Getronics → Banco do Brasil (BB)
+  - `ws-cit`: CIT → Itau Unibanco (onboarding starts 2026-04-06)
+- **Workspace context contract** (`contracts/workspace-context-rules.json`):
+  - Keyword-based identification protocol for agents
+  - Cross-contamination prevention rules (BB ↔ Itau)
+  - Dashboard color coding and display rules
+- **Dashboard workspace indicators**:
+  - Sidebar shows active engagements with company→client labels and color coding
+  - Workspace detail view shows client name, service type, start date
+  - Work Center header shows company→client label
+  - Color theme: green=Getronics/BB, orange=CIT/Itau, red=locked
+- **Agent workspace awareness**: All 8 agent definitions updated with:
+  - Consultancy model context (company→client mapping)
+  - Cross-contamination prevention rules
+  - Reference to workspace-context-rules.json
+- **Enriched workspace configs** (schemaVersion 2):
+  - Added client, clientShortName, serviceType, startDate, colorTheme, keywords
+  - Updated ws-default with current versions (ctrl 3.8.2, agent 2.3.3)
+  - Updated ws-cit with onboarding status and tasks
+- **Workspace schema** updated: Added client, clientShortName, serviceType, startDate, colorTheme fields
+
+### Security
+- **Corporate environment rule**: NEVER mention AI/Claude/GPT/LLM in corporate-facing content (commits, PRs, issues, branch names, code comments). All work in corporate repos must appear as regular developer work. Rule enforced in workspace-context-rules.json and shared-agent-context.md
+
+### Changed
+- Shared agent context updated with consultancy model and current state
+- Dashboard WS_CTX enriched with company, client, serviceType, icon, color per workspace
+
 ## [1.0.3] - 2026-04-04
 
 ### Improved

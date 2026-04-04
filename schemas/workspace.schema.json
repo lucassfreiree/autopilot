@@ -12,13 +12,18 @@
     "updatedAt": { "type": "string", "format": "date-time" },
     "company": {
       "type": "object",
-      "description": "Company context isolation — each workspace belongs to exactly one company",
+      "description": "Company context isolation — each workspace belongs to exactly one consultancy engagement (company → client)",
       "required": ["id", "name"],
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Unique company identifier (lowercase, no spaces)" },
-        "name": { "type": "string", "description": "Company display name" },
+        "name": { "type": "string", "description": "Company display name (where the consultant works)" },
+        "client": { "type": "string", "description": "End-customer name (who receives the service)" },
+        "clientShortName": { "type": "string", "description": "Short name for the client (e.g., BB, Itau)" },
+        "serviceType": { "type": "string", "description": "Type of service provided (e.g., Application Development & SRE, DevOps Engineering)" },
         "machine": { "type": "string", "description": "Machine/environment identifier where this context operates" },
-        "dataClassification": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"], "default": "internal" }
+        "dataClassification": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"], "default": "internal" },
+        "startDate": { "type": "string", "format": "date", "description": "Engagement start date (ISO 8601)" },
+        "colorTheme": { "type": "string", "description": "Color theme for dashboard (green, orange, blue, etc.)" }
       }
     },
     "stack": {

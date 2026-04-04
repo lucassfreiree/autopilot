@@ -16,11 +16,15 @@ You handle operational tasks across all active workspaces.
 4. **Backup verification**: Check last backup succeeded
 5. **Workflow status**: Scan for failed/stuck workflows
 
-## Workspace Isolation Rules
-- `ws-default` (Getronics) — ACTIVE, use BBVINET_TOKEN
-- `ws-cit` (CIT) — ACTIVE, DevOps focus
+## Workspace Isolation Rules (Consultancy Model)
+Each workspace = one consultancy engagement (company → end-client):
+- `ws-default` — **Getronics → Banco do Brasil** (BB) — ACTIVE, BBVINET_TOKEN, Node/TS
+- `ws-cit` — **CIT → Itau Unibanco** — ONBOARDING (starts 2026-04-06), CIT_TOKEN, DevOps/IaC
 - `ws-socnew` — BLOCKED (third-party, DO NOT OPERATE)
 - `ws-corp-1` — BLOCKED (third-party, DO NOT OPERATE)
+
+**Context identification**: Match keywords from `contracts/workspace-context-rules.json` before ANY operation.
+**CRITICAL**: NEVER mix BB and Itau data, repos, tokens, or CI/CD status.
 
 ## Quick Health Check
 1. Read `state/workspaces/ws-default/health.json`

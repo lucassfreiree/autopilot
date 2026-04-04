@@ -156,6 +156,10 @@
 <div class="layout">
   <nav class="sidebar">
     <div class="sidebar-logo"><h1>Autopilot</h1><p>Intelligence Dashboard v2</p></div>
+    <div style="padding:8px 12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Active Engagements</div>
+      <div id="sidebarWsIndicators" style="display:flex;flex-direction:column;gap:4px"></div>
+    </div>
     <div class="sidebar-nav">
       <div class="nav-item active" onclick="go('workspaces')">Workspaces <span class="nav-badge" id="wsCount2">0</span></div>
     </div>
@@ -483,6 +487,26 @@
     const t=fmtDate(state.lastSync);
     const syncMode=isBusinessHours()?'Business Hours (1min)':'Off-Hours (5min)';
     document.getElementById('sidebarSync').innerHTML=`Sync: ${t}<br>${syncMode}<br>v${state.metadata?.stateVersion||1}`;
+    // Render sidebar workspace indicators
+    const wsInd=document.getElementById('sidebarWsIndicators');
+    if(wsInd){
+      const ws=state.workspaces||[];
+      wsInd.innerHTML=ws.filter(w=>w.status!=='locked').map(w=>{
+        const ctx=WS_CTX[w.id];
+        const color=ctx?.colorPrimary||'var(--muted)';
+        const icon=ctx?.icon||'📦';
+        const client=ctx?.clientShort||ctx?.client||'';
+        const svc=ctx?.serviceType||w.stack||'';
+        const statusDot=w.status==='active'?'dot-green':w.status==='onboarding'||w.status==='setup'?'dot-yellow':'dot-gray';
+        return`<div onclick="go('workspaces');setTimeout(()=>openWs('${w.id}'),100)" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;border-left:3px solid ${color};background:var(--surface2);font-size:11px" title="${esc(svc)}">
+          <span>${icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.company)}${client?' → '+esc(client):''}</div>
+          </div>
+          <span class="dot ${statusDot}" style="width:6px;height:6px"></span>
+        </div>`;
+      }).join('');
+    }
   }
 
   function renderNavBadges(){
@@ -726,9 +750,13 @@
   }
 
   // Workspace context — ALL company info self-contained per workspace
-  // Workspace context database
+  // Each workspace = consultancy engagement (company → client)
   const WS_CTX={
     'ws-default':{
+      company:'Getronics',client:'Banco do Brasil',clientShort:'BB',
+      serviceType:'Application Development & SRE',
+      colorPrimary:'var(--green)',colorLabel:'green',icon:'🏦',
+      startDate:'2025-01-01',
       repos:[
         {name:'psc-sre-automacao-controller',url:'https://github.com/bbvinet/psc-sre-automacao-controller',type:'source',desc:'Controller — orchestrates automations'},
         {name:'psc-sre-automacao-agent',url:'https://github.com/bbvinet/psc-sre-automacao-agent',type:'source',desc:'Agent — executes on clusters'},
@@ -744,8 +772,16 @@
       infra:{'Cluster HML':'k8shmlbb111b','Controller NS':'psc-sre-aut-controller','Registry':'docker.binarios.intranet.bb.com.br/bb/psc','CI':'Esteira de Build NPM (corp runner)','Auth':'OAS internal-origin + JWT','Deploy':'apply-source-change (7 stages)','CAP Promote':'Auto after CI green'}
     },
     'ws-cit':{
-      repos:[],links:[],
-      infra:{'Stack':'DevOps (K8s, Docker, Terraform, Helm, ArgoCD)','CI Ready':'GitHub Actions, GitLab CI, Jenkins','Cloud Ready':'AWS, Azure, GCP (awaiting creds)','Monitoring':'Datadog, Grafana, Prometheus','Ops Center':'ops/ (scripts, runbooks, templates)','Status':'Setup — awaiting repos & credentials'}
+      company:'CIT',client:'Itau Unibanco',clientShort:'Itau',
+      serviceType:'DevOps Engineering & Cloud Infrastructure',
+      colorPrimary:'var(--orange)',colorLabel:'orange',icon:'☁️',
+      startDate:'2026-04-06',
+      repos:[],links:[
+        {label:'Autopilot Workflows',url:'https://github.com/lucassfreiree/autopilot/actions'},
+        {label:'Ops Center Docs',url:'https://github.com/lucassfreiree/autopilot/tree/main/ops'},
+        {label:'Dashboard',url:'https://lucassfreiree.github.io/autopilot/dashboard/'}
+      ],
+      infra:{'Stack':'DevOps (K8s, Docker, Terraform, Helm, ArgoCD)','CI Ready':'GitHub Actions, GitLab CI, Jenkins','Cloud Ready':'AWS, Azure, GCP (awaiting creds)','Monitoring':'Datadog, Grafana, Prometheus','Ops Center':'ops/ (scripts, runbooks, templates)','Status':'Onboarding — starts 2026-04-06'}
     }
   };
   let selectedWs=null;
@@ -773,11 +809,17 @@
       const ctrlVer=isDefault?(cc.capTag&&cc.capTag!=='?'?cc.capTag:(c.version||w.controllerVersion||'—')):(w.controllerVersion||'—');
       const agentVer=isDefault?(ca.capTag&&ca.capTag!=='?'?ca.capTag:(a.version||w.agentVersion||'—')):(w.agentVersion||'—');
 
+      const ctxD=WS_CTX[w.id];
+      const wsIconD=ctxD?.icon||'📦';const wsClientD=ctxD?.client||'';const wsSvcD=ctxD?.serviceType||'';
+      const wsColorD=ctxD?.colorPrimary||'var(--muted)';const wsStart=ctxD?.startDate||'';
       document.getElementById('wsDetailView').innerHTML=`
         <div class="ws-back-btn" onclick="closeWs()">← Back to list</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <div><div style="font-size:22px;font-weight:700">${esc(w.company)}</div>
-          <div style="font-size:13px;color:var(--muted)"><code>${esc(w.id)}</code> · ${esc(w.stack||'—')} · ${badge(w.status)} ${w.token?`<span class="tag" style="background:var(--surface2);color:var(--muted)">${esc(w.token)}</span>`:''}</div></div>
+          <div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:26px">${wsIconD}</span><div style="font-size:22px;font-weight:700">${esc(w.company)}${wsClientD?` <span style="color:${wsColorD}">→ ${esc(wsClientD)}</span>`:''}</div></div>
+            ${wsSvcD?`<div style="font-size:13px;color:${wsColorD};font-weight:500;margin:4px 0">${esc(wsSvcD)}</div>`:''}
+            <div style="font-size:13px;color:var(--muted)"><code>${esc(w.id)}</code> · ${esc(w.stack||'—')} · ${badge(w.status)} ${w.token?`<span class="tag" style="background:var(--surface2);color:var(--muted)">${esc(w.token)}</span>`:''} ${wsStart?`<span style="font-size:11px;color:var(--muted)">since ${esc(wsStart)}</span>`:''}</div>
+          </div>
           ${hasDrift?badge('DRIFT','red'):''}
         </div>
 
@@ -826,11 +868,15 @@
         const ctrlV=isDefault?(cc2.capTag&&cc2.capTag!=='?'?cc2.capTag:(c2.version||'—')):(w.controllerVersion||'—');
         const agentV=isDefault?(ca2.capTag&&ca2.capTag!=='?'?ca2.capTag:(a2.version||'—')):(w.agentVersion||'—');
         const alerts=isDefault?computeAlerts().filter(a=>a.type==='error'||a.type==='warn'):[];
+        const ctx=WS_CTX[w.id];
+        const wsIcon=ctx?.icon||'📦';const wsClient=ctx?.client||'';const wsSvc=ctx?.serviceType||'';
+        const wsColor=ctx?.colorPrimary||'var(--muted)';
         return`<div class="ws-list-item ws-${sc}" onclick="${w.status!=='locked'?`openWs('${w.id}')`:''}" ${w.status==='locked'?'style="cursor:not-allowed;opacity:.7"':''}>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <strong style="font-size:16px">${esc(w.company)}</strong>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:20px">${wsIcon}</span><div><strong style="font-size:16px">${esc(w.company)}</strong>${wsClient?`<span style="font-size:13px;color:${wsColor};margin-left:8px;font-weight:600">→ ${esc(wsClient)}</span>`:''}</div></div>
             ${badge(w.status)}
           </div>
+          ${wsSvc?`<div style="font-size:11px;color:${wsColor};margin-bottom:4px;font-weight:500">${esc(wsSvc)}</div>`:''}
           <div style="font-size:11px;color:var(--muted);margin-bottom:8px"><code>${esc(w.id)}</code> · ${esc(w.stack||'—')} · token: <code>${esc(w.token||'—')}</code></div>
           ${w.status==='locked'?'<div style="font-size:11px;color:var(--red)">🔒 Third-party — access blocked</div>':`
           ${isDefault&&ctrlV!=='—'?`<div style="display:flex;gap:16px;font-size:12px;margin-bottom:6px">
@@ -903,8 +949,10 @@
       `<option value="controller">Controller</option><option value="agent">Agent</option><option value="both">Both</option>`:
       `<option value="infra">Infrastructure</option><option value="k8s">Kubernetes</option><option value="terraform">Terraform</option><option value="ci">CI/CD</option>`;
 
+    const wsCtx=WS_CTX[wsId];
+    const wcLabel=wsCtx?`${wsCtx.icon} ${wsCtx.company} → ${wsCtx.client}`:wsId;
     return`
-      <div class="section"><h3>Work Center — ${esc(wsId)}</h3>
+      <div class="section"><h3>Work Center — ${wcLabel}</h3>
         <div class="work-form">
           <input type="hidden" id="wkWs" value="${esc(wsId)}">
           <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">

@@ -63,10 +63,19 @@ grep -q "$(jq -r .version version.json)" CHANGELOG.md
 - Workflows without concurrency group (target: 0)
 - Workflows without timeout (flag for improvement)
 
+## Workspace-Aware Workflows
+When modifying workflows, respect workspace isolation:
+- `ws-default` (Getronics → Banco do Brasil): uses BBVINET_TOKEN, Node/TS CI
+- `ws-cit` (CIT → Itau Unibanco): uses CIT_TOKEN, DevOps/IaC focus
+- `[Corp]` workflows currently hardcoded to BBVINET_TOKEN — flag for dynamic token selection
+- `[Core]` and `Ops:` workflows should accept workspace_id parameter
+- Full workspace context: `contracts/workspace-context-rules.json`
+
 ## Constraints
 - NEVER disable safety workflows (session-guard, compliance-gate, quality-gate)
 - NEVER modify workflow triggers without validating downstream dependencies
 - NEVER remove workflows — rename to `.yml.disabled` if truly deprecated
 - NEVER modify corporate deploy workflows (apply-source-change, promote-cap) without explicit approval
+- NEVER cross-contaminate tokens between workspaces
 - Always test YAML validity BEFORE committing
 - Maximum 10 workflow fixes per PR
