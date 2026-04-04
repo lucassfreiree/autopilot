@@ -83,6 +83,12 @@
   ],
   "fixes": [
     {
+      "workflow": "Security Scorecard",
+      "action": "re-run",
+      "fixedAt": "2026-04-04T20:17:03Z",
+      "method": "re-run"
+    },
+    {
       "workflow": "[Core] Backup: State Snapshot",
       "action": "re-run",
       "fixedAt": "2026-03-31T07:51:20Z",
@@ -117,16 +123,18 @@
       "action": "re-run",
       "fixedAt": "2026-04-02T14:09:03Z",
       "method": "re-run"
+    },
+    {
+      "workflow": "[Release] Autopilot Product",
+      "action": "re-run",
+      "fixedAt": "2026-04-04T20:17:03Z",
+      "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-04T19:23:09Z",
+  "lastRun": "2026-04-04T20:17:03Z",
   "lastHealth": "healthy",
-  "runCount": 128,
+  "runCount": 129,
   "healthHistory": [
-    {
-      "ts": "2026-04-04T04:05:49Z",
-      "health": "critical"
-    },
     {
       "ts": "2026-04-04T05:18:22Z",
       "health": "critical"
@@ -201,6 +209,10 @@
     },
     {
       "ts": "2026-04-04T19:23:09Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-04T20:17:03Z",
       "health": "healthy"
     }
   ]
