@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T14:50:06Z",
+  "lastUpdated": "2026-04-04T18:30:00Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -386,6 +386,34 @@
             "ws-corp-1"
           ],
           "staleLockCleaned": true
+        }
+      },
+      {
+        "date": "2026-04-04",
+        "agent": "claude-code",
+        "summary": "Autonomous control plane audit - full 6-phase inspection (session 2)",
+        "actions": [
+          "Live monitoring: controller 3.8.2 promoted+ci-passed, agent 2.3.3 ci-passed — no new failures",
+          "Workflow health report: 79 workflows, 2 degraded (post-merge-monitor 75% fail rate, autonomous-merge-direct 75% fail rate), 0 critical — both last runs succeeded",
+          "Auto-repair alert: intelligent-orchestrator had 7 consecutive failures (now resolved, last run success)",
+          "Workspace health: all 4 workspaces degraded — ws-default has active lock warning + drift warning, ws-cit/ws-corp-1/ws-socnew have lock warnings but no actual lock files found",
+          "Dashboard sync: state.json FRESH (2026-04-04T17:36:53Z, <1h old), controller 3.8.2 promoted, agent 2.3.3 ci-passed",
+          "Pipeline health: deploy-pipeline-monitor healthy, workflow-sentinel healthy, ci-monitor-loop not in recent runs (idle — no active deploy)",
+          "Lock GC: workspace-lock-gc healthy (5/5 success), no actual lock files on autopilot-state branch",
+          "CLAUDE.md audit: 100% workflow coverage, 100% trigger coverage — no unmapped items",
+          "Pending deploys: none detected (pipeline idle, patches are reference files from run 103)",
+          "Session memory updated with audit findings"
+        ],
+        "findings": {
+          "healthStatus": "degraded (phantom lock warnings in health.json — no actual locks exist)",
+          "controllerVersion": "3.8.2 (promoted, ci-passed)",
+          "agentVersion": "2.3.3 (ci-passed, not promoted)",
+          "dashboardSync": "fresh (<1h old)",
+          "claudeMdCoverage": "100%",
+          "degradedWorkflows": ["post-merge-monitor (75% fail rate, last: success)", "autonomous-merge-direct (75% fail rate, last: success)"],
+          "pendingDeploys": "none detected",
+          "blockedWorkspaces": ["ws-socnew", "ws-corp-1"],
+          "phantomLockWarning": "health.json reports '1 active locks' for all workspaces but no lock files exist on autopilot-state — likely stale health check data"
         }
       }
     ]
