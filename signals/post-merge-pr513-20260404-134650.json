@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 513,
+  "branch": "claude/agent-v103-improvements",
+  "timestamp": "2026-04-04T13:46:50Z",
+  "runId": "23980151708",
+  "healthStatus": "degraded"
+}
