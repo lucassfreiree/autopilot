@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr510-20260404-021045",
+  "event": "post-merge-monitor",
+  "prNumber": 510,
+  "branch": "claude/agent-improve-test-v101",
+  "mergeSha": "4c6efec76ff8aae249b88b084db4ac09760e859f",
+  "timestamp": "2026-04-04T02:10:45Z",
+  "runId": "23969118398",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
