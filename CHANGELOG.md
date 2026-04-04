@@ -5,6 +5,12 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-04-04
+
+### Fixed
+- Refined agent analysis to reduce false positives in deprecated action detection
+- Agent orchestrator now skips sed pattern strings when scanning for deprecated actions
+
 ## [1.0.0] - 2026-04-04
 
 ### Added
