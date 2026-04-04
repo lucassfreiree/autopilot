@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T12:06:06Z",
+  "runId": "23899391001",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23899391001",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): tsconfig ignoreDeprecations TS5107 + rotas cronjob /agent/* (v3.7.9)",
+  "commitSha": "d90e0158fc0ae170d72f753f01dba92e68f17fc5",
+  "ciResult": "failure",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
