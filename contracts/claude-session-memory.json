@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T21:49:58Z",
+  "lastUpdated": "2026-04-04T21:55:14Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1551,8 +1551,8 @@
         "approvalRequired": false
       }
     },
-    "lastMergedPR": "#534",
-    "lastMergedTitle": "config: set real GitHub OAuth Client ID",
+    "lastMergedPR": "#536",
+    "lastMergedTitle": "feat: Vercel OAuth proxy for GitHub login",
     "lastMergedHealth": "degraded"
   },
   "deployCompliancePipeline": {
