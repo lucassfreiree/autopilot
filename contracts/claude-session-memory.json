@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T20:03:57Z",
+  "lastUpdated": "2026-04-04T20:08:02Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1552,8 +1552,8 @@
         "approvalRequired": false
       }
     },
-    "lastMergedPR": "#524",
-    "lastMergedTitle": "feat: 7 new skills, issue templates, auto-label, actionlint (v1.7.0)",
+    "lastMergedPR": "#525",
+    "lastMergedTitle": "feat: Security Scorecard + CI Hardening + paths-filter (v1.8.0)",
     "lastMergedHealth": "degraded"
   },
   "deployCompliancePipeline": {
