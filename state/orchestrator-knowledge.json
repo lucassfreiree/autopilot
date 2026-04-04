@@ -21,6 +21,11 @@
       "count": 5
     },
     {
+      "workflow": "Security Scorecard",
+      "consecutiveAt": "2026-04-04T21:20:25Z",
+      "count": 4
+    },
+    {
       "workflow": "[Agent] Claude Code Assistant",
       "consecutiveAt": "2026-04-01T16:05:42Z",
       "count": 3
@@ -131,14 +136,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-04T20:17:03Z",
-  "lastHealth": "healthy",
-  "runCount": 129,
+  "lastRun": "2026-04-04T21:20:25Z",
+  "lastHealth": "degraded",
+  "runCount": 130,
   "healthHistory": [
-    {
-      "ts": "2026-04-04T05:18:22Z",
-      "health": "critical"
-    },
     {
       "ts": "2026-04-04T05:48:01Z",
       "health": "critical"
@@ -214,6 +215,10 @@
     {
       "ts": "2026-04-04T20:17:03Z",
       "health": "healthy"
+    },
+    {
+      "ts": "2026-04-04T21:20:25Z",
+      "health": "degraded"
     }
   ]
 }
