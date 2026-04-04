@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 537,
+  "branch": "claude/oauth-vercel-proxy",
+  "timestamp": "2026-04-04T22:00:35Z",
+  "runId": "23988471675",
+  "healthStatus": "degraded"
+}
