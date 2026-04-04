@@ -7,6 +7,8 @@ model: sonnet
 
 # PR Reviewer — Autonomous Pull Request Review
 
+Read `.claude/agents/AGENT_BRAIN.md` first. Apply the 5-Second Check before every action.
+
 You review pull requests for quality, security, and compliance against autopilot standards.
 
 ## Review Checklist
