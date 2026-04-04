@@ -1,0 +1,206 @@
+# ===========================================================
+# Agent Quality Gate
+#
+# Runs on every PR from agent branches (claude/agent-*).
+# Validates that autonomous changes don't break anything.
+# Must pass before auto-merge is allowed.
+# ===========================================================
+name: "[Agent] Quality Gate"
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'schemas/**'
+      - 'contracts/**'
+      - 'panel/**'
+      - 'version.json'
+      - 'CHANGELOG.md'
+      - '.claude/agents/**'
+      - '.claude/skills/**'
+      - 'ops/**'
+      - 'scripts/**'
+
+concurrency:
+  group: agent-quality-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  yaml-validation:
+    name: YAML Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate all workflow YAML
+        run: |
+          ERRORS=0
+          for f in .github/workflows/*.yml; do
+            if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+              echo "::error file=$f::Invalid YAML syntax"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          echo "Checked $(ls .github/workflows/*.yml | wc -l) workflows, $ERRORS errors"
+          [ "$ERRORS" -eq 0 ] || exit 1
+
+  json-validation:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate all JSON files
+        run: |
+          ERRORS=0
+          for f in schemas/*.json contracts/*.json version.json trigger/*.json; do
+            if [ -f "$f" ]; then
+              if ! jq '.' "$f" > /dev/null 2>&1; then
+                echo "::error file=$f::Invalid JSON"
+                ERRORS=$((ERRORS + 1))
+              fi
+            fi
+          done
+          echo "Checked JSON files, $ERRORS errors"
+          [ "$ERRORS" -eq 0 ] || exit 1
+
+  version-check:
+    name: Version Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version.json format
+        run: |
+          VERSION=$(jq -r '.version // empty' version.json)
+          if [ -z "$VERSION" ]; then
+            echo "::error ::version.json missing version field"
+            exit 1
+          fi
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error ::Invalid version format: $VERSION (expected X.Y.Z)"
+            exit 1
+          fi
+          echo "Version: $VERSION ✓"
+
+      - name: Check CHANGELOG entry exists
+        run: |
+          VERSION=$(jq -r '.version' version.json)
+          if ! grep -q "\[$VERSION\]" CHANGELOG.md; then
+            echo "::error ::CHANGELOG.md missing entry for version $VERSION"
+            exit 1
+          fi
+          echo "CHANGELOG entry for $VERSION ✓"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets
+        run: |
+          ERRORS=0
+          # Patterns that should never appear in committed files
+          PATTERNS=(
+            "BBVINET_TOKEN.*=.*ghp_"
+            "password.*=.*['\"][a-zA-Z0-9]"
+            "api_key.*=.*['\"][a-zA-Z0-9]"
+            "secret.*=.*['\"][a-zA-Z0-9]{20}"
+          )
+          for PATTERN in "${PATTERNS[@]}"; do
+            HITS=$(grep -rlE "$PATTERN" --include="*.yml" --include="*.json" --include="*.sh" \
+              --exclude-dir=.git . 2>/dev/null | wc -l)
+            if [ "$HITS" -gt 0 ]; then
+              echo "::error ::Potential hardcoded secret matching: $PATTERN"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          [ "$ERRORS" -eq 0 ] && echo "No hardcoded secrets found ✓"
+          [ "$ERRORS" -eq 0 ] || exit 1
+
+      - name: Check corporate data isolation
+        run: |
+          # Files that should NOT contain corporate identifiers
+          ERRORS=0
+          for f in .claude/agents/*.md .claude/skills/*.md panel/*.html; do
+            if [ -f "$f" ] && grep -qE "\.intranet\." "$f" 2>/dev/null; then
+              echo "::error file=$f::Corporate identifier found in public-facing file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          [ "$ERRORS" -eq 0 ] && echo "Corporate data isolation ✓"
+          [ "$ERRORS" -eq 0 ] || exit 1
+
+  dashboard-check:
+    name: Dashboard Health
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.changed_files, 'panel/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate dashboard HTML
+        run: |
+          for f in panel/*.html panel/**/*.html; do
+            [ -f "$f" ] || continue
+            # Basic structure check
+            if ! grep -q "<html" "$f"; then
+              echo "::error file=$f::Missing <html> tag"
+              exit 1
+            fi
+            if ! grep -q "</html>" "$f"; then
+              echo "::error file=$f::Missing </html> closing tag"
+              exit 1
+            fi
+          done
+          echo "Dashboard HTML structure ✓"
+
+      - name: Validate state.json
+        run: |
+          if [ -f "panel/dashboard/state.json" ]; then
+            if ! jq '.' panel/dashboard/state.json > /dev/null 2>&1; then
+              echo "::error ::panel/dashboard/state.json is invalid JSON"
+              exit 1
+            fi
+          fi
+          echo "State JSON ✓"
+
+  report:
+    name: Quality Report
+    needs: [yaml-validation, json-validation, version-check, security-scan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate report
+        run: |
+          echo "## Agent Quality Gate Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+
+          for JOB in yaml-validation json-validation version-check security-scan; do
+            STATUS="unknown"
+            case "$JOB" in
+              yaml-validation) STATUS="${{ needs.yaml-validation.result }}" ;;
+              json-validation) STATUS="${{ needs.json-validation.result }}" ;;
+              version-check)   STATUS="${{ needs.version-check.result }}" ;;
+              security-scan)   STATUS="${{ needs.security-scan.result }}" ;;
+            esac
+            ICON=$( [ "$STATUS" = "success" ] && echo "✅" || echo "❌" )
+            echo "| $JOB | $ICON $STATUS |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Gate decision
+        if: |
+          needs.yaml-validation.result != 'success' ||
+          needs.json-validation.result != 'success' ||
+          needs.version-check.result != 'success' ||
+          needs.security-scan.result != 'success'
+        run: |
+          echo "::error ::Quality gate FAILED. Agent changes blocked."
+          exit 1
