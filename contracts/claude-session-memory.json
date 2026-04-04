@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T18:30:00Z",
+  "lastUpdated": "2026-04-04T19:23:31Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -410,9 +410,15 @@
           "agentVersion": "2.3.3 (ci-passed, not promoted)",
           "dashboardSync": "fresh (<1h old)",
           "claudeMdCoverage": "100%",
-          "degradedWorkflows": ["post-merge-monitor (75% fail rate, last: success)", "autonomous-merge-direct (75% fail rate, last: success)"],
+          "degradedWorkflows": [
+            "post-merge-monitor (75% fail rate, last: success)",
+            "autonomous-merge-direct (75% fail rate, last: success)"
+          ],
           "pendingDeploys": "none detected",
-          "blockedWorkspaces": ["ws-socnew", "ws-corp-1"],
+          "blockedWorkspaces": [
+            "ws-socnew",
+            "ws-corp-1"
+          ],
           "phantomLockWarning": "health.json reports '1 active locks' for all workspaces but no lock files exist on autopilot-state — likely stale health check data"
         }
       }
@@ -1546,8 +1552,8 @@
         "approvalRequired": false
       }
     },
-    "lastMergedPR": "#516",
-    "lastMergedTitle": "fix: post-merge-monitor safe JSON payload (v1.1.2)",
+    "lastMergedPR": "#518",
+    "lastMergedTitle": "feat: Agent Brain protocol + infra-ops-agent (v1.2.0)",
     "lastMergedHealth": "degraded"
   },
   "deployCompliancePipeline": {
