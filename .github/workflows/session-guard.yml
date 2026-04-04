@@ -38,6 +38,9 @@ on:
         description: "Agent that blocked us (if any)"
         value: ${{ jobs.guard.outputs.blocked_by }}
 
+permissions:
+  contents: write
+
 concurrency:
   group: session-guard-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: false

@@ -11,6 +11,10 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+  pull-requests: write
+
 concurrency:
   group: sync-community-resources
   cancel-in-progress: false
