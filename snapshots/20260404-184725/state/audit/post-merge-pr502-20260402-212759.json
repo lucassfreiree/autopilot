@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr502-20260402-212759",
+  "event": "post-merge-monitor",
+  "prNumber": 502,
+  "branch": "claude/test-simulation",
+  "mergeSha": "569333fdb96afd5fc59afea0625eb13fbb39bb73",
+  "timestamp": "2026-04-02T21:27:59Z",
+  "runId": "23922829238",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
