@@ -5,6 +5,27 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.3] - 2026-04-04
+
+### Added
+- **GitHub authentication gate on both dashboards** (panel/index.html + panel/dashboard/index.html)
+  - Login screen with GitHub PAT validation via GitHub API (`/user` endpoint)
+  - User verification against `ALLOWED_USERS` whitelist (only `lucassfreiree`)
+  - Repo access verification (ensures PAT has `repo` scope)
+  - Zero dashboard content visible without authentication
+  - Session shared via `sessionStorage` between both panels (login once, access both)
+  - Auto-reconnect on page refresh if session still valid
+  - Re-validates token on every reconnect (expired tokens are rejected)
+  - Logout button clears session and returns to login screen
+  - Enter key submits login form
+  - Professional dark theme login card with lock icon
+
+### Security
+- Dashboard HTML no longer exposes any data without valid GitHub authentication
+- Only whitelisted GitHub users can access — all others see "Access denied"
+- Token stored in sessionStorage only (cleared on tab close, never persisted)
+- Token re-validated on every page load via GitHub API
+
 ## [1.8.2] - 2026-04-04
 
 ### Changed
