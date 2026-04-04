@@ -492,10 +492,7 @@ jobs:
               JOBS_LINE=$(grep -n "^jobs:" "$f" | head -1 | cut -d: -f1)
               if [ -n "$JOBS_LINE" ]; then
                 INSERT_LINE=$((JOBS_LINE - 1))
-                sed -i "${INSERT_LINE}a\\
-\\
-permissions:\\
-  contents: read" "$f"
+                sed -i "${INSERT_LINE}a\\\npermissions:\n  contents: read" "$f"
                 FIXED=$((FIXED + 1))
                 echo "Added permissions to $(basename $f)"
               fi
