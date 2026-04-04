@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr483-20260402-195933",
+  "event": "post-merge-monitor",
+  "prNumber": 483,
+  "branch": "claude/dual-side-validation",
+  "mergeSha": "d6982d036985d8f6a7ebc66129e6fd6aa87db8b9",
+  "timestamp": "2026-04-02T19:59:33Z",
+  "runId": "23919322094",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
