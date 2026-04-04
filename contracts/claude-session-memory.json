@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T19:26:19Z",
+  "lastUpdated": "2026-04-04T19:32:26Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1552,8 +1552,8 @@
         "approvalRequired": false
       }
     },
-    "lastMergedPR": "#519",
-    "lastMergedTitle": "feat: DevOps team hierarchy — Director + Team Lead (v1.3.0)",
+    "lastMergedPR": "#520",
+    "lastMergedTitle": "feat: GitHub-First governance — processes that survive without AI (v1.4.0)",
     "lastMergedHealth": "degraded"
   },
   "deployCompliancePipeline": {
