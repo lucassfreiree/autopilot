@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T22:00:35Z",
+  "lastUpdated": "2026-04-04T22:10:35Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -1551,8 +1551,8 @@
         "approvalRequired": false
       }
     },
-    "lastMergedPR": "#537",
-    "lastMergedTitle": "fix: remove invalid runtime from vercel.json (#537)",
+    "lastMergedPR": "#538",
+    "lastMergedTitle": "fix: update OAuth proxy URL to actual Vercel domain (#538)",
     "lastMergedHealth": "degraded"
   },
   "deployCompliancePipeline": {
