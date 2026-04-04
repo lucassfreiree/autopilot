@@ -1,6 +1,6 @@
 {
   "product": "autopilot",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "Web-only CI/CD control plane for multi-workspace, multi-agent release orchestration",
   "repository": "lucassfreiree/autopilot",
   "versioningRules": {
@@ -29,8 +29,7 @@
       "ci-debugger",
       "deploy-agent",
       "pr-reviewer",
-      "workspace-ops",
-      "dashboard-monitor"
+      "workspace-ops"
     ],
     "autonomyLevel": "high",
     "approvalRequired": false,

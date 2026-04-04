@@ -1545,8 +1545,7 @@
           "ci-debugger",
           "deploy-agent",
           "pr-reviewer",
-          "workspace-ops",
-          "dashboard-monitor"
+          "workspace-ops"
         ],
         "autonomyLevel": "high",
         "approvalRequired": false

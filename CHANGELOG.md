@@ -5,6 +5,16 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-04-04
+
+### Changed
+- **Consolidated dashboard-agent + dashboard-monitor into single specialist agent**
+  - `dashboard-agent.md` now owns all dashboard layers: UI, data sync, state accuracy, deploy pipeline
+  - Removed `dashboard-monitor.md` (functionality absorbed into dashboard-agent)
+  - Eliminates overlap between two agents that both checked state.json
+  - Agent team reduced from 13 to 12 (10 specialists + Team Lead + Director)
+  - Updated all references: AGENT_BRAIN, team-lead, version.json, CLAUDE.md, issue templates, governance contract
+
 ## [1.8.1] - 2026-04-04
 
 ### Improved

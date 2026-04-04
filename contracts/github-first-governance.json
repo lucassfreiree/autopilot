@@ -110,7 +110,6 @@
       "agent:director", "agent:team-lead", "agent:architect", "agent:devops",
       "agent:quality", "agent:security", "agent:dashboard", "agent:infra-ops",
       "agent:ci-debugger", "agent:deploy", "agent:pr-reviewer", "agent:workspace-ops",
-      "agent:dashboard-monitor",
       "auto-fixable", "needs-review", "needs-claude",
       "workflow-improvement", "monitoring-gap", "security-finding"
     ]
