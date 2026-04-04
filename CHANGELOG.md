@@ -5,6 +5,13 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-04-04
+
+### Fixed
+- Intelligent Orchestrator Phase 4: subshell variable bug (pipe + while-read loses UPDATED), save to state branch
+- Post-Merge Monitor: `set -e` killed script on `grep -c` exit 1, jq memory update now non-fatal
+- Autonomous Direct Merge: stale queue detection (>3min = skip), timeout grace if completed checks passed
+
 ## [1.1.0] - 2026-04-04
 
 ### Added
