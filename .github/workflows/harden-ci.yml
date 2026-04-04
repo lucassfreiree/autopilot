@@ -1,0 +1,94 @@
+name: "Harden CI Runners"
+
+# Step Security Harden Runner — monitors and restricts GitHub Actions runner activity
+# Detects: unexpected network egress, file modifications, process execution
+# Critical for workflows using BBVINET_TOKEN (corporate repo access)
+# Free tier: audit mode (detect + log). Block mode available on upgrade.
+# https://github.com/step-security/harden-runner
+
+# This workflow validates that our security-sensitive workflows are hardened
+# It runs weekly and on-demand to audit runner behavior
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # Every Monday 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harden-ci
+  cancel-in-progress: true
+
+jobs:
+  audit-sensitive-workflows:
+    name: "Audit Sensitive Workflows"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          # In audit mode, it logs all outbound connections
+          # Review logs to build an allowlist, then switch to block mode
+
+      - uses: actions/checkout@v4
+
+      - name: "Check workflows using corporate tokens"
+        run: |
+          echo "=== Workflows using BBVINET_TOKEN ==="
+          grep -rl "BBVINET_TOKEN" .github/workflows/*.yml | while read f; do
+            BASENAME=$(basename "$f")
+            HAS_HARDEN=$(grep -c "harden-runner" "$f" || true)
+            HAS_PERMS=$(grep -c "^permissions:" "$f" || true)
+            echo "  $BASENAME: harden-runner=$HAS_HARDEN, permissions=$HAS_PERMS"
+          done
+
+          echo ""
+          echo "=== Workflows using RELEASE_TOKEN ==="
+          grep -rl "RELEASE_TOKEN" .github/workflows/*.yml | while read f; do
+            BASENAME=$(basename "$f")
+            HAS_HARDEN=$(grep -c "harden-runner" "$f" || true)
+            HAS_PERMS=$(grep -c "^permissions:" "$f" || true)
+            echo "  $BASENAME: harden-runner=$HAS_HARDEN, permissions=$HAS_PERMS"
+          done
+
+          echo ""
+          echo "=== Unpinned third-party actions ==="
+          UNPINNED=0
+          for f in .github/workflows/*.yml; do
+            [ -f "$f" ] || continue
+            # Find uses: lines that aren't actions/* or github/* and don't have @sha
+            grep -E "uses: [^#]*@" "$f" | grep -v "actions/" | grep -v "github/" | while read line; do
+              if ! echo "$line" | grep -qE "@[a-f0-9]{40}"; then
+                echo "  $(basename $f): $line"
+                UNPINNED=$((UNPINNED + 1))
+              fi
+            done
+          done
+
+      - name: "Check for dangerous patterns"
+        run: |
+          echo "=== pull_request_target with checkout (injection risk) ==="
+          RISKY=0
+          for f in .github/workflows/*.yml; do
+            [ -f "$f" ] || continue
+            if grep -q "pull_request_target" "$f" && grep -q "actions/checkout" "$f"; then
+              echo "  WARNING: $(basename $f) — has pull_request_target + checkout"
+              RISKY=$((RISKY + 1))
+            fi
+          done
+          [ "$RISKY" -eq 0 ] && echo "  None found (good)"
+
+          echo ""
+          echo "=== curl piped to shell ==="
+          PIPES=0
+          for f in .github/workflows/*.yml; do
+            [ -f "$f" ] || continue
+            if grep -qE "curl.*\|.*sh|wget.*\|.*sh" "$f"; then
+              echo "  WARNING: $(basename $f) — has curl|sh pattern"
+              PIPES=$((PIPES + 1))
+            fi
+          done
+          [ "$PIPES" -eq 0 ] && echo "  None found (good)"
