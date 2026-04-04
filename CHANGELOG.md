@@ -5,6 +5,18 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.4] - 2026-04-04
+
+### Added
+- **"Login with GitHub" OAuth flow** on both dashboards
+  - GitHub OAuth App + Cloudflare Worker proxy (free) for secure token exchange
+  - OAuth proxy template at `panel/oauth-proxy/worker.js` with setup guide
+  - CSRF protection via state parameter
+  - Auto-handles OAuth callback (?code= redirect from GitHub)
+  - Falls back to PAT entry when OAuth not configured
+  - Direct link to create PAT on GitHub (pre-filled scopes)
+  - Spark dashboard redirects to main panel for OAuth login
+
 ## [1.8.3] - 2026-04-04
 
 ### Added
