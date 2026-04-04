@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 442,
+  "branch": "codex/fix-dashboard-pages-redeploy-20260401",
+  "mergeSha": "666481040f4a96d8986257d85d0cd5f801282562",
+  "timestamp": "2026-04-01T18:41:40Z",
+  "runId": "23864877709",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
