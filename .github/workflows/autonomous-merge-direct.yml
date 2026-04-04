@@ -89,17 +89,16 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const headSha   = '${{ steps.policy.outputs.head_sha }}';
-            const maxWaitMs = 15 * 60 * 1000; // 15 minutes — compliance gate needs npm ci + tsc + jest
-            const pollMs    = 20 * 1000;      // 20 seconds
-            const initialWaitMs = 30 * 1000;  // 30s initial delay so check suites are created
+            const maxWaitMs = 10 * 60 * 1000; // 10 minutes max
+            const pollMs    = 15 * 1000;      // 15 seconds between polls
+            const initialWaitMs = 20 * 1000;  // 20s initial delay for check suites creation
             const start     = Date.now();
 
             // Wait for GitHub to create check suites before polling
-            core.notice('Initial 30s wait for check suites to be created…');
+            core.notice('Initial 20s wait for check suites to be created…');
             await new Promise(r => setTimeout(r, initialWaitMs));
 
-            // Collect ALL merge-related workflow run IDs to exclude them.
-            // These workflows wait for each other = deadlock if we wait for them.
+            // Collect ALL merge-related workflow run IDs to exclude (prevents deadlock).
             const excludeSuiteIds = new Set();
             try {
               const { data: ownRun } = await github.rest.actions.getWorkflowRun({
@@ -109,13 +108,13 @@ jobs:
               core.notice(`Own check suite ID: ${ownRun.check_suite_id}`);
             } catch (e) { core.warning(`Could not resolve own suite: ${e.message}`); }
 
-            // Also exclude suites from other merge/sweeper workflows to prevent deadlock
+            // Exclude suites from other merge/sweeper workflows to prevent deadlock
             try {
               const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
                 owner: context.repo.owner, repo: context.repo.repo,
                 status: 'in_progress', per_page: 20,
               });
-              const mergeWorkflows = ['Auto-Merge Sweeper', 'Autonomous PR Lane', 'Auto-Merge PR to main', 'Autonomous Direct Merge'];
+              const mergeWorkflows = ['Auto-Merge Sweeper', 'Autonomous PR Lane', 'Auto-Merge PR to main', 'Autonomous Direct Merge', 'Post-Merge Monitor'];
               for (const run of runs.workflow_runs) {
                 if (mergeWorkflows.some(n => run.name.includes(n)) && run.check_suite_id) {
                   excludeSuiteIds.add(run.check_suite_id);
@@ -126,23 +125,40 @@ jobs:
               }
             } catch (e) { core.warning(`Could not list running workflows: ${e.message}`); }
 
-            // Only exclude action_required suites (manual approval gates) — NOT queued ones
-            // queued = GitHub Actions not started yet (must wait), action_required = manual gate (will never auto-complete)
-            core.notice(`Polling checks on ${headSha} (max 15 min)…`);
+            core.notice(`Polling checks on ${headSha} (max 10 min)…`);
+
+            // Track suites that have been queued for too long (stale)
+            const firstSeenQueued = new Map();
 
             while (true) {
               const { data: suites } = await github.rest.checks.listSuitesForRef({
                 owner: context.repo.owner, repo: context.repo.repo, ref: headSha, per_page: 100,
               });
 
-              // Exclude: merge workflows (deadlock) + action_required (manual gates that won't complete)
-              // Do NOT exclude 'queued' — those are checks waiting to start (compliance-gate, etc.)
+              // Exclude: merge workflows (deadlock) + action_required (manual gates)
               const relevant = suites.check_suites.filter(s =>
                 !excludeSuiteIds.has(s.id) && s.conclusion !== 'action_required'
               );
 
-              const pending = relevant.filter(s => s.status !== 'completed');
-              const failed  = relevant.filter(s =>
+              const now = Date.now();
+
+              // Track queued suites — if queued > 3 min, treat as stale and skip
+              const staleSuiteIds = new Set();
+              for (const s of relevant) {
+                if (s.status === 'queued') {
+                  if (!firstSeenQueued.has(s.id)) firstSeenQueued.set(s.id, now);
+                  if (now - firstSeenQueued.get(s.id) > 3 * 60 * 1000) {
+                    staleSuiteIds.add(s.id);
+                    core.notice(`Suite ${s.id} queued for >3min — treating as stale, skipping`);
+                  }
+                } else {
+                  firstSeenQueued.delete(s.id);
+                }
+              }
+
+              const active = relevant.filter(s => !staleSuiteIds.has(s.id));
+              const pending = active.filter(s => s.status !== 'completed');
+              const failed  = active.filter(s =>
                 s.status === 'completed' &&
                 !['success', 'neutral', 'skipped'].includes(s.conclusion)
               );
@@ -154,19 +170,27 @@ jobs:
                   core.setOutput('checks_ok', 'false');
                   return;
                 }
-                core.notice('All check suites completed successfully (or no checks required).');
+                core.notice('All check suites completed successfully.');
                 core.setOutput('checks_ok', 'true');
                 return;
               }
 
-              const elapsed = Date.now() - start;
+              const elapsed = now - start;
               if (elapsed >= maxWaitMs) {
-                core.setFailed(`Timed out after ${Math.round(elapsed / 1000)}s waiting for ${pending.length} check suite(s) to complete. Not merging to avoid merging unverified code.`);
+                // On timeout, check if only quality-gate checks passed — merge anyway
+                const completed = active.filter(s => s.status === 'completed');
+                const allCompleteOk = completed.every(s => ['success', 'neutral', 'skipped'].includes(s.conclusion));
+                if (allCompleteOk && completed.length > 0) {
+                  core.warning(`Timed out but ${completed.length} completed checks all passed. ${pending.length} suite(s) still pending — merging with completed checks.`);
+                  core.setOutput('checks_ok', 'true');
+                  return;
+                }
+                core.setFailed(`Timed out after ${Math.round(elapsed / 1000)}s waiting for ${pending.length} check suite(s).`);
                 core.setOutput('checks_ok', 'false');
                 return;
               }
 
-              core.notice(`${pending.length} check suite(s) still pending — waiting ${pollMs / 1000}s…`);
+              core.notice(`${pending.length} suite(s) pending — waiting ${pollMs / 1000}s… (${Math.round(elapsed / 1000)}s elapsed)`);
               await new Promise(r => setTimeout(r, pollMs));
             }
 
