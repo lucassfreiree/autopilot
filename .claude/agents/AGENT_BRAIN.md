@@ -46,22 +46,48 @@ Every change MUST pass before merge:
 5. **No corporate leaks** — no .intranet. FQDNs in public files
 6. **Workspace isolated** — no cross-contamination between BB and Itau
 
-## How Agents Collaborate
+## Team Hierarchy — DevOps Organization
 
 ```
-architect  → sees the big picture, plans what to change
-quality    → validates everything, blocks bad changes  
-devops     → optimizes workflows and pipelines
-security   → scans for vulnerabilities and data leaks
-dashboard  → keeps the UI accurate and beautiful
-ci-debugger → diagnoses and auto-fixes CI failures
-deploy     → executes the full deploy pipeline
-pr-reviewer → reviews every PR before merge
-workspace-ops → monitors health across all workspaces
-dashboard-monitor → ensures dashboard data is fresh and accurate
+┌─────────────────────────────────────────────┐
+│  DIRECTOR (director-agent)                  │
+│  Strategic oversight, deep audits,          │
+│  guarantees everything works                │
+│                                             │
+│  ┌─────────────────────────────────────┐    │
+│  │  TEAM LEAD (team-lead-agent)        │    │
+│  │  Coordinates agents, creates plans, │    │
+│  │  ensures quality & delivery         │    │
+│  │                                     │    │
+│  │  ┌─ architect    ─ quality        │    │
+│  │  ├─ devops       ─ security       │    │
+│  │  ├─ dashboard    ─ infra-ops      │    │
+│  │  ├─ ci-debugger  ─ deploy         │    │
+│  │  ├─ pr-reviewer  ─ workspace-ops  │    │
+│  │  └─ dashboard-monitor             │    │
+│  └─────────────────────────────────────┘    │
+└─────────────────────────────────────────────┘
 ```
 
-**Coordination rule:** If your change touches another agent's domain, mention it in the PR description. The quality gate validates everything — trust the process.
+| Role | Agent | What It Does |
+|------|-------|-------------|
+| **Director** | director-agent | Strategic vision, deep audits, escalation handling, guarantees everything |
+| **Team Lead** | team-lead-agent | Task distribution, improvement planning, quality assurance, monitoring oversight |
+| Architect | architect-agent | Big picture, schema consistency, pattern consolidation |
+| Quality | quality-agent | Validation, testing, regression prevention |
+| DevOps | devops-agent | Workflow optimization, pipeline efficiency |
+| Security | security-agent | Vulnerability scanning, policy enforcement |
+| Dashboard | dashboard-agent | UI/UX, data sync, visualizations |
+| Infra-Ops | infra-ops-agent | Terraform, K8s, Cloud, Monitoring |
+| CI Debugger | ci-debugger | CI failure diagnosis and auto-fix |
+| Deploy | deploy-agent | Full deploy pipeline execution |
+| PR Reviewer | pr-reviewer | Automated PR review |
+| Workspace Ops | workspace-ops | Health checks, locks, state management |
+| Dashboard Monitor | dashboard-monitor | Dashboard sync validation and repair |
+
+**Coordination rule:** Report to Team Lead. Team Lead reports to Director. If your change touches another agent's domain, mention it in the PR description. The quality gate validates everything — trust the process.
+
+**Escalation chain:** Specialist → Team Lead → Director → Human Owner
 
 ## Error Recovery
 

@@ -5,6 +5,23 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-04
+
+### Added
+- **Director Agent** (`director-agent.md`): Strategic oversight VP — deep audits, system-wide guarantee,
+  escalation handling, defines priorities. The 5 Guarantees: nothing fails silently, no data crosses
+  boundaries, no security regression, continuous improvement, full accountability.
+- **Team Lead Agent** (`team-lead-agent.md`): DevOps Coordinator — creates improvement plans, distributes
+  tasks to 11 specialist agents, ensures quality & delivery, monitoring oversight.
+- **Agent hierarchy**: Director → Team Lead → 11 Specialists (mirrors real DevOps org structure)
+- **Escalation chain**: Specialist → Team Lead → Director → Human Owner
+- **Task distribution matrix**: Every issue type mapped to primary agent + backup + escalation path
+
+### Changed
+- AGENT_BRAIN.md updated with full team hierarchy diagram and role table
+- Agent team now 13 members (was 11): added director-agent and team-lead-agent
+- Coordination rule updated: specialists report to Team Lead, Team Lead to Director
+
 ## [1.2.0] - 2026-04-04
 
 ### Added
