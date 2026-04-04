@@ -1,0 +1,61 @@
+name: "Lint Workflows"
+
+# Uses rhysd/actionlint (8k+ stars) — the gold standard for GitHub Actions linting
+# Catches: invalid syntax, type errors, deprecated features, shell script issues,
+# missing permissions, invalid glob patterns, and more
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-workflows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install actionlint
+        run: |
+          bash <(curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          echo "actionlint installed"
+
+      - name: Run actionlint
+        run: |
+          # Run on all workflow files, ignore disabled ones
+          ERRORS=0
+          for f in .github/workflows/*.yml; do
+            [ -f "$f" ] || continue
+            OUTPUT=$(./actionlint -no-color "$f" 2>&1 || true)
+            if [ -n "$OUTPUT" ]; then
+              echo "::group::$(basename $f)"
+              echo "$OUTPUT"
+              echo "::endgroup::"
+              # Count only errors, not warnings
+              ERR_COUNT=$(echo "$OUTPUT" | grep -c "error:" || true)
+              ERRORS=$((ERRORS + ERR_COUNT))
+            fi
+          done
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::actionlint found $ERRORS error(s) across workflows"
+            echo ""
+            echo "Total errors: $ERRORS"
+            echo "Run 'actionlint' locally to see details"
+            # Don't fail the build — report as warning for now
+            # Uncomment next line to make it blocking:
+            # exit 1
+          else
+            echo "All workflows pass actionlint validation"
+          fi

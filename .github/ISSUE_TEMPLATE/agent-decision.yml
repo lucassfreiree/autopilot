@@ -1,0 +1,58 @@
+name: "Architecture Decision"
+description: "Record an architecture or strategic decision (ADR-style)"
+labels: ["decision", "architecture"]
+body:
+  - type: input
+    id: title
+    attributes:
+      label: Decision Title
+      placeholder: "e.g., Use GitHub Projects for agent task tracking"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: decided_by
+    attributes:
+      label: Decided By
+      options:
+        - director-agent
+        - team-lead-agent
+        - human-owner
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this decision needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: Options Considered
+      description: List alternatives evaluated
+      placeholder: |
+        1. Option A: description — pros/cons
+        2. Option B: description — pros/cons
+        3. Option C: description — pros/cons
+    validations:
+      required: true
+
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision
+      description: What was decided and why?
+    validations:
+      required: true
+
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences
+      description: What changes as a result?
+    validations:
+      required: true

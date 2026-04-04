@@ -1,0 +1,79 @@
+name: "Auto-Fix on Push"
+
+# Runs after every push to main — detects and auto-fixes common issues
+# Uses stefanzweifel/git-auto-commit-action (3k+ stars) to commit fixes
+# This is the "self-healing layer" that makes the repo self-correcting
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'contracts/claude-session-memory.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-fix-on-push
+  cancel-in-progress: true
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Fix 1: Ensure all JSON files are formatted"
+        run: |
+          FIXED=0
+          for f in $(find . -name "*.json" -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./patches/*"); do
+            if python3 -c "import json; json.load(open('$f'))" 2>/dev/null; then
+              # Valid JSON — check if it can be prettified
+              BEFORE=$(cat "$f" | md5sum)
+              python3 -c "
+          import json
+          with open('$f') as fh:
+              data = json.load(fh)
+          with open('$f', 'w') as fh:
+              json.dump(data, fh, indent=2, ensure_ascii=False)
+              fh.write('\n')
+          " 2>/dev/null || true
+              AFTER=$(cat "$f" | md5sum)
+              if [ "$BEFORE" != "$AFTER" ]; then
+                FIXED=$((FIXED + 1))
+              fi
+            fi
+          done
+          echo "Formatted $FIXED JSON files"
+
+      - name: "Fix 2: Remove trailing whitespace from MD files"
+        run: |
+          FIXED=0
+          for f in $(find . -name "*.md" -not -path "./.git/*"); do
+            if grep -qP '\s+$' "$f" 2>/dev/null; then
+              sed -i 's/[[:space:]]*$//' "$f"
+              FIXED=$((FIXED + 1))
+            fi
+          done
+          echo "Cleaned trailing whitespace in $FIXED files"
+
+      - name: "Fix 3: Ensure newline at end of files"
+        run: |
+          FIXED=0
+          for f in $(find . \( -name "*.json" -o -name "*.yml" -o -name "*.md" \) -not -path "./.git/*"); do
+            if [ -s "$f" ] && [ "$(tail -c 1 "$f" | wc -l)" -eq 0 ]; then
+              echo "" >> "$f"
+              FIXED=$((FIXED + 1))
+            fi
+          done
+          echo "Added trailing newline to $FIXED files"
+
+      - name: "Commit auto-fixes"
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "fix(auto): format and clean files [skip ci]"
+          commit_user_name: "autopilot-bot"
+          commit_user_email: "autopilot@autofix.local"
+          file_pattern: "*.json *.md *.yml"

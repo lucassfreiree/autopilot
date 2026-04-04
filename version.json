@@ -1,6 +1,6 @@
 {
   "product": "autopilot",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Web-only CI/CD control plane for multi-workspace, multi-agent release orchestration",
   "repository": "lucassfreiree/autopilot",
   "versioningRules": {

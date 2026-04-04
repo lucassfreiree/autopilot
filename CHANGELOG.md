@@ -5,6 +5,35 @@ All notable changes to the Autopilot project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-04-04
+
+### Added
+- **Issue Templates**: 3 structured templates for agent work (Finding, Improvement, Decision)
+  with severity, workspace, agent dropdown, cost-benefit analysis fields
+- **Skills** (7 new, inspired by `anthropics/skills` official patterns):
+  - `workspace-onboarding`: 6-phase checklist for new workspace setup
+  - `changelog-generator`: Auto-generate CHANGELOG from conventional commits
+  - `cost-reducer`: Cloud/infra costs, token costs, FinOps, free tier tracking
+  - `security-hardening`: Auth/secrets, dependency security, web security, supply chain
+  - `create-skill`: Guide for agents to create well-structured new skills
+  - `know-me`: Owner preference tracking across sessions (language, style, decisions)
+  - `self-healing`: Pattern recognition, memory management, auto-recovery framework
+- **PR Auto-Label** (`pr-auto-label.yml`): Uses `actions/labeler@v5` (official, 10k+ stars)
+  to auto-label PRs by changed file paths (agent, workflow, dashboard, patch, security, etc.)
+- **Lint Workflows** (`lint-workflows.yml`): Uses `rhysd/actionlint` (8k+ stars) to validate
+  all workflow YAML for syntax errors, type issues, deprecated features, shell script problems
+- **Stale PR Cleanup** (`stale-pr-cleanup.yml`): Uses `actions/stale@v9` (official, 1.2k+ stars)
+  to auto-warn (7d) and close (10d) abandoned PRs
+- **Auto-Fix on Push** (`auto-fix-on-push.yml`): Self-healing layer using
+  `stefanzweifel/git-auto-commit-action@v5` (3k+ stars) — auto-formats JSON,
+  removes trailing whitespace, ensures newlines at EOF
+- **Labeler config** (`.github/labeler.yml`): 12 label rules for file path patterns
+
+### Changed
+- Total workflows: 79 (was 75)
+- Total skills: 15 (was 8)
+- Issue templates: 10 (was 7)
+
 ## [1.6.0] - 2026-04-04
 
 ### Added
