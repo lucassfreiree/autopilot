@@ -355,5 +355,72 @@
         "prevention": "Apos disparar workflow: verificar API a cada 2-3 min. NAO confiar em sleep longo."
       }
     ]
+  },
+  {
+    "id": "session_017Vu7y3pTKmpZxQoERQhKyN",
+    "date": "2026-03-23",
+    "summary": "Historia #868216 completa + deploy 3.5.4 + sistema de memoria",
+    "stepsExecuted": [
+      {
+        "step": 6,
+        "action": "Criar values.yaml de referencia do CAP",
+        "how": "Criou references/controller-cap/values.yaml completo com env, secrets, RBAC, probes",
+        "filesCreated": [
+          "references/controller-cap/values.yaml"
+        ],
+        "keyDecision": "Separar env vars em 3 blocos: plain values, secretKeyRef sre-controller-auth, secretKeyRef runtime"
+      },
+      {
+        "step": 7,
+        "action": "Configurar trigger de deploy multi-file",
+        "how": "Atualizou trigger/source-change.json com change_type=multi-file, 3 changes, promote=true",
+        "triggerRun": 27,
+        "lesson": "multi-file change: array de changes com action search-replace ou replace-file. content_ref aponta para arquivo em patches/"
+      },
+      {
+        "step": 8,
+        "action": "Criar PR #85 e mergear",
+        "how": "PR criado via MCP GitHub. merge conflict com main. resolvido (run 26 para 27). squash merge",
+        "problemEncountered": "mergeable_state=dirty porque main tinha commits novos em trigger/source-change.json",
+        "resolution": "git fetch origin main. git merge origin/main. resolver conflito manual. push",
+        "lesson": "SEMPRE fazer fetch origin/main e verificar conflitos ANTES de tentar merge do PR"
+      },
+      {
+        "step": 9,
+        "action": "Criar sistema de memoria + hooks",
+        "how": "contracts/claude-session-memory.json + .claude/settings.json com SessionStart/PreCompact/Stop hooks",
+        "filesCreated": [
+          "contracts/claude-session-memory.json",
+          ".claude/settings.json"
+        ],
+        "lesson": "Push direto para main bloqueado (403). Sempre usar branch claude/* para PR para merge"
+      },
+      {
+        "step": 10,
+        "action": "PR #86 com memoria atualizada",
+        "how": "Criou PR #86 com session memory + permissions. squash merge",
+        "lesson": "Para atualizar arquivos em main: criar branch nova do main atual, commitar, PR, merge. Nao tentar push direto."
+      }
+    ],
+    "mistakesMade": [
+      {
+        "mistake": "git reset --hard descartou mudancas locais nao commitadas",
+        "error": "Arquivo reverteu para versao anterior",
+        "fix": "Reescrever o arquivo",
+        "prevention": "SEMPRE commitar ou stash ANTES de reset --hard. Ou usar git checkout -b sem --hard"
+      },
+      {
+        "mistake": "Criou branch que ja existia",
+        "error": "fatal: branch already exists",
+        "fix": "git branch -D nome && git checkout -b nome",
+        "prevention": "Verificar branches existentes antes ou usar git checkout -B (force create)"
+      },
+      {
+        "mistake": "Nao verificou versao anterior no registry antes de version bump",
+        "error": "CI rejeitou tag duplicada 3.5.3",
+        "fix": "Bumpar para 3.5.4",
+        "prevention": "Sempre checar versioningRules.currentVersion na memoria"
+      }
+    ]
   }
 ]
