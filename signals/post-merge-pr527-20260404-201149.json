@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 527,
+  "branch": "claude/autopilot-versioning-agents-Uw6g2",
+  "timestamp": "2026-04-04T20:11:49Z",
+  "runId": "23986684456",
+  "healthStatus": "degraded"
+}
