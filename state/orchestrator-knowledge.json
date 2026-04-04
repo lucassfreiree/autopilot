@@ -1,6 +1,11 @@
 {
   "patterns": [
     {
+      "workflow": ".github/workflows/agent-team-orchestrator.yml",
+      "consecutiveAt": "2026-04-04T04:05:49Z",
+      "count": 5
+    },
+    {
       "workflow": ".github/workflows/auto-dispatch-task.yml",
       "consecutiveAt": "2026-03-30T04:25:02Z",
       "count": 5
@@ -18,6 +23,11 @@
     {
       "workflow": "[Agent] Claude Code Assistant",
       "consecutiveAt": "2026-04-01T16:05:42Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Agent] Quality Gate",
+      "consecutiveAt": "2026-04-04T04:05:49Z",
       "count": 3
     },
     {
@@ -109,14 +119,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-04T01:18:18Z",
-  "lastHealth": "degraded",
-  "runCount": 108,
+  "lastRun": "2026-04-04T04:05:49Z",
+  "lastHealth": "critical",
+  "runCount": 109,
   "healthHistory": [
-    {
-      "ts": "2026-04-03T10:09:23Z",
-      "health": "degraded"
-    },
     {
       "ts": "2026-04-03T11:09:44Z",
       "health": "degraded"
@@ -192,6 +198,10 @@
     {
       "ts": "2026-04-04T01:18:18Z",
       "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T04:05:49Z",
+      "health": "critical"
     }
   ]
 }
