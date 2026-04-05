@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T22:20:25Z",
+  "lastUpdated": "2026-04-05T11:37:13Z",
   "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -420,6 +420,37 @@
             "ws-corp-1"
           ],
           "phantomLockWarning": "health.json reports '1 active locks' for all workspaces but no lock files exist on autopilot-state — likely stale health check data"
+        }
+      },
+      {
+        "date": "2026-04-05",
+        "sessionId": "ops-patrol-2026-04-05",
+        "actions": [
+          "Full autopilot control plane patrol",
+          "Checked CI logs on autopilot-state branch — 31 log files all show exit code 1 (historical failures), but ci-monitor JSONs show ciOutcome: success for both controller and agent",
+          "Controller release state: promoted at v3.8.2 (ws-default), agent: ci-passed at v2.3.3 but NOT promoted",
+          "Pipeline health: all scheduled workflows (sentinel 4h, deploy-pipeline-monitor 30min, lock-gc 15min) configured correctly",
+          "No active workspace locks found — only released lock in ws-default (cleaned by lock-gc)",
+          "Dashboard state.json: fresh (synced 2026-04-05T02:57:07Z), not empty, data consistent",
+          "Session memory: fresh (updated 2026-04-04T22:20:25Z)",
+          "CLAUDE.md: found 7 unmapped workflows + 1 ghost reference — fixed all",
+          "Added to CLAUDE.md: auto-fix-on-push, feature-validation-sweep, harden-ci, lint-workflows, pr-auto-label, security-scorecard, stale-pr-cleanup",
+          "Fixed ghost reference: auto-merge-to-main.yml replaced with auto-fix-on-push.yml (actual file)",
+          "No pending patches needing deploy — patches/ stable since Apr 3",
+          "Pending workflow drafts found: pending/release-autopilot.yml, pending-workflows/{agent-release.yml, init-state-branch.yml} — not yet installed",
+          "Workspaces ws-corp-1 and ws-socnew are idle (LOCKED third-party)"
+        ],
+        "prsCreated": [],
+        "findings": {
+          "ciLogsAllFailures": "All 31 CI log files on autopilot-state show exit code 1 (historical); monitors show success for latest good run",
+          "agentNotPromoted": "Agent v2.3.3 ci-passed but promoted:false — may need manual promote-cap trigger",
+          "unmappedWorkflowsFixed": 7,
+          "ghostReferenceFixed": "auto-merge-to-main.yml → auto-fix-on-push.yml",
+          "pendingWorkflowDrafts": [
+            "pending/release-autopilot.yml",
+            "pending-workflows/agent-release.yml",
+            "pending-workflows/init-state-branch.yml"
+          ]
         }
       }
     ]
@@ -1553,7 +1584,9 @@
     },
     "lastMergedPR": "#540",
     "lastMergedTitle": "revert: rollback dashboards to pre-auth state, remove OAuth proxy (v1.8.6) (#540)",
-    "lastMergedHealth": "degraded"
+    "lastMergedHealth": "degraded",
+    "lastPatrol": "2026-04-05T11:37:13Z",
+    "claudeMdWorkflowCount": 81
   },
   "deployCompliancePipeline": {
     "_ref": "contracts/archive/static-reference.json#deployCompliancePipeline",
