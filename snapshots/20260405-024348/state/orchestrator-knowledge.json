@@ -1,0 +1,229 @@
+{
+  "patterns": [
+    {
+      "workflow": ".github/workflows/agent-team-orchestrator.yml",
+      "consecutiveAt": "2026-04-04T04:05:49Z",
+      "count": 5
+    },
+    {
+      "workflow": ".github/workflows/auto-dispatch-task.yml",
+      "consecutiveAt": "2026-03-30T04:25:02Z",
+      "count": 5
+    },
+    {
+      "workflow": ".github/workflows/devin-assistant.yml",
+      "consecutiveAt": "2026-03-31T22:32:31Z",
+      "count": 3
+    },
+    {
+      "workflow": ".github/workflows/emergency-watchdog.yml",
+      "consecutiveAt": "2026-03-30T04:25:02Z",
+      "count": 5
+    },
+    {
+      "workflow": "Auto-Fix on Push",
+      "consecutiveAt": "2026-04-04T22:17:04Z",
+      "count": 4
+    },
+    {
+      "workflow": "Security Scorecard",
+      "consecutiveAt": "2026-04-04T21:20:25Z",
+      "count": 4
+    },
+    {
+      "workflow": "[Agent] Claude Code Assistant",
+      "consecutiveAt": "2026-04-01T16:05:42Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Agent] Quality Gate",
+      "consecutiveAt": "2026-04-04T04:05:49Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Autonomous Direct Merge",
+      "consecutiveAt": "2026-03-30T20:05:34Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Backup: State Snapshot",
+      "consecutiveAt": "2026-03-31T08:56:20Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Builds Validation Gate",
+      "consecutiveAt": "2026-03-31T22:32:31Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Compliance Gate",
+      "consecutiveAt": "2026-03-31T17:55:15Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Intelligent Orchestrator",
+      "consecutiveAt": "2026-03-31T01:25:03Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] PR Auto-Review",
+      "consecutiveAt": "2026-03-31T13:14:22Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Core] Post-Merge Monitor",
+      "consecutiveAt": "2026-04-02T21:35:38Z",
+      "count": 5
+    },
+    {
+      "workflow": "[Core] Workflow Auto-Repair",
+      "consecutiveAt": "2026-03-30T21:02:32Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Corp] Deploy: Apply Source Change",
+      "consecutiveAt": "2026-04-02T15:15:53Z",
+      "count": 3
+    },
+    {
+      "workflow": "[Corp] Fix: CI Lint Errors",
+      "consecutiveAt": "2026-04-02T14:09:03Z",
+      "count": 3
+    }
+  ],
+  "fixes": [
+    {
+      "workflow": "Security Scorecard",
+      "action": "re-run",
+      "fixedAt": "2026-04-04T20:17:03Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Backup: State Snapshot",
+      "action": "re-run",
+      "fixedAt": "2026-03-31T07:51:20Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Builds Validation Gate",
+      "action": "re-run",
+      "fixedAt": "2026-03-31T22:32:31Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Compliance Gate",
+      "action": "re-run",
+      "fixedAt": "2026-03-31T17:55:15Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Intelligent Orchestrator",
+      "action": "re-run",
+      "fixedAt": "2026-03-30T21:40:01Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Core] Workflow Auto-Repair",
+      "action": "re-run",
+      "fixedAt": "2026-03-30T21:02:32Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Corp] Fix: CI Lint Errors",
+      "action": "re-run",
+      "fixedAt": "2026-04-02T14:09:03Z",
+      "method": "re-run"
+    },
+    {
+      "workflow": "[Release] Autopilot Product",
+      "action": "re-run",
+      "fixedAt": "2026-04-04T20:17:03Z",
+      "method": "re-run"
+    }
+  ],
+  "lastRun": "2026-04-05T01:13:48Z",
+  "lastHealth": "degraded",
+  "runCount": 133,
+  "healthHistory": [
+    {
+      "ts": "2026-04-04T08:28:11Z",
+      "health": "critical"
+    },
+    {
+      "ts": "2026-04-04T08:31:05Z",
+      "health": "critical"
+    },
+    {
+      "ts": "2026-04-04T09:27:09Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T10:22:05Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T11:19:19Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T12:28:11Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T12:34:12Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T13:43:57Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T14:24:13Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T15:19:50Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T16:21:00Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T16:24:39Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T17:20:50Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T18:24:28Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T19:23:09Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-04T20:17:03Z",
+      "health": "healthy"
+    },
+    {
+      "ts": "2026-04-04T21:20:25Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-04T22:17:04Z",
+      "health": "critical"
+    },
+    {
+      "ts": "2026-04-04T23:19:55Z",
+      "health": "degraded"
+    },
+    {
+      "ts": "2026-04-05T01:13:48Z",
+      "health": "degraded"
+    }
+  ]
+}
