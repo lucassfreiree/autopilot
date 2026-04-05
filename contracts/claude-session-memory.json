@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-04T22:20:25Z",
-  "lastSessionId": "session_01SonvhGxzAEwDYab3KfMQQx",
+  "lastUpdated": "2026-04-05T11:39:10Z",
+  "lastSessionId": "session_01WhntY5CEifvznsi4bFVUQG",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
     "companies": {
@@ -420,6 +420,31 @@
             "ws-corp-1"
           ],
           "phantomLockWarning": "health.json reports '1 active locks' for all workspaces but no lock files exist on autopilot-state — likely stale health check data"
+        }
+      },
+      {
+        "date": "2026-04-05",
+        "agent": "claude-code",
+        "sessionId": "ops-patrol-2026-04-05",
+        "summary": "Autonomous control plane patrol — full 6-phase inspection (session 3)",
+        "actions": [
+          "Full autopilot control plane patrol",
+          "CI monitors show ciOutcome:success for both controller and agent",
+          "Controller promoted v3.8.2, agent v2.3.3 ci-passed but NOT promoted",
+          "All 31 historical CI log files show exit code 1 (expected — logs capture failures only)",
+          "Pipeline health OK: sentinel(4h), deploy-pipeline-monitor(30m), lock-gc(15m) all configured",
+          "No active workspace locks — only released lock in ws-default",
+          "Dashboard state.json fresh (synced 2026-04-05T02:57:07Z)",
+          "CLAUDE.md: fixed 7 unmapped workflows + 1 ghost reference",
+          "Added: auto-fix-on-push, feature-validation-sweep, harden-ci, lint-workflows, pr-auto-label, security-scorecard, stale-pr-cleanup",
+          "Fixed ghost: auto-merge-to-main.yml replaced with auto-fix-on-push.yml",
+          "No pending patches needing deploy",
+          "Pending workflow drafts: pending/release-autopilot.yml, pending-workflows/{agent-release.yml,init-state-branch.yml}"
+        ],
+        "findings": {
+          "agentNotPromoted": "Agent v2.3.3 ci-passed but promoted:false",
+          "unmappedWorkflowsFixed": 7,
+          "ghostReferenceFixed": "auto-merge-to-main.yml -> auto-fix-on-push.yml"
         }
       }
     ]
@@ -1553,7 +1578,8 @@
     },
     "lastMergedPR": "#540",
     "lastMergedTitle": "revert: rollback dashboards to pre-auth state, remove OAuth proxy (v1.8.6) (#540)",
-    "lastMergedHealth": "degraded"
+    "lastMergedHealth": "degraded",
+    "lastPatrol": "2026-04-05T11:39:10Z"
   },
   "deployCompliancePipeline": {
     "_ref": "contracts/archive/static-reference.json#deployCompliancePipeline",

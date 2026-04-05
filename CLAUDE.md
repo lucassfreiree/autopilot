@@ -536,6 +536,7 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 | deploy-auto-learn.yml | **AUTO-LEARN** — Maps errors to patterns, generates learning report, updates compliance rules. |
 | test-full-flow.yml | Full integration test (controller + agent + CAP) |
 | test-corporate-flow.yml | Corporate flow test |
+| feature-validation-sweep.yml | Post-merge validation sweep — validates new features for bugs, gaps, and inconsistencies; auto-fixes or creates Issues |
 
 ### Deploy Compliance Pipeline (OBRIGATORIO — 5 stages)
 **NUNCA deployar sem validar primeiro.** O pipeline de compliance roda automaticamente em PRs e pos-deploy.
@@ -674,7 +675,7 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | check-repo-access.yml | Validate BBVINET_TOKEN access to corporate repos |
 | ci-diagnose.yml | Diagnose CI failures with detailed analysis |
 | fetch-files.yml | Fetch files from corporate repos using BBVINET_TOKEN |
-| auto-merge-to-main.yml | Auto-merge PRs from claude/* branches to main (squash) |
+| auto-fix-on-push.yml | Auto-fix on push — detects and auto-fixes common issues after every push to main |
 | autonomous-merge-direct.yml | Direct autonomous merge for agent PRs (bypasses branch protection auto-merge requirement) |
 | ops-workflow-observability.yml | Workflow run observability and metrics |
 | ci-self-heal.yml | Auto-heal CI failures with pattern matching |
@@ -696,6 +697,11 @@ Maps errors to known patterns, generates learning report with pipeline visualiza
 | sync-community-resources.yml | Weekly auto-sync intelligence from anthropics/skills, awesome-claude-code, a-list-of-agents |
 | emergency-watchdog.yml | Emergency watchdog — detects critical failures, stuck states, and auto-escalates |
 | stale-issue-cleanup.yml | Weekly cleanup of stale issues (14+ days inactive → close, 7+ days → warn) |
+| stale-pr-cleanup.yml | Auto-warn and close abandoned PRs to keep repo clean |
+| pr-auto-label.yml | Auto-label PRs based on changed file paths (actions/labeler) |
+| lint-workflows.yml | Lint all workflow YAML with actionlint — catches syntax, type errors, deprecated features |
+| harden-ci.yml | Step Security Harden Runner — monitors and restricts GitHub Actions runner activity |
+| security-scorecard.yml | OpenSSF Scorecard — 18 automated security checks, uploads SARIF to GitHub Security tab |
 | workflow-cost-tracker.yml | Weekly workflow usage & cost tracking (runs, success rate, wasteful workflows) |
 | pr-auto-review.yml | Automated PR review (security, quality, compliance checks on every PR) |
 | security-intake-dispatch.yml | Classify security issues and dispatch to Claude for autonomous remediation |
