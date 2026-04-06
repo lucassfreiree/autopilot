@@ -740,6 +740,7 @@ Disabled files (preserved for reference in `.github/workflows/*.yml.disabled`):
 | `trigger/codex-commit.json` | codex-apply.yml (DISABLED — legacy) |
 | `trigger/codex-deploy.json` | codex-deploy.yml (DISABLED — legacy) |
 | `trigger/copilot-task.json` | copilot-task-dispatch.yml (DISABLED — legacy) |
+| `trigger/test-marker.txt` | Test sentinel file for pr-auto-review validation (not a dispatch trigger) |
 
 ## Deploy Flow — Complete Guide (Claude Code only)
 

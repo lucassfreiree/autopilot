@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-05T11:39:10Z",
-  "lastSessionId": "session_01WhntY5CEifvznsi4bFVUQG",
+  "lastUpdated": "2026-04-06T00:00:00Z",
+  "lastSessionId": "claude_session_ops_patrol_2026-04-06",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
     "companies": {
@@ -445,6 +445,33 @@
           "agentNotPromoted": "Agent v2.3.3 ci-passed but promoted:false",
           "unmappedWorkflowsFixed": 7,
           "ghostReferenceFixed": "auto-merge-to-main.yml -> auto-fix-on-push.yml"
+        }
+      },
+      {
+        "date": "2026-04-06",
+        "agent": "claude-code",
+        "sessionId": "ops-patrol-2026-04-06",
+        "summary": "Autonomous control plane patrol — full 6-phase inspection (session 4)",
+        "actions": [
+          "Full autopilot control plane patrol — all 6 phases",
+          "CI monitors: ciOutcome=success for both controller and agent (ws-default)",
+          "Controller v3.8.2 promoted, agent ci-passed (source-change tag)",
+          "Sentinel state: all-healthy, 0 sick monitors",
+          "Workflow health report: 5 workflows tracked, 0 failures, 100% success rate",
+          "Dashboard state.json STALE (last sync 2026-04-05T02:57:07Z, >24h old) — spark-sync-state.yml needs attention",
+          "Workspace health: ws-default degraded (1 active lock warning, drift warning)",
+          "ws-corp-1 and ws-socnew: idle, never released (third-party blocked workspaces)",
+          "CLAUDE.md: added trigger/test-marker.txt to trigger table (was unmapped)",
+          "All 83 active workflows mapped in CLAUDE.md — no gaps",
+          "Pipeline status: idle, no pending deploys, lastTriggerRun=103",
+          "No expired locks found (no lock files in workspace state)",
+          "Patches directory has 20 patch files — all from previous deploys, no uncommitted new patches"
+        ],
+        "findings": {
+          "dashboardStateStale": "state.json last sync 2026-04-05T02:57:07Z — over 24h old",
+          "wsDefaultDegraded": "Health degraded: 1 active lock warning + drift warning",
+          "testMarkerMapped": "trigger/test-marker.txt added to CLAUDE.md trigger table",
+          "noNewFailures": "All CI outcomes success, all monitors healthy"
         }
       }
     ]
