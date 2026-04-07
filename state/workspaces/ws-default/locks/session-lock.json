@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "lockId": "lock-20260407-e2e-test",
+  "lockedBy": "claude-code",
+  "operation": "e2e-validation-test",
+  "acquiredAt": "2026-04-07T19:35:00Z",
+  "expiresAt": "2026-04-07T20:05:00Z",
+  "ttlMinutes": 30
+}
