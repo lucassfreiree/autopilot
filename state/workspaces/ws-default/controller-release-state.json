@@ -3,15 +3,15 @@
   "workspaceId": "ws-default",
   "component": "controller",
   "lastReleasedSha": "c5ace1e36f7b92ca5a45e7e474bf8fef36011bfa",
-  "lastTag": "3.8.3-c5ace1e",
-  "updatedAt": "2026-04-07T19:50:00Z",
+  "lastTag": "3.8.3",
+  "updatedAt": "2026-04-07T20:05:00Z",
   "runId": "backup-system-direct-push",
   "runUrl": "",
-  "ciResult": "pending",
-  "status": "releasing",
+  "ciResult": "success",
+  "status": "promoted",
   "changeType": "version-bump",
   "commitMessage": "chore(controller): bump version 3.8.2 → 3.8.3 (autopilot backup e2e test)",
-  "promoted": false,
+  "promoted": true,
   "preExistingFailure": false,
-  "gateDecision": "pending"
+  "gateDecision": "pass"
 }
