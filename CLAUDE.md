@@ -61,6 +61,23 @@ Specialized agents work as a team, continuously improving the autopilot product 
   - `contracts/codex-session-memory.json` — Codex cumulative session memory
   - `contracts/interface-contract.json` — Controller↔Agent API surface contract (JWT, routes, security)
   - `contracts/resilience-patterns.json` — 13 failure patterns with automatic workarounds and fallback chains
+  - `contracts/agent-registry.json` — Registry of all agents (Claude, Codex, Copilot, ChatGPT, Devin) with capabilities and status
+  - `contracts/claude-live-status.json` — Claude Code live operational status and current task tracking
+  - `contracts/copilot-session-memory.json` — Copilot cumulative session memory (disabled agent)
+  - `contracts/devin-agent-contract.json` — Devin agent contract (disabled agent)
+  - `contracts/devin-session-memory.json` — Devin cumulative session memory (disabled agent)
+  - `contracts/improvement-history.json` — Historical record of all improvements with before/after metrics
+  - `contracts/pending-tasks.json` — Task queue for pending agent work items
+  - `contracts/shared-agent-contract.json` — Shared contract fields common to all agents
+  - `contracts/token-optimization-rules.json` — Token compaction rules and optimization metrics
+  - `contracts/workspace-context-rules.json` — Workspace isolation and context separation rules
+  - `contracts/external-tools-registry.json` — Registry of external tools and integrations
+  - `contracts/github-first-governance.json` — GitHub-first governance rules for all operations
+  - `contracts/agent-onboarding.md` — Agent onboarding guide for new agent types
+  - `contracts/ai-takeover-kit.md` — Documentation for autonomous AI operation procedures
+  - `contracts/copilot-isolation-rules.md` — Copilot workspace isolation rules (disabled agent)
+  - `contracts/copilot-mega-prompt.md` — Copilot mega prompt reference (disabled agent)
+  - `contracts/copilot-super-prompt.md` — Copilot super prompt reference (disabled agent)
 - `.github/workflows/` — All automation workflows
 - `AGENTS.md` — Legacy Codex prompt (workflow disabled, file kept for reference)
 - `panel/` — GitHub Pages control plane UI (`panel/index.html`)
