@@ -1094,6 +1094,10 @@ Specialized agents that Claude Code can delegate to for focused tasks:
 | Deploy Monitor | `.claude/skills/deploy-monitor.md` | Monitor active deploy pipeline status |
 | CI Fix | `.claude/skills/ci-fix.md` | Auto-diagnose and repair CI failures |
 | Daily Digest | `.claude/skills/daily-digest.md` | Daily operational status report (health, deploys, CI, issues) |
+| Patrol | `.claude/skills/patrol.md` | Full control plane health sweep (workflows, state, dashboard, issues, CI) |
+| Sync State | `.claude/skills/sync-state.md` | Validate and sync state.json to Spark Dashboard |
+| Bump Version | `.claude/skills/bump-version.md` | Product version bump with rollover rules (patch/minor/major) |
+| Health Check | `.claude/skills/health-check.md` | Quick workspace health check (under 30s) |
 
 ### GitHub `@claude` Integration
 Workflow `claude-assistant.yml` responds to `@claude` mentions in Issues and PRs.
