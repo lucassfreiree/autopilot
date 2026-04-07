@@ -5,5 +5,7 @@
   "operation": "e2e-validation-test",
   "acquiredAt": "2026-04-07T19:35:00Z",
   "expiresAt": "2026-04-07T20:05:00Z",
-  "ttlMinutes": 30
+  "ttlMinutes": 30,
+  "released": true,
+  "releasedAt": "2026-04-07T19:35:30Z"
 }
