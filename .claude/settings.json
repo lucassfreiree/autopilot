@@ -78,6 +78,30 @@
             "statusMessage": "Dual-side validation (controller + agent)..."
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command // \"\"' 2>/dev/null || echo \"\"); if echo \"$CMD\" | grep -qE '(ws-socnew|ws-corp-1)'; then echo '{\"decision\":\"block\",\"reason\":\"BLOCKED: ws-socnew and ws-corp-1 are third-party workspaces. Operation requires explicit owner authorization.\"}'; else echo '{\"decision\":\"approve\"}'; fi",
+            "timeout": 3,
+            "statusMessage": "Workspace isolation check..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command // \"\"' 2>/dev/null || echo \"\"); if echo \"$CMD\" | grep -qE '^git (push|commit|merge)'; then TS=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo \"{\\\"systemMessage\\\":\\\"Audit: git operation at $TS\\\"}\" ; fi",
+            "timeout": 3,
+            "statusMessage": "Audit logging..."
+          }
+        ]
       }
     ]
   }
