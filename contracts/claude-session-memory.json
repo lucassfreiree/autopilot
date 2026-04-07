@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-05T11:39:10Z",
+  "lastUpdated": "2026-04-07T11:40:00Z",
   "lastSessionId": "session_01WhntY5CEifvznsi4bFVUQG",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
@@ -446,6 +446,30 @@
           "unmappedWorkflowsFixed": 7,
           "ghostReferenceFixed": "auto-merge-to-main.yml -> auto-fix-on-push.yml"
         }
+      },
+      {
+        "date": "2026-04-07",
+        "agent": "claude",
+        "type": "ops-patrol",
+        "summary": "Full 6-phase autonomous ops patrol. Findings: (1) No active CI failures — TS5103 error in logs is pre-v3.8.2, controller promoted at v3.8.2, agent ci-passed at v2.3.3. (2) CI monitors stale — last ran April 2 (5 days). (3) Dashboard state.json stale — lastSync April 5 (2 days). (4) All 86 workflows healthy per workflow-health-report. (5) Workspace health degraded for ws-default and ws-cit due to phantom locks and drift warnings. (6) All 83 active workflows mapped in CLAUDE.md, only trigger/test-marker.txt unmapped. (7) No pending deploys — patches are historical references from prior releases. (8) Session memory updated with patrol findings.",
+        "actions": [
+          "Checked all CI logs on autopilot-state (controller/agent)",
+          "Verified release states: controller v3.8.2 promoted, agent v2.3.3 ci-passed",
+          "Verified CI monitors: both show success but stale (5-8 days)",
+          "Checked sentinel state: all-healthy",
+          "Checked workflow-health-report: 86 workflows, 0 failures",
+          "Verified dashboard state.json: lastSync 2026-04-05, versions aligned with release state",
+          "Checked workspace health: ws-default and ws-cit degraded (phantom locks, drift)",
+          "Scanned CLAUDE.md: all 83 workflows mapped, added test-marker.txt reference",
+          "Verified patches/: version-sync-3.5.4.patch obsolete, execute.controller.ts.patch historical",
+          "Updated session memory with patrol findings"
+        ],
+        "prsCreated": [],
+        "issues": [
+          "CI monitors have not run since April 2 — ci-monitor-loop may need manual re-dispatch",
+          "Dashboard sync stale by 2 days — spark-sync-state.yml should be triggered",
+          "Workspace health shows phantom locks despite no lock files existing"
+        ]
       }
     ]
   },
