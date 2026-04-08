@@ -21,9 +21,9 @@
       "message": "None"
     },
     "locks": {
-      "status": "warn",
-      "message": "1 active locks"
+      "status": "pass",
+      "message": "0 active locks"
     }
   },
-  "summary": "degraded at 2026-03-26T19:57:39Z"
+  "summary": "setup at 2026-04-08T11:40:00Z"
 }
