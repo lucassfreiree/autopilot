@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-07T11:40:00Z",
-  "lastSessionId": "session_01WhntY5CEifvznsi4bFVUQG",
+  "lastUpdated": "2026-04-08T11:40:00Z",
+  "lastSessionId": "session_01228azHFTzHJcEEwGBcQKvn",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
     "companies": {
@@ -22,7 +22,7 @@
           "bbvinet/psc-sre-automacao-controller": {
             "role": "Controller — orquestra automacoes, despacha para agents, gerencia logs de execucao",
             "type": "source-code",
-            "currentVersion": "3.8.2",
+            "currentVersion": "3.8.3",
             "stack": "Node 22, TypeScript, Express, Jest, SQLite, S3",
             "ci": "Esteira de Build NPM (corporate runner)",
             "actionsUrl": "https://github.com/bbvinet/psc-sre-automacao-controller/actions",
@@ -33,7 +33,7 @@
           "bbvinet/psc-sre-automacao-agent": {
             "role": "Agent — executa automacoes nos clusters, recebe callbacks de cronjob, envia logs ao controller",
             "type": "source-code",
-            "currentVersion": "2.3.3",
+            "currentVersion": "2.3.6",
             "stack": "Node 22, TypeScript, Express, Jest, K8s client",
             "ci": "Esteira de Build NPM (corporate runner)",
             "actionsUrl": "https://github.com/bbvinet/psc-sre-automacao-agent/actions",
@@ -61,7 +61,7 @@
           }
         },
         "status": "active",
-        "lastDeploy": "controller 3.8.2 (fix: generateOutboundAgentJwt replaces forwarded JWT, parseExpiresIn numeric seconds, cronjob callback route), agent 2.3.3",
+        "lastDeploy": "controller 3.8.3, agent 2.3.6 (backup system e2e test — bump versions via direct push 2026-04-07)",
         "notes": "Pipeline completo e funcional. Controller CAP agora no GitHub (bbvinet/psc_releases_cap_sre-aut-controller) com auto-promote HABILITADO no Stage 4 do apply-source-change. Esteira de Build NPM. Controller v3.6.3 operacional no cluster k8shmlbb111b (HML). Security fixes: XSS sanitizeForOutput, DoS MAX_RESULTS=1000, error detail hardening. Pre-deploy validation workflow criado."
       },
       "cit": {
@@ -177,8 +177,8 @@
       "Workflows Ops: sao shared — funcionam para qualquer workspace"
     ],
     "workspaceSeparationAudit": {
-      "date": "2026-03-24",
-      "status": "structure_complete_enforcement_partial",
+      "date": "2026-04-08",
+      "status": "structure_complete_classification_updated",
       "findings": {
         "safe_for_all_workspaces": [
           "health-check.yml",
@@ -196,7 +196,67 @@
           "ops-tf-plan.yml",
           "ops-k8s-health.yml",
           "ops-monitor-alerts.yml",
-          "ops-pipeline-diagnose.yml"
+          "ops-pipeline-diagnose.yml",
+          "apply-source-change.yml",
+          "ci-monitor-loop.yml",
+          "ci-diagnose.yml",
+          "ci-status-check.yml",
+          "fetch-files.yml",
+          "promote-cap.yml",
+          "fix-and-validate.yml",
+          "deploy-pipeline-monitor.yml",
+          "compliance-gate.yml",
+          "lint-workflows.yml",
+          "auto-merge-sweeper.yml",
+          "spark-sync-state.yml",
+          "sync-spark-dashboard.yml",
+          "deploy-panel.yml",
+          "dashboard-auto-improve.yml",
+          "workflow-sentinel.yml",
+          "workflow-auto-repair.yml",
+          "workflow-health-monitor.yml",
+          "workflow-cost-tracker.yml",
+          "emergency-watchdog.yml",
+          "security-scorecard.yml",
+          "security-vuln-scanner.yml",
+          "token-auto-optimize.yml",
+          "sync-community-resources.yml",
+          "alert-notify.yml",
+          "harden-ci.yml",
+          "ci-self-heal.yml",
+          "auto-fix-on-push.yml",
+          "post-merge-monitor.yml",
+          "post-deploy-validation.yml",
+          "builds-validation-gate.yml",
+          "report-status.yml",
+          "record-improvement.yml",
+          "continuous-improvement.yml",
+          "cleanup-branches.yml",
+          "stale-issue-cleanup.yml",
+          "stale-pr-cleanup.yml",
+          "repo-cleanup.yml",
+          "pr-auto-label.yml",
+          "pr-auto-review.yml",
+          "bootstrap.yml",
+          "release-autopilot-product.yml",
+          "ci-failure-analysis.yml",
+          "agent-autonomous-improve.yml",
+          "agent-quality-gate.yml",
+          "agent-team-orchestrator.yml",
+          "auto-dispatch-task.yml",
+          "autonomous-merge-direct.yml",
+          "autonomy-improver.yml",
+          "claude-assistant.yml",
+          "dispatch-proxy.yml",
+          "drift-correction.yml",
+          "enqueue-agent-handoff.yml",
+          "escalate-to-claude.yml",
+          "feature-validation-sweep.yml",
+          "intelligent-orchestrator.yml",
+          "langchain-orchestrator.yml",
+          "deploy-auto-learn.yml",
+          "security-intake-dispatch.yml",
+          "ops-workflow-observability.yml"
         ],
         "hardcoded_to_ws_default": [
           "apply-source-change.yml",
@@ -215,7 +275,18 @@
           "deploy-panel.yml",
           "sync-copilot-prompt.yml",
           "cleanup-branches.yml"
-        ]
+        ],
+        "hardcoded_bbvinet_token": [
+          "clone-corporate-repos.yml",
+          "fix-corporate-ci.yml",
+          "test-corporate-flow.yml",
+          "test-full-flow.yml",
+          "check-repo-access.yml"
+        ],
+        "total_active": 81,
+        "total_disabled": 12,
+        "total_classified": 93,
+        "unclassified_remaining": 0
       },
       "visualSeparation": {
         "triggerFiles": "Campo _context adicionado com formato 'EMPRESA | workspace_id | TOKEN_NAME'",
@@ -470,6 +541,21 @@
           "Dashboard sync stale by 2 days — spark-sync-state.yml should be triggered",
           "Workspace health shows phantom locks despite no lock files existing"
         ]
+      },
+      {
+        "date": "2026-04-08",
+        "agent": "claude",
+        "type": "autonomous-sweep",
+        "summary": "Full autonomous sweep. Fixed: (1) Dashboard state.json stale 3 days — updated controller 3.8.2->3.8.3, agent 2.3.3->2.3.6 from autopilot-state. (2) Health degraded false-positive — lock already released by GC, cleared lock/drift warnings for all 4 workspaces. (3) Live status stale — updated controller 3.7.3->3.8.3, agent 2.3.3->2.3.6. (4) Session memory versions updated. (5) Spark-dashboard state.json synced. (6) No CI failures detected. (7) No pending deploys requiring action. All pipelines green.",
+        "actions": [
+          "fix-dashboard-state-version-drift",
+          "fix-health-false-positive-locks",
+          "update-live-status-versions",
+          "sync-spark-dashboard-state",
+          "update-session-memory",
+          "clear-idle-workspace-lock-warnings"
+        ],
+        "prs": []
       }
     ]
   },
@@ -544,9 +630,9 @@
       "15. Atualizar session memory com resultado"
     ],
     "triggerFile": "trigger/source-change.json",
-    "lastTriggerRun": 103,
-    "lastSuccessfulRun": 103,
-    "lastDeployPR": "PR #479 (v3.8.2 — fix TS2769 expiresIn type + generateOutboundAgentJwt)",
+    "lastTriggerRun": 104,
+    "lastSuccessfulRun": 104,
+    "lastDeployPR": "backup-system-direct-push (v3.8.3 controller + v2.3.6 agent, 2026-04-07)",
     "pipelineStatus": "idle",
     "multiFilePayload": {
       "change_type": "multi-file",
