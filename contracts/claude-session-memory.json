@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "contractId": "claude-session-memory",
   "description": "Memoria cumulativa de TUDO que foi feito, decidido e aprendido. Cada sessao DEVE ler isso e aplicar automaticamente. O objetivo e reduzir tempo de execucao e melhorar qualidade a cada sessao.",
-  "lastUpdated": "2026-04-02T23:45:00Z",
-  "lastSessionId": "session_01YC9RyjbGfw471NTB928HcA",
+  "lastUpdated": "2026-04-09T12:00:00Z",
+  "lastSessionId": "session-autonomous-ops-20260409",
   "multiCompanyModel": {
     "description": "Control plane centralizado gerenciando multiplas empresas. Cada empresa e um contexto COMPLETAMENTE ISOLADO.",
     "companies": {
@@ -22,7 +22,7 @@
           "bbvinet/psc-sre-automacao-controller": {
             "role": "Controller — orquestra automacoes, despacha para agents, gerencia logs de execucao",
             "type": "source-code",
-            "currentVersion": "3.8.2",
+            "currentVersion": "3.8.3",
             "stack": "Node 22, TypeScript, Express, Jest, SQLite, S3",
             "ci": "Esteira de Build NPM (corporate runner)",
             "actionsUrl": "https://github.com/bbvinet/psc-sre-automacao-controller/actions",
@@ -33,7 +33,7 @@
           "bbvinet/psc-sre-automacao-agent": {
             "role": "Agent — executa automacoes nos clusters, recebe callbacks de cronjob, envia logs ao controller",
             "type": "source-code",
-            "currentVersion": "2.3.3",
+            "currentVersion": "2.3.6",
             "stack": "Node 22, TypeScript, Express, Jest, K8s client",
             "ci": "Esteira de Build NPM (corporate runner)",
             "actionsUrl": "https://github.com/bbvinet/psc-sre-automacao-agent/actions",
@@ -61,7 +61,7 @@
           }
         },
         "status": "active",
-        "lastDeploy": "controller 3.8.2 (fix: generateOutboundAgentJwt replaces forwarded JWT, parseExpiresIn numeric seconds, cronjob callback route), agent 2.3.3",
+        "lastDeploy": "controller 3.8.3 (version bump via backup system e2e test), agent 2.3.6 (version bump via backup system e2e test)",
         "notes": "Pipeline completo e funcional. Controller CAP agora no GitHub (bbvinet/psc_releases_cap_sre-aut-controller) com auto-promote HABILITADO no Stage 4 do apply-source-change. Esteira de Build NPM. Controller v3.6.3 operacional no cluster k8shmlbb111b (HML). Security fixes: XSS sanitizeForOutput, DoS MAX_RESULTS=1000, error detail hardening. Pre-deploy validation workflow criado."
       },
       "cit": {
@@ -425,12 +425,29 @@
         "newArtifacts": [
           "contracts/resilience-patterns.json"
         ]
+      },
+      {
+        "sessionId": "session-autonomous-ops-20260409",
+        "date": "2026-04-09",
+        "type": "autonomous-monitoring",
+        "summary": "Autonomous ops monitoring: verified CI health (both components green), fixed 6-day-stale dashboard state.json (version drift: controller 3.8.2->3.8.3, agent 2.3.3->2.3.6), updated CLAUDE.md version refs, updated session memory, verified all locks released, confirmed pipeline health ok.",
+        "actions": [
+          "Checked ci-monitor-controller.json: ciOutcome=success",
+          "Checked ci-monitor-agent.json: ciOutcome=success",
+          "Checked controller-release-state: 3.8.3 promoted",
+          "Checked agent-release-state: 2.3.6 promoted",
+          "Fixed dashboard state.json: version drift + 6-day staleness",
+          "Updated CLAUDE.md: controller 3.7.4->3.8.3, agent 2.3.3->2.3.6",
+          "Verified all session locks released",
+          "Verified pipeline-status: overallHealth=ok"
+        ],
+        "prs": []
       }
     ]
   },
   "versioningRules": {
-    "currentVersion": "3.8.2",
-    "previousVersion": "3.8.0",
+    "currentVersion": "3.8.3",
+    "previousVersion": "3.8.2",
     "rule": "Se a esteira ja gerou imagem para uma versao, a proxima DEVE incrementar o patch. CI rejeita tags duplicadas no registry.",
     "versioningPattern": "CRITICO: Apos X.Y.9, a proxima versao e X.(Y+1).0 — NUNCA X.Y.10. Exemplos: 3.5.9 → 3.6.0, 3.6.9 → 3.7.0, 3.9.9 → 3.10.0. O terceiro digito (patch) vai de 0 a 9 apenas.",
     "versionFiles": [

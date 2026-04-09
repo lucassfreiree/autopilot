@@ -1,24 +1,24 @@
 {
-  "lastSync": "2026-04-03T11:04:15Z",
+  "lastSync": "2026-04-09T12:00:00Z",
   "syncSource": "autopilot/spark-sync-state.yml",
   "controller": {
-    "version": "3.8.2",
+    "version": "3.8.3",
     "status": "promoted",
     "ciResult": "success",
     "promoted": true,
-    "lastSha": "b95c34708dfa9d3656e2715bbbc0f92c0af01fb4",
-    "updatedAt": "2026-04-02T17:40:58Z",
+    "lastSha": "c5ace1e36f7b92ca5a45e7e474bf8fef36011bfa",
+    "updatedAt": "2026-04-07T20:05:00Z",
     "repo": "bbvinet/psc-sre-automacao-controller",
     "capRepo": "bbvinet/psc_releases_cap_sre-aut-controller",
     "stack": "Node 22, TypeScript, Express, Jest, SQLite, S3"
   },
   "agent": {
-    "version": "2.3.3",
-    "status": "ci-passed",
+    "version": "2.3.6",
+    "status": "promoted",
     "ciResult": "success",
-    "promoted": false,
-    "lastSha": "9a4821239b127c042565ed97b03d40f246c4a76d",
-    "updatedAt": "2026-03-30T16:42:43Z",
+    "promoted": true,
+    "lastSha": "2a14d57d5130c3841f0e96d1c4951d9ed51e5d50",
+    "updatedAt": "2026-04-07T20:05:00Z",
     "repo": "bbvinet/psc-sre-automacao-agent",
     "capRepo": "bbvinet/psc_releases_cap_sre-aut-agent",
     "stack": "Node 22, TypeScript, Express, Jest, K8s client"
@@ -27,7 +27,7 @@
     "status": "success",
     "lastRun": 103,
     "component": "controller",
-    "version": "3.8.2",
+    "version": "3.8.3",
     "promote": true,
     "workspace": "GETRONICS | ws-default | BBVINET_TOKEN",
     "changeType": "multi-file",
@@ -37,10 +37,10 @@
   "agents": {
     "claude": {
       "status": "active",
-      "task": "Fix dashboard sync + UI cleanup",
+      "task": "Autonomous ops monitoring + dashboard sync fix",
       "phase": "monitoring",
-      "lastUpdated": "2026-03-31T12:00:00Z",
-      "lastAction": "fix-dashboard-sync-git-push"
+      "lastUpdated": "2026-04-09T12:00:00Z",
+      "lastAction": "autonomous-ops-sync-version-drift-fix"
     },
     "copilot": {
       "sessionCount": 5,
@@ -113,8 +113,8 @@
   "health": {
     "schemaVersion": 2,
     "workspaceId": "ws-default",
-    "checkedAt": "2026-04-03T11:00:02Z",
-    "overall": "degraded",
+    "checkedAt": "2026-04-09T12:00:00Z",
+    "overall": "healthy",
     "checks": {
       "workspace": {
         "status": "pass",
@@ -122,28 +122,28 @@
       },
       "controllerRelease": {
         "status": "pass",
-        "message": "Tag: 3.8.2",
-        "detail": "Age: 17h"
+        "message": "Tag: 3.8.3",
+        "detail": "Age: 48h"
       },
       "agentRelease": {
         "status": "pass",
-        "message": "Tag: source-change",
-        "detail": "Age: 90h"
+        "message": "Tag: 2.3.6",
+        "detail": "Age: 48h"
       },
       "stuckRuns": {
         "status": "pass",
         "message": "None"
       },
       "locks": {
-        "status": "warn",
-        "message": "1 active locks"
+        "status": "pass",
+        "message": "No active locks"
       },
       "drift": {
-        "status": "warn",
-        "message": "? commits ahead"
+        "status": "pass",
+        "message": "Synced"
       }
     },
-    "summary": "degraded at 2026-04-03T11:00:02Z"
+    "summary": "healthy at 2026-04-09T12:00:00Z"
   },
   "ciMonitor": {
     "workspaceId": "ws-default",
@@ -156,7 +156,7 @@
     "failedRunUrl": ""
   },
   "pipelineStatus": {
-    "updatedAt": "2026-04-03T10:39:30Z",
+    "updatedAt": "2026-04-09T12:00:00Z",
     "workspaceId": "ws-default",
     "overallHealth": "ok",
     "monitorRunId": "23943445729",
@@ -164,9 +164,9 @@
     "autoDispatched": "",
     "components": {
       "agent": {
-        "version": "source-change",
-        "deployedAt": "2026-03-30T16:42:43Z",
-        "deployRunId": "23755765756",
+        "version": "2.3.6",
+        "deployedAt": "2026-04-07T20:05:00Z",
+        "deployRunId": "backup-system-direct-push",
         "ciGateResult": "success",
         "gateDecision": "pass",
         "ciMonitorResult": "success",
@@ -177,9 +177,9 @@
         "deployAge": "5396min"
       },
       "controller": {
-        "version": "3.8.2",
-        "deployedAt": "2026-04-02T17:40:58Z",
-        "deployRunId": "23913111241",
+        "version": "3.8.3",
+        "deployedAt": "2026-04-07T20:05:00Z",
+        "deployRunId": "backup-system-direct-push",
         "ciGateResult": "success",
         "gateDecision": "pass",
         "ciMonitorResult": "success",
@@ -198,8 +198,8 @@
       "status": "active",
       "stack": "Node/TypeScript (NestJS, Jest, ESLint)",
       "token": "BBVINET_TOKEN",
-      "controllerVersion": "3.8.2",
-      "agentVersion": "2.3.3",
+      "controllerVersion": "3.8.3",
+      "agentVersion": "2.3.6",
       "pipelineStatus": "success",
       "repos": [
         "psc-sre-automacao-controller",
