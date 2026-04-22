@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-04-22T21:02:02Z",
+  "updatedAt": "2026-04-22T22:10:47Z",
   "workspaceId": "ws-default",
   "overallHealth": "degraded",
-  "monitorRunId": "24802487368",
+  "monitorRunId": "24805303297",
   "triggerEvent": "schedule",
   "autoDispatched": "",
   "components": {
@@ -20,7 +20,7 @@
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "21657min"
+      "deployAge": "21725min"
     },
     "controller": {
       "version": "source-change",
@@ -28,15 +28,15 @@
       "deployRunId": "24799835137",
       "ciGateResult": "failure",
       "gateDecision": "pass-preexisting",
-      "ciMonitorResult": "failure",
-      "ciMonitorAt": "2026-04-22T20:07:53Z",
-      "ciWorkflowName": "",
+      "ciMonitorResult": "timeout",
+      "ciMonitorAt": "2026-04-22T21:10:54Z",
+      "ciWorkflowName": "Esteira de Build NPM",
       "artifactVerified": false,
       "artifactEvidence": "",
-      "stage": "ci-failed",
-      "health": "error",
+      "stage": "ci-timeout",
+      "health": "warning",
       "actionTaken": "none",
-      "deployAge": "54min"
+      "deployAge": "123min"
     }
   }
 }
