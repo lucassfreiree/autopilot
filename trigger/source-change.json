@@ -7,36 +7,12 @@
   "changes": [
     {
       "action": "replace-file",
-      "target_path": "tsconfig.json",
-      "content_ref": "patches/controller-tsconfig.json"
-    },
-    {
-      "action": "search-replace",
-      "target_path": "package.json",
-      "search": "\"better-sqlite3\": \"^9.4.0\"",
-      "replace": "\"better-sqlite3\": \"^12.9.0\""
-    },
-    {
-      "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"better-sqlite3\": \"^9.4.0\"",
-      "replace": "\"better-sqlite3\": \"^12.9.0\""
-    },
-    {
-      "action": "search-replace",
-      "target_path": "package-lock.json",
-      "search": "https://registry.npmjs.org/better-sqlite3/-/better-sqlite3-9.4.0.tgz",
-      "replace": "https://registry.npmjs.org/better-sqlite3/-/better-sqlite3-12.9.0.tgz"
-    },
-    {
-      "action": "search-replace",
-      "target_path": "package-lock.json",
-      "search": "sha512-5kynxekMxSjCMiFyUBLHggFcJkCmiZi6fUkiGz/B5GZOvdRWQJD0klqCx5/Y+bm2AKP7I/DHbSFx26AxjruWNg==",
-      "replace": "sha512-wqUv4Gm3toFpHDQmaKD4QhZm3g1DjUBI0yzS4UBl6lElUmXFYdTQmmEDpAFa5o8FiFiymURypEnfVHzILKaxqQ=="
+      "content_ref": "patches/controller-package-lock.json"
     }
   ],
-  "commit_message": "fix(controller): restore node 22 CI for sqlite runtime",
+  "commit_message": "fix(controller): sync package-lock for better-sqlite3 12.9.0",
   "skip_ci_wait": false,
   "promote": false,
-  "run": 107
+  "run": 108
 }
