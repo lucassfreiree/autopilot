@@ -78,7 +78,9 @@ jobs:
       skip_ci: ${{ steps.cfg.outputs.skip_ci }}
       promote: ${{ steps.cfg.outputs.promote }}
       agent_repo: ${{ steps.cfg.outputs.agent_repo }}
+      agent_branch: ${{ steps.cfg.outputs.agent_branch }}
       controller_repo: ${{ steps.cfg.outputs.controller_repo }}
+      controller_branch: ${{ steps.cfg.outputs.controller_branch }}
       cap_repo: ${{ steps.cfg.outputs.cap_repo }}
       cap_branch: ${{ steps.cfg.outputs.cap_branch }}
       cap_values: ${{ steps.cfg.outputs.cap_values }}
