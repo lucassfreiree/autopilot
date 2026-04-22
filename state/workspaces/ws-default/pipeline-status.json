@@ -1,36 +1,42 @@
 {
-  "updatedAt": "2026-04-05T02:53:59Z",
+  "updatedAt": "2026-04-22T20:56:33Z",
   "workspaceId": "ws-default",
-  "overallHealth": "ok",
-  "monitorRunId": "23992893666",
-  "triggerEvent": "schedule",
+  "overallHealth": "degraded",
+  "monitorRunId": "24802243862",
+  "triggerEvent": "workflow_dispatch",
   "autoDispatched": "",
   "components": {
     "agent": {
-      "version": "source-change",
-      "deployedAt": "2026-03-30T16:42:43Z",
-      "deployRunId": "23755765756",
+      "version": "2.3.6",
+      "deployedAt": "2026-04-07T20:05:00Z",
+      "deployRunId": "backup-system-direct-push",
       "ciGateResult": "success",
       "gateDecision": "pass",
       "ciMonitorResult": "success",
       "ciMonitorAt": "2026-03-30T16:43:07Z",
+      "ciWorkflowName": "",
+      "artifactVerified": false,
+      "artifactEvidence": "",
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "7811min"
+      "deployAge": "21651min"
     },
     "controller": {
-      "version": "3.8.2",
-      "deployedAt": "2026-04-02T17:40:58Z",
-      "deployRunId": "23913111241",
-      "ciGateResult": "success",
-      "gateDecision": "pass",
-      "ciMonitorResult": "success",
-      "ciMonitorAt": "2026-04-02T17:41:23Z",
-      "stage": "idle",
-      "health": "ok",
+      "version": "source-change",
+      "deployedAt": "2026-04-22T20:07:26Z",
+      "deployRunId": "24799835137",
+      "ciGateResult": "failure",
+      "gateDecision": "pass-preexisting",
+      "ciMonitorResult": "failure",
+      "ciMonitorAt": "2026-04-22T20:07:53Z",
+      "ciWorkflowName": "",
+      "artifactVerified": false,
+      "artifactEvidence": "",
+      "stage": "ci-failed",
+      "health": "error",
       "actionTaken": "none",
-      "deployAge": "3433min"
+      "deployAge": "49min"
     }
   }
 }
