@@ -71,6 +71,7 @@ jobs:
       component: ${{ steps.cfg.outputs.component }}
       components_json: ${{ steps.cfg.outputs.components_json }}
       change_type: ${{ steps.cfg.outputs.change_type }}
+      version: ${{ steps.cfg.outputs.version }}
       target_path: ${{ steps.cfg.outputs.target_path }}
       file_content_b64: ${{ steps.cfg.outputs.file_content_b64 }}
       changes_b64: ${{ steps.cfg.outputs.changes_b64 }}
@@ -104,6 +105,7 @@ jobs:
             WS_ID=$(echo "$TRIG" | jq -r '.workspace_id // "ws-default"')
             COMPONENT=$(echo "$TRIG" | jq -r '.component // "agent"')
             CHANGE_TYPE=$(echo "$TRIG" | jq -r '.change_type // "add-file"')
+            VERSION=$(echo "$TRIG" | jq -r '.version // ""')
             TARGET_PATH=$(echo "$TRIG" | jq -r '.target_path // ""')
             FILE_CONTENT=$(echo "$TRIG" | jq -r '.file_content // ""')
             COMMIT_MSG=$(echo "$TRIG" | jq -r '.commit_message // "feat: apply source code change via autopilot"')
@@ -113,6 +115,7 @@ jobs:
             WS_ID="${{ github.event.inputs.workspace_id || 'ws-default' }}"
             COMPONENT="${{ github.event.inputs.component }}"
             CHANGE_TYPE="${{ github.event.inputs.change_type }}"
+            VERSION=""
             TARGET_PATH="${{ github.event.inputs.target_path }}"
             FILE_CONTENT="${{ github.event.inputs.file_content }}"
             COMMIT_MSG="${{ github.event.inputs.commit_message }}"
@@ -138,6 +141,7 @@ jobs:
           echo "component=$COMPONENT" >> "$GITHUB_OUTPUT"
           echo "components_json=$COMPONENTS_JSON" >> "$GITHUB_OUTPUT"
           echo "change_type=$CHANGE_TYPE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "target_path=$TARGET_PATH" >> "$GITHUB_OUTPUT"
           echo "commit_message=$COMMIT_MSG" >> "$GITHUB_OUTPUT"
           echo "skip_ci=$SKIP_CI" >> "$GITHUB_OUTPUT"
@@ -725,11 +729,13 @@ jobs:
             echo "decision=pass" >> "$GITHUB_OUTPUT"
             echo "CI passed or no CI configured"
           elif [ "$PRE" = "true" ]; then
-            echo "decision=pass-preexisting" >> "$GITHUB_OUTPUT"
-            echo "::warning ::CI failed but failure is PRE-EXISTING. Allowing promotion."
+            echo "decision=block-preexisting" >> "$GITHUB_OUTPUT"
+            echo "::error ::CI failed. Failure may be pre-existing, but promotion is blocked until the source pipeline is green."
+            exit 1
           elif [ "$PRE" = "unknown" ]; then
-            echo "decision=pass-unknown" >> "$GITHUB_OUTPUT"
-            echo "::warning ::CI failed, could not determine if pre-existing. Allowing with caution."
+            echo "decision=block-unknown" >> "$GITHUB_OUTPUT"
+            echo "::error ::CI failed and the cause could not be determined. Promotion is blocked until the source pipeline is green."
+            exit 1
           else
             echo "decision=block" >> "$GITHUB_OUTPUT"
             echo "::error ::CI failed due to our change. Blocking promotion."
@@ -745,7 +751,7 @@ jobs:
     if: |
       always() &&
       needs.setup.outputs.promote == 'true' &&
-      needs.ci-gate.result != 'failure'
+      needs.ci-gate.outputs.gate_decision == 'pass'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -897,6 +903,7 @@ jobs:
           [ -z "$CI_RES" ] && CI_RES="unknown"
 
           TAG="${{ needs.promote.outputs.tag }}"
+          [ -z "$TAG" ] && TAG="${{ needs.setup.outputs.version }}"
           [ -z "$TAG" ] && TAG="source-change"
 
           PROMOTED="${{ needs.promote.outputs.promoted }}"
@@ -905,8 +912,6 @@ jobs:
 
           if [ "$CI_RES" = "success" ] && [ "$PROMOTED" = "true" ]; then
             STATUS="promoted"
-          elif [ "$GATE" = "pass-preexisting" ] && [ "$PROMOTED" = "true" ]; then
-            STATUS="promoted-preexisting-ci-fail"
           elif [ "$CI_RES" = "success" ]; then
             STATUS="ci-passed"
           elif [ "$PRE_EXISTING" = "true" ]; then
