@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 573,
+  "branch": "codex/persist-source-ci-release-protocol",
+  "timestamp": "2026-04-22T21:22:54Z",
+  "runId": "24803368567",
+  "healthStatus": "degraded"
+}
