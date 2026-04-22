@@ -4,6 +4,10 @@
 > to deploy code changes to corporate repos through the autopilot control plane.
 > Corporate repos are never edited directly from the session. Follow this flow step by step.
 
+Exception:
+- If the user explicitly authorizes direct corporate operation in the current session, use the isolated bundle at `/Users/lucasfreire/Documents/ISOLADO-AUTOPILOT-CORPORATIVO-GITHUB-DESKTOP-NUNCA-MISTURAR`.
+- In that mode, use runtime credentials only, publish the source fix directly, monitor the exact source SHA, and backfill the result into autopilot memory/docs when done.
+
 ## Prerequisites
 
 Before deploying, you need:
@@ -238,6 +242,46 @@ If `workflow_runs` do not show the configured workflow name, do not assume nothi
 Only after all of the following are true is the deploy valid:
 
 1. The correct corporate source SHA finished green.
+
+---
+
+## Direct Corporate Override (explicit user authorization only)
+
+Use this path only if the user explicitly says to operate directly in the corporate repo.
+
+```text
+1. Enter the isolated corporate directory only
+2. Validate the fix locally in that clone
+3. Commit with a neutral technical message
+4. Publish using the active corporate session or a runtime token from the isolated bundle
+5. Monitor the pushed SHA and the Esteira de Build NPM run until completion
+6. Only after source green and image publication may deploy/CAP promotion proceed
+7. Write the final outcome back into autopilot memory/docs
+```
+
+### Direct-mode credential rule
+
+- Read credentials only from the isolated bundle or active corporate login session
+- Never commit, print, or copy the token into autopilot files
+- Prefer `GIT_ASKPASS` or another runtime-only mechanism when publishing from shell
+
+### Direct-mode example
+
+```bash
+MANIFEST="/Users/lucasfreire/Documents/ISOLADO-AUTOPILOT-CORPORATIVO-GITHUB-DESKTOP-NUNCA-MISTURAR/ATENCAO-MANIFESTO-REPOS-AUTOPILOT-CORPORATIVO-ISOLADO.txt"
+TOKEN=$(awk -F'BBVINET_TOKEN: ' '/BBVINET_TOKEN: /{print $2; exit}' "$MANIFEST")
+ASKPASS=$(mktemp)
+cat > "$ASKPASS" <<'EOF'
+#!/bin/sh
+case "$1" in
+  *Username*) printf '%s\n' 'x-access-token' ;;
+  *Password*) printf '%s\n' "$GIT_TOKEN" ;;
+esac
+EOF
+chmod 700 "$ASKPASS"
+GIT_TERMINAL_PROMPT=0 GIT_ASKPASS="$ASKPASS" GIT_TOKEN="$TOKEN" git push origin main
+rm -f "$ASKPASS"
+```
 2. The expected corporate workload/check-runs finished green.
 3. The target image version was published.
 4. The CAP/deploy repo tag matches that published version.

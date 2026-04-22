@@ -37,6 +37,18 @@ This includes: commit messages, PR titles/descriptions, issue titles, branch nam
 All work pushed to corporate repos (bbvinet/*, CIT repos) must appear as regular developer work.
 Internal autopilot references (CLAUDE.md, session memory, contracts) are OK — they stay in the autopilot repo.
 
+### Explicit Direct-Corporate Override (Only with explicit user authorization)
+Default mode remains: use autopilot as the control plane for corporate source and deploy repos.
+Exception: if the user explicitly authorizes direct operation in the current session, agents may work directly in the corporate clone.
+
+Direct-mode rules:
+- Use ONLY the isolated corporate workspace at `/Users/lucasfreire/Documents/ISOLADO-AUTOPILOT-CORPORATIVO-GITHUB-DESKTOP-NUNCA-MISTURAR`
+- Never mix this workspace with unrelated local repos, sessions, or products
+- Use credentials/tokens only from the isolated bundle or the active corporate login session
+- Never persist secrets in tracked files, prompts, memory snapshots, or autopilot state
+- After the direct corporate cycle ends, write the operational outcome back into autopilot memory/docs
+- Deploy/CAP changes remain blocked until the source repo is green and the image publication is confirmed
+
 ### Cross-Contamination Prevention
 - NEVER reference BB data/repos in CIT context or vice-versa
 - NEVER use BBVINET_TOKEN for CIT or CIT_TOKEN for Getronics
@@ -75,6 +87,15 @@ Internal autopilot references (CLAUDE.md, session memory, contracts) are OK — 
 7. Workflow auto-triggers on merge (path: trigger/source-change.json)
 8. Monitor the exact pushed corporate source SHA plus check-runs/workloads until Docker image is published
 9. Only then is CAP/deploy tag promotion valid
+
+### Direct-Mode Deploy Flow (explicit override only)
+1. Work only inside the isolated corporate directory
+2. Validate changes locally in the corporate clone before publishing
+3. Commit with a neutral technical message and no AI/autopilot references
+4. Publish using the active corporate credential or isolated token bundle at runtime only
+5. Monitor the exact source SHA and the `Esteira de Build NPM` run plus commit check-runs
+6. Only after source green and image publication may deploy/CAP promotion proceed
+7. Backfill the result into autopilot memory/docs for continuity across sessions
 
 ## Versioning Rules
 - Current controller target: 3.9.3. Next: 3.9.4 (or 3.10.0 if after 3.9.9)
@@ -119,6 +140,9 @@ Codex can commit via `codex-apply.yml` workflow:
 | JWT scope claim wrong | Agent reads `payload.scope` (singular), NEVER `scopes` | `Insufficient scope` |
 | validateTrustedUrl in fetch | NEVER - breaks mock tests. Use parseSafeIdentifier on input | Test failures with mock URLs |
 | CI Gate / workflow name mismatch | Workflow runs may be absent or renamed. Check the pushed corporate SHA, commit check-runs, workloads, and image evidence for the REAL status | ci-failed-preexisting |
+| Browser access works but git push fails | Use the isolated credential bundle/token at runtime or the active corporate login session; do not persist secrets | `Device not configured`\|`Authentication failed`\|`Permission denied (publickey)` |
+| Validation details lose quotes in response | `details` can be sanitized again at the response boundary. Assert the outward payload, not the pre-sanitized internal string | Tests fail even though endpoint behavior is correct |
+| npm install fails in isolated clone with intranet host | The local `.npmrc` may resolve tarballs through `binarios.intranet.bb.com.br`; outside corporate DNS this is an environment issue, not necessarily a source bug | `ENOTFOUND` in npm debug log, partial `node_modules`, `Exit handler never called!` |
 | Swagger garbled chars | ASCII only, NEVER accents | UTF-8 encoding errors |
 | Push to main 403 | Always use branch + PR + squash merge | HTTP 403 |
 

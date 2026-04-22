@@ -251,6 +251,87 @@ gh api "repos/bbvinet/psc_releases_cap_sre-aut-controller/contents/releases/open
 
 ---
 
+### Problema #12A: Browser autenticado, mas shell e GitHub Desktop nao conseguem publicar
+
+**Sintomas**:
+- `git push` falha com `could not read Username ... Device not configured`
+- GitHub Desktop falha com `Authentication failed`
+- SSH falha com `Permission denied (publickey)` ou `Host key verification failed`
+- O navegador acessa o repo corporativo normalmente
+
+**Causa**:
+- A sessao web corporativa nao esta integrada ao helper de credencial usado pelo shell ou pelo GitHub Desktop
+- O repo local pode estar fora do helper correto de `https://github.com`
+
+**Solucao preferencial**:
+1. Usar o token disponivel no bundle isolado corporativo em runtime apenas
+2. Publicar com `GIT_ASKPASS`
+3. Monitorar imediatamente o SHA publicado e o run da `Esteira de Build NPM`
+
+**Exemplo seguro**:
+```bash
+MANIFEST="/Users/lucasfreire/Documents/ISOLADO-AUTOPILOT-CORPORATIVO-GITHUB-DESKTOP-NUNCA-MISTURAR/ATENCAO-MANIFESTO-REPOS-AUTOPILOT-CORPORATIVO-ISOLADO.txt"
+TOKEN=$(awk -F'BBVINET_TOKEN: ' '/BBVINET_TOKEN: /{print $2; exit}' "$MANIFEST")
+ASKPASS=$(mktemp)
+cat > "$ASKPASS" <<'EOF'
+#!/bin/sh
+case "$1" in
+  *Username*) printf '%s\n' 'x-access-token' ;;
+  *Password*) printf '%s\n' "$GIT_TOKEN" ;;
+esac
+EOF
+chmod 700 "$ASKPASS"
+GIT_TERMINAL_PROMPT=0 GIT_ASKPASS="$ASKPASS" GIT_TOKEN="$TOKEN" git push origin main
+rm -f "$ASKPASS"
+```
+
+**Regra de seguranca**:
+- NUNCA copiar o token para arquivo rastreado, patch, trigger ou memoria persistente
+- Se o token vier de manifesto/bundle isolado, usar apenas em memoria e descartar no fim do comando
+
+---
+
+### Problema #12B: `npm ci` falha no clone corporativo isolado com `ENOTFOUND` para Artifactory
+
+**Sintomas**:
+- `npm ci` termina com `Exit handler never called!`
+- o log em `~/.npm/_logs/...-debug-0.log` mostra repetidos `ENOTFOUND`
+- as URLs que falham apontam para `https://binarios.intranet.bb.com.br/artifactory/...`
+- `node_modules` pode ficar parcialmente criado, mas sem confiabilidade para validacao local
+
+**Causa**:
+- o `.npmrc` corporativo resolve downloads de tarballs via Artifactory intranet
+- fora do contexto de rede/DNS corporativo, esse host nao resolve
+
+**Leitura correta**:
+- isso nao prova bug de source code
+- e um bloqueio de ambiente para validacao local completa
+
+**Acao recomendada**:
+1. Registrar o bloqueio no mapeamento de diagnostico
+2. Fazer verificacoes locais que nao dependam do registry quando possivel
+3. Usar a esteira do source repo como validacao autoritativa para instalacao/testes
+
+---
+
+### Problema #12C: testes falham porque a resposta sanitiza os `details`
+
+**Sintomas**:
+- o teste espera `Field 'envs.ACTION' ...`
+- a resposta real volta `Field envs.ACTION ...`
+- a funcionalidade esta correta, mas o assert textual quebra
+
+**Causa**:
+- o controller monta a mensagem com aspas, mas faz `details: validation.errors.map(sanitizeForOutput)` antes do `res.json`
+- `sanitizeForOutput` remove aspas do payload final
+
+**Acao recomendada**:
+1. Verificar o payload real da resposta e o log da esteira
+2. Alinhar o teste ao texto final observado
+3. So alterar o sanitizador se houver decisao deliberada de formato e revisao de seguranca
+
+---
+
 ### Problema #13: TypeScript Error na Esteira
 
 **Sintoma no log**: `error TS2769`, `error TS2304`, `error TS2688`

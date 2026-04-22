@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-22T21:07:44Z",
-  "sessionCount": 9,
+  "lastUpdated": "2026-04-22T22:13:56Z",
+  "sessionCount": 10,
   "currentState": {
     "controllerVersion": "3.9.3",
     "agentVersion": "2.2.9",
     "lastTriggerRun": 111,
     "lastSuccessfulRun": 66,
     "workspace": "ws-default",
-    "pipelineStatus": "controller-source-ci-must-pass-before-cap-promotion"
+    "pipelineStatus": "direct-corporate-controller-source-run-24804944785-success"
   },
   "sessionsLog": [
     {
@@ -35,6 +35,16 @@
       "timestamp": "2026-04-22T21:07:44Z",
       "topic": "controller-source-ci-promotion-protocol",
       "action": "Registered the permanent rule that corporate source and deploy repos must be operated only through autopilot: fetch the live corporate base first, implement patches and validations in autopilot, trigger the corporate source pipeline through BBVINET_TOKEN, monitor the exact source commit SHA plus corporate workloads/check-runs, confirm image publication for the target version, and only then treat CAP/deploy tag promotion as valid."
+    },
+    {
+      "timestamp": "2026-04-22T22:01:27Z",
+      "topic": "direct-corporate-controller-hotfix",
+      "action": "Under explicit user authorization, operated directly in the isolated corporate clone, published source commits ff3dbb9 and 2034a5e to bbvinet/psc-sre-automacao-controller, and mapped the new source run 24804944785 to SHA 2034a5e88bd56b0feb6772519fcdb9155b4906f3 while keeping deploy promotion blocked until source CI and image publication succeed."
+    },
+    {
+      "timestamp": "2026-04-22T22:13:56Z",
+      "topic": "direct-corporate-controller-run-24804944785-success",
+      "action": "Recorded that corporate source run 24804944785 finished success end-to-end for controller commit 2034a5e88bd56b0feb6772519fcdb9155b4906f3, including workflow-npm, image publication, release analysis, and CD desenvolvimento autoDeploy."
     }
   ],
   "decisions": [
@@ -62,6 +72,16 @@
       "timestamp": "2026-04-22T21:07:44Z",
       "decision": "Corporate repos must always be changed through autopilot fetch/patch/test/trigger flow, and CAP release tag changes are blocked until the source repo is green with image publication confirmed.",
       "reason": "Direct assumptions or premature promotion can desynchronize source and deploy state. The source repo commit, workloads/check-runs, and image publication are the required release gate."
+    },
+    {
+      "timestamp": "2026-04-22T22:01:27Z",
+      "decision": "When validation errors are sanitized at the response boundary, keep implementation unchanged and align failing tests to the externally observed payload unless there is a security-approved reason to change the serializer.",
+      "reason": "The failing controller source run proved the functional path was correct and only three route-test assertions were mismatched against the sanitized response body."
+    },
+    {
+      "timestamp": "2026-04-22T22:13:56Z",
+      "decision": "Treat source completion as the full corporate run, not just workflow-npm success.",
+      "reason": "After workflow-npm and image publication succeed, the run may still require Análise Motor Liberação and CD desenvolvimento autoDeploy before the source pipeline is truly complete."
     }
   ],
   "lessonsLearned": [
@@ -96,6 +116,18 @@
     {
       "timestamp": "2026-04-22T21:07:44Z",
       "lesson": "If workflow_runs are missing or differently named, that does not mean the corporate CI did not start. The source-of-truth monitor is the pushed corporate commit SHA plus its check-runs/workloads and image publication evidence."
+    },
+    {
+      "timestamp": "2026-04-22T22:01:27Z",
+      "lesson": "In oas-sre-controller, validation.errors are sanitized again before res.json via details: validation.errors.map(sanitizeForOutput). Tests must assert the sanitized outward message, not the pre-sanitized internal string with quotes."
+    },
+    {
+      "timestamp": "2026-04-22T22:01:27Z",
+      "lesson": "Local npm install in the isolated corporate clone can fail outside corporate DNS because .npmrc resolves tarballs through binarios.intranet.bb.com.br. Treat local npm ci as best-effort in this environment and use the corporate source pipeline as the final validator when intranet registry resolution is unavailable."
+    },
+    {
+      "timestamp": "2026-04-22T22:13:56Z",
+      "lesson": "A green workflow-npm is necessary but not sufficient. Keep monitoring until Análise Motor Liberação and any triggered CD desenvolvimento autoDeploy also conclude, then mark the source line as fully healthy."
     }
   ],
   "errorPatterns": {
@@ -139,6 +171,26 @@
       ],
       "rootCause": "Monitoring relied too heavily on exact workflow_run name matching. Some corporate repos expose the source pipeline primarily through commit check-runs or differently named workloads.",
       "fix": "Track the exact corporate commit SHA, use check-runs/workloads as the primary signal, confirm image publication for the expected version, and keep CAP promotion blocked until those signals are green."
+    },
+    "controller_validation_details_sanitized": {
+      "observedAt": "2026-04-22T22:01:27Z",
+      "symptoms": [
+        "route test expects quoted field names in res.body.details",
+        "corporate CI returns the same message without quotes",
+        "implementation builds the quoted string but response payload removes quotes"
+      ],
+      "rootCause": "The controller sanitizes validation details at the final response boundary with sanitizeForOutput, which strips quote characters from the outward JSON payload.",
+      "fix": "Assert the sanitized response text in tests or, if message format must change, update the sanitizer path deliberately and re-review the reflected-output security posture."
+    },
+    "corporate_npmrc_intranet_unreachable": {
+      "observedAt": "2026-04-22T22:01:27Z",
+      "symptoms": [
+        "npm ci ends with Exit handler never called",
+        "npm debug log shows repeated ENOTFOUND for binarios.intranet.bb.com.br tarball URLs",
+        "node_modules may be partially materialized but the install is not trustworthy"
+      ],
+      "rootCause": "The corporate .npmrc points package tarball downloads to the intranet Artifactory host, which is unreachable from the current network context.",
+      "fix": "Do not treat this as a source-code failure by default. Record the network dependency, use local validation only when registry resolution is available, and rely on the corporate source pipeline as the authoritative package-install and test executor."
     }
   }
 }

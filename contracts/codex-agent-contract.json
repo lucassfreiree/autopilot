@@ -101,8 +101,8 @@
       "note": "Preferir trigger files (editar + bump run + merge) em vez de dispatch direto"
     }
   },
-  "deployFlow": {
-    "description": "FLUXO COMPLETO de deploy — o autopilot e a unica porta para repos corporativos e Codex DEVE seguir estes passos na ordem",
+    "deployFlow": {
+    "description": "FLUXO COMPLETO de deploy — o autopilot e a porta padrao para repos corporativos. Excecao: operacao direta so existe quando o usuario autoriza explicitamente na sessao atual.",
     "steps": [
       "0. OBRIGATORIO: Usar o autopilot como unica porta para repos corporativos; nunca editar ou commitar diretamente neles",
       "1. OBRIGATORIO: Buscar arquivos corporativos ATUAIS via fetch-files (base correta)",
@@ -118,6 +118,17 @@
       "11. So entao considerar valida a promocao da tag no CAP/deploy repo",
       "12. Se falhar: ler logs, diagnosticar, corrigir, re-deploy AUTOMATICAMENTE sem promover o CAP antes do source repo ficar verde"
     ],
+    "directCorporateOverride": {
+      "enabledOnlyWhen": "O usuario autoriza explicitamente operacao direta no repo corporativo na sessao atual",
+      "requiredIsolation": "/Users/lucasfreire/Documents/ISOLADO-AUTOPILOT-CORPORATIVO-GITHUB-DESKTOP-NUNCA-MISTURAR",
+      "rules": [
+        "Usar somente o clone corporativo isolado",
+        "Validar localmente antes de publicar",
+        "Usar token/credencial apenas em runtime, nunca persistir em arquivos rastreados",
+        "Nao mencionar autopilot nem IA em commits, PRs ou comentarios corporativos",
+        "Depois da execucao, registrar o resultado no autopilot memory/docs"
+      ]
+    },
     "preDeployValidation": {
       "workflow": "validate-patches.yml",
       "triggeredBy": "PR com changes em patches/ ou trigger/source-change.json",
@@ -159,8 +170,8 @@
     "releaseProtocol": "Follow workspace.json config, use gh CLI for API operations, and operate corporate repos only through autopilot workflows. Follow deployFlow steps exactly.",
     "handoffProtocol": "Read pending handoffs via gh api, update status on completion",
     "auditProtocol": "Record actions via gh api to audit directory after every state mutation",
-    "sourceCodeChanges": "Corporate source changes live in autopilot. Always fetch the current corporate files first, implement patches only in autopilot, validate locally, then use apply-source-change.yml or trigger/source-change.json. Never push directly to corporate repos.",
-    "monitoringProtocol": "ALWAYS monitor the autopilot workflow plus the exact corporate source commit SHA. Use commit check-runs/workloads as the primary signal when workflow_runs are absent or renamed. Deploy is NOT complete until the expected Docker image is published, and CAP promotion is NOT valid before that. Poll every 30-60s.",
+    "sourceCodeChanges": "Padrao: corporate source changes vivem no autopilot. Sempre buscar a base corporativa atual, implementar patches no autopilot, validar localmente e usar apply-source-change.yml ou trigger/source-change.json. Excecao: se o usuario autorizar explicitamente operacao direta, usar somente o clone corporativo isolado, publicar com credencial runtime e documentar o resultado no autopilot ao final.",
+    "monitoringProtocol": "ALWAYS monitor o workflow do autopilot quando estiver no fluxo padrao ou, no modo direto, o run da esteira do repo corporativo e o SHA exato publicado. Use commit check-runs/workloads como sinal primario quando workflow_runs estiverem ausentes ou renomeados. Deploy nao termina sem imagem publicada e promocao CAP nao e valida antes disso. Poll every 30-60s.",
     "errorRecovery": "If deploy fails: read ci-logs-controller-*.txt from autopilot-state, diagnose, fix, re-deploy AUTOMATICALLY without asking user."
   },
   "memoryProtocol": {
@@ -197,6 +208,7 @@
       "Nunca misturar contextos entre workspaces",
       "Nunca mergear PR de deploy se validate-patches falhar",
       "Nunca promover tag CAP/deploy se o source repo nao estiver verde com a imagem publicada",
+      "Em modo direto, nunca sair do diretorio isolado corporativo e nunca persistir token em arquivo rastreado",
       "Sempre monitorar workflows e esteira corporativa apos merge"
     ],
     "sourceOfTruth": [
