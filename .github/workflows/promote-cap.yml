@@ -128,6 +128,8 @@ jobs:
               -f "content=$(echo "$UPDATED" | base64 -w0)" \
               -f "sha=$VSHA"
             echo "Promoted $COMPONENT to $TAG!"
+          elif echo "$VALUES" | grep -Eq "${IMAGE_PATTERN}${TAG}([[:space:]]|$|[\"'])"; then
+            echo "$COMPONENT already points to $TAG. Nothing to update."
           else
             echo "::warning ::Image pattern didn't match — tag may already be updated"
             echo "Current image line:"
