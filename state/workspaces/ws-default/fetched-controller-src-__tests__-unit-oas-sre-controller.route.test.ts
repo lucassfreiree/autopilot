@@ -50,6 +50,24 @@ describe("POST /oas/sre-controller", () => {
     } as unknown as Response;
   }
 
+  function buildFunctionPayload(
+    overrides: Partial<{
+      execId: string;
+      cluster: string;
+      namespace: string;
+      function: string;
+      envs: Record<string, unknown>;
+    }> = {},
+  ) {
+    return {
+      execId: "550e8400-e29b-41d4-a716-446655440000",
+      cluster: "k8shmlbb111b",
+      namespace: "meu-namespace",
+      function: "get_pods",
+      ...overrides,
+    };
+  }
+
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "oas-sre-route-"));
     dbPath = path.join(tmpDir, "test.db");
@@ -82,17 +100,28 @@ describe("POST /oas/sre-controller", () => {
 
     const { AgentsRepo } = await import("../../repository/agentsRepo");
     [
-      "k8scluster01",
-      "cluster-a",
-      "cluster-b",
-      "cluster-origem",
-      "cluster-destino",
-    ].forEach((cluster) => {
-      AgentsRepo.upsertAgent({
-        Namespace: "teste",
-        Cluster: cluster,
+      { Namespace: "teste", Cluster: "k8scluster01", environment: "hml" },
+      { Namespace: "teste", Cluster: "cluster-a", environment: "hml" },
+      { Namespace: "teste", Cluster: "cluster-b", environment: "hml" },
+      { Namespace: "teste", Cluster: "cluster-origem", environment: "hml" },
+      { Namespace: "teste", Cluster: "cluster-destino", environment: "hml" },
+      {
+        Namespace: "meu-namespace",
+        Cluster: "k8shmlbb111b",
         environment: "hml",
-      });
+      },
+      {
+        Namespace: "psc-sre-dummy-migration",
+        Cluster: "k8shmlbb111",
+        environment: "hml",
+      },
+      {
+        Namespace: "psc-sre-dummy-migration",
+        Cluster: "k8shmlbb111b",
+        environment: "hml",
+      },
+    ].forEach((agent) => {
+      AgentsRepo.upsertAgent(agent);
     });
   });
 
@@ -109,7 +138,6 @@ describe("POST /oas/sre-controller", () => {
     const app = await makeApp();
     const res = await request(app).post("/oas/sre-controller").send({
       image: "psc-sre-ns-migration-preflight",
-      namespace: "teste",
       envs: { NAMESPACE: "teste" },
       CLUSTERS_NAMES: ["k8scluster01"],
     });
@@ -132,7 +160,6 @@ describe("POST /oas/sre-controller", () => {
       .set("x-service-account", "default")
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -150,7 +177,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([READ_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -172,7 +198,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: {
           CLUSTER_DE_ORIGEM: true,
           CLUSTER_DE_DESTINO: false,
@@ -211,7 +236,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "vip-autorizador-auditoria-transacoes",
         envs: {
           NAMESPACE: ["vip-autorizador-auditoria-transacoes"],
           CLUSTER_DE_ORIGEM: true,
@@ -239,6 +263,255 @@ describe("POST /oas/sre-controller", () => {
     expect(callBody.image).toBe("psc-sre-ns-migration-preflight");
   });
 
+  test("accepts function=get_pods", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const payload = buildFunctionPayload();
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(payload);
+
+    expect(res.status).toBe(202);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.execId).toBe(payload.execId);
+    expect(res.body.function).toBe("get_pods");
+    expect(res.body.cluster).toBe("k8shmlbb111b");
+    expect(res.body.namespace).toBe("meu-namespace");
+    expect(res.body.clustersNames).toEqual(["k8shmlbb111b"]);
+
+    const callBody = JSON.parse(
+      String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+    ) as Record<string, unknown>;
+    expect(callBody.execId).toBe(payload.execId);
+    expect(callBody.cluster).toBe("k8shmlbb111b");
+    expect(callBody.namespace).toBe("meu-namespace");
+    expect(callBody.function).toBe("get_pods");
+  });
+
+  test("accepts function=get_all_resources", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(buildFunctionPayload({ function: "get_all_resources" }));
+
+    expect(res.status).toBe(202);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.function).toBe("get_all_resources");
+
+    const callBody = JSON.parse(
+      String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+    ) as Record<string, unknown>;
+    expect(callBody.function).toBe("get_all_resources");
+  });
+
+  test.each([
+    "migration_origem",
+    "migration_destino",
+    "migration",
+    "manage_namespace_origem",
+    "manage_namespace_destino",
+  ])("keeps existing function %s valid", async (functionName) => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(buildFunctionPayload({ function: functionName }));
+
+    expect(res.status).toBe(202);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.function).toBe(functionName);
+
+    const callBody = JSON.parse(
+      String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+    ) as Record<string, unknown>;
+    expect(callBody.function).toBe(functionName);
+  });
+
+  test("accepts copy_resources_origem with ACTION=copy", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(
+        buildFunctionPayload({
+          cluster: "k8shmlbb111",
+          namespace: "psc-sre-dummy-migration",
+          function: "copy_resources_origem",
+          envs: {
+            ACTION: "copy",
+            NAMESPACE_ENVIRONMENT: "hml",
+            RESOURCE_TYPES: "secrets,configmaps",
+          },
+        }),
+      );
+
+    expect(res.status).toBe(202);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.function).toBe("copy_resources_origem");
+
+    const callBody = JSON.parse(
+      String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+    ) as Record<string, unknown>;
+    const envs = callBody.envs as Record<string, unknown>;
+    expect(callBody.function).toBe("copy_resources_origem");
+    expect(envs.ACTION).toBe("copy");
+    expect(envs.NAMESPACE_ENVIRONMENT).toBe("hml");
+    expect(envs.RESOURCE_TYPES).toBe("secrets,configmaps");
+  });
+
+  test("accepts copy_resources_destino with ACTION=apply and defaults RESOURCE_TYPES", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(
+        buildFunctionPayload({
+          cluster: "k8shmlbb111b",
+          namespace: "psc-sre-dummy-migration",
+          function: "copy_resources_destino",
+          envs: {
+            ACTION: "apply",
+            NAMESPACE_ENVIRONMENT: "hml",
+          },
+        }),
+      );
+
+    expect(res.status).toBe(202);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.function).toBe("copy_resources_destino");
+
+    const callBody = JSON.parse(
+      String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+    ) as Record<string, unknown>;
+    const envs = callBody.envs as Record<string, unknown>;
+    expect(envs.ACTION).toBe("apply");
+    expect(envs.NAMESPACE_ENVIRONMENT).toBe("hml");
+    expect(envs.RESOURCE_TYPES).toBe("secrets,configmaps");
+  });
+
+  test("accepts copy_resources_origem with ACTION=remove", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(
+        buildFunctionPayload({
+          cluster: "k8shmlbb111",
+          namespace: "psc-sre-dummy-migration",
+          function: "copy_resources_origem",
+          envs: {
+            ACTION: "remove",
+            NAMESPACE_ENVIRONMENT: "hml",
+            RESOURCE_TYPES: "secrets",
+          },
+        }),
+      );
+
+    expect(res.status).toBe(202);
+    expect(res.body.ok).toBe(true);
+
+    const callBody = JSON.parse(
+      String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+    ) as Record<string, unknown>;
+    const envs = callBody.envs as Record<string, unknown>;
+    expect(envs.ACTION).toBe("remove");
+    expect(envs.RESOURCE_TYPES).toBe("secrets");
+  });
+
+  test("rejects copy_resources payload when envs is missing", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(
+        buildFunctionPayload({
+          cluster: "k8shmlbb111",
+          namespace: "psc-sre-dummy-migration",
+          function: "copy_resources_origem",
+        }),
+      );
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toContain(
+      "Field 'envs' is required for function 'copy_resources_origem'.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects copy_resources payload without NAMESPACE_ENVIRONMENT", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(
+        buildFunctionPayload({
+          cluster: "k8shmlbb111",
+          namespace: "psc-sre-dummy-migration",
+          function: "copy_resources_origem",
+          envs: {
+            ACTION: "copy",
+          },
+        }),
+      );
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toContain(
+      "Field 'envs.NAMESPACE_ENVIRONMENT' is required for function 'copy_resources_origem'.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects copy_resources payload with invalid ACTION", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(
+        buildFunctionPayload({
+          cluster: "k8shmlbb111b",
+          namespace: "psc-sre-dummy-migration",
+          function: "copy_resources_destino",
+          envs: {
+            ACTION: "rename",
+            NAMESPACE_ENVIRONMENT: "hml",
+          },
+        }),
+      );
+
+    expect(res.status).toBe(400);
+    expect(res.body.details).toContain(
+      "Field 'envs.ACTION' has invalid value 'rename'. Allowed values: copy, apply, remove.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects unknown function names", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .send(buildFunctionPayload({ function: "funcao_inexistente" }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.details[0]).toContain(
+      "Function funcao_inexistente is not recognized.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test("rejects payload when image is not in allowlist", async () => {
     const app = await makeApp();
     const res = await request(app)
@@ -255,14 +528,13 @@ describe("POST /oas/sre-controller", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("rejects payload when namespace field is missing", async () => {
+  test("rejects payload when envs field is missing", async () => {
     const app = await makeApp();
     const res = await request(app)
       .post("/oas/sre-controller")
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
 
@@ -278,7 +550,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
       });
 
@@ -300,7 +571,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -326,7 +596,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -349,7 +618,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         variables: { NAMESPACE: "teste", SOME_FLAG: true },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -421,7 +689,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -491,7 +758,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -518,7 +784,6 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
-        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
