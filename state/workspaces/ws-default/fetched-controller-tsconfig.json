@@ -10,8 +10,8 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "typeRoots": ["./src/types", "./node_modules/@types"],
-    // Necessário para o tsoa
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
