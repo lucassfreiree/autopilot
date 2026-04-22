@@ -98,6 +98,7 @@ jobs:
             --jq '.content' | base64 -d)
           echo "deploy_repo=$(echo "$WS_JSON" | jq -r '.agent.deployRepo')" >> "$GITHUB_OUTPUT"
           echo "deploy_branch=$(echo "$WS_JSON" | jq -r '.agent.deployBranch // "main"')" >> "$GITHUB_OUTPUT"
+          echo "source_repo=$(echo "$WS_JSON" | jq -r '.agent.sourceRepo // ""')" >> "$GITHUB_OUTPUT"
           echo "deploy_values_path=$(echo "$WS_JSON" | jq -r '.agent.deployValuesPath')" >> "$GITHUB_OUTPUT"
           echo "cap_repo=$(echo "$WS_JSON" | jq -r '.agent.capRepo')" >> "$GITHUB_OUTPUT"
           echo "cap_branch=$(echo "$WS_JSON" | jq -r '.agent.capBranch // "main"')" >> "$GITHUB_OUTPUT"
@@ -255,10 +256,12 @@ jobs:
             --arg sha "${{ steps.state.outputs.current_sha }}" \
             --arg tag "${{ steps.ver.outputs.tag }}" \
             --arg ver "${{ steps.ver.outputs.version }}" \
+            --arg source_repo "${{ steps.ws.outputs.source_repo }}" \
+            --arg source_branch "${{ steps.ws.outputs.deploy_branch }}" \
             --arg ts "$NOW" --arg run "${{ github.run_id }}" \
             --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --argjson promo "$PROMOTIONS" \
-            '{schemaVersion:2, workspaceId:$ws, component:"agent", lastReleasedSha:$sha, lastTag:$tag, lastVersion:$ver, updatedAt:$ts, runId:$run, runUrl:$url, promotions:$promo, status:"promoted"}')
+            '{schemaVersion:2, workspaceId:$ws, component:"agent", lastReleasedSha:$sha, lastTag:$tag, lastVersion:$ver, sourceRepo:$source_repo, sourceBranch:$source_branch, sourceHeadSha:$sha, sourceHeadCheckedAt:$ts, sourceHeadMatchesReleased:true, updatedAt:$ts, runId:$run, runUrl:$url, promotions:$promo, status:"promoted"}')
           ENCODED=$(echo "$NEW_STATE" | base64 -w0)
           ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: agent -> ${{ steps.ver.outputs.tag }} [skip ci]" -f "content=$ENCODED")
           [ -n "$FILE_SHA" ] && [ "$FILE_SHA" != "null" ] && ARGS+=(-f "sha=$FILE_SHA")

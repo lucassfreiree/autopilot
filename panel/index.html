@@ -618,6 +618,26 @@
       return 'dot-gray';
     }
 
+    function releaseRows(release) {
+      const headMatch = release.sourceHeadMatchesReleased === true
+        ? badge('pass')
+        : release.sourceHeadMatchesReleased === false
+          ? badge('warn')
+          : '-';
+      const headSha = release.sourceHeadSha ? release.sourceHeadSha.substring(0, 7) : '-';
+      return `<table>
+        <tr><th>Tag</th><td>${release.lastTag}</td></tr>
+        <tr><th>SHA</th><td>${(release.lastReleasedSha || '').substring(0, 7)}</td></tr>
+        <tr><th>Source Repo</th><td>${release.sourceRepo || '-'}</td></tr>
+        <tr><th>Source Branch</th><td>${release.sourceBranch || '-'}</td></tr>
+        <tr><th>Source HEAD</th><td>${headSha}</td></tr>
+        <tr><th>HEAD Match</th><td>${headMatch}</td></tr>
+        <tr><th>HEAD Checked</th><td>${release.sourceHeadCheckedAt || '-'}</td></tr>
+        <tr><th>Updated</th><td>${release.updatedAt}</td></tr>
+        <tr><th>Status</th><td>${badge(release.status)}</td></tr>
+      </table>`;
+    }
+
     async function loadWorkspace() {
       const wsId = document.getElementById('wsSelect').value;
       if (!wsId) return;
@@ -646,24 +666,14 @@
       const ctrl = await ghContent(`${wsPath}/controller-release-state.json`);
       const ctrlEl = document.getElementById('controllerContent');
       if (ctrl && ctrl.lastTag) {
-        ctrlEl.innerHTML = `<table>
-          <tr><th>Tag</th><td>${ctrl.lastTag}</td></tr>
-          <tr><th>SHA</th><td>${(ctrl.lastReleasedSha||'').substring(0,7)}</td></tr>
-          <tr><th>Updated</th><td>${ctrl.updatedAt}</td></tr>
-          <tr><th>Status</th><td>${badge(ctrl.status)}</td></tr>
-        </table>`;
+        ctrlEl.innerHTML = releaseRows(ctrl);
       } else { ctrlEl.innerHTML = '<div class="empty">Never released</div>'; }
 
       // Agent
       const agent = await ghContent(`${wsPath}/agent-release-state.json`);
       const agentEl = document.getElementById('agentContent');
       if (agent && agent.lastTag) {
-        agentEl.innerHTML = `<table>
-          <tr><th>Tag</th><td>${agent.lastTag}</td></tr>
-          <tr><th>SHA</th><td>${(agent.lastReleasedSha||'').substring(0,7)}</td></tr>
-          <tr><th>Updated</th><td>${agent.updatedAt}</td></tr>
-          <tr><th>Status</th><td>${badge(agent.status)}</td></tr>
-        </table>`;
+        agentEl.innerHTML = releaseRows(agent);
       } else { agentEl.innerHTML = '<div class="empty">Never released</div>'; }
 
       // Deploy Pipeline Monitor
