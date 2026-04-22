@@ -5,7 +5,7 @@
   "description": "psc-sre-automacao-controller in node with expressjs",
   "repository": {
     "type": "git",
-    "url": "https://fontes.intranet.bb.com.br/psc/psc-sre-automacao-controller/psc-sre-automacao-controller.git"
+    "url": "https://***REDACTED***/psc/psc-sre-automacao-controller/psc-sre-automacao-controller.git"
   },
   "license": "ISC",
   "author": "Equipe DS",
@@ -62,7 +62,7 @@
     "@smithy/node-http-handler": "^3.0.0",
     "@types/aws-sdk": "^0.0.42",
     "aws-sdk": "^2.1693.0",
-    "better-sqlite3": "^12.9.0",
+    "better-sqlite3": "^9.4.0",
     "body-parser": "1.20.3",
     "cors": "2.8.5",
     "date-fns": "^3.6.0",
