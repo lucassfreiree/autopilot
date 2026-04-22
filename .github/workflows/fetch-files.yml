@@ -49,8 +49,9 @@ jobs:
           WS_PATH="state/workspaces/${WS_ID}"
           WS_JSON=$(GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/contents/${WS_PATH}/workspace.json?ref=$STATE_BRANCH" --jq '.content' | base64 -d)
           SOURCE_REPO=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.sourceRepo")
-          echo "Fetching from $SOURCE_REPO: $FILES"
-          git clone "https://x-access-token:${BBVINET_TOKEN}@github.com/${SOURCE_REPO}.git" /tmp/source 2>/dev/null
+          SOURCE_BRANCH=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.deployBranch // \"main\"")
+          echo "Fetching from $SOURCE_REPO@$SOURCE_BRANCH: $FILES"
+          git clone --branch "$SOURCE_BRANCH" --single-branch "https://x-access-token:${BBVINET_TOKEN}@github.com/${SOURCE_REPO}.git" /tmp/source 2>/dev/null
           cd /tmp/source
           IFS=',' read -ra FILE_LIST <<< "$FILES"
           for FILE in "${FILE_LIST[@]}"; do
