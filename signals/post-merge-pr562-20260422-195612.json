@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 562,
+  "branch": "codex/fix-source-branch",
+  "timestamp": "2026-04-22T19:56:12Z",
+  "runId": "24799519259",
+  "healthStatus": "degraded"
+}
