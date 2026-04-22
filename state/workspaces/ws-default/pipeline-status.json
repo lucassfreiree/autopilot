@@ -1,9 +1,9 @@
 {
-  "updatedAt": "2026-04-22T20:56:33Z",
+  "updatedAt": "2026-04-22T21:02:02Z",
   "workspaceId": "ws-default",
   "overallHealth": "degraded",
-  "monitorRunId": "24802243862",
-  "triggerEvent": "workflow_dispatch",
+  "monitorRunId": "24802487368",
+  "triggerEvent": "schedule",
   "autoDispatched": "",
   "components": {
     "agent": {
@@ -20,7 +20,7 @@
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "21651min"
+      "deployAge": "21657min"
     },
     "controller": {
       "version": "source-change",
@@ -36,7 +36,7 @@
       "stage": "ci-failed",
       "health": "error",
       "actionTaken": "none",
-      "deployAge": "49min"
+      "deployAge": "54min"
     }
   }
 }
