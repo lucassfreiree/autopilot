@@ -5,9 +5,9 @@
   "commitSha": "735a427ecf5a0ea7f46a3177f96e0cbd37f8525c",
   "commitMessage": "fix(controller): support new oas sre functions",
   "commitAuthor": "github-actions",
-  "diagnosedAt": "2026-04-22T20:08:18Z",
-  "runId": "24800057797",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24800057797",
+  "diagnosedAt": "2026-04-22T21:11:25Z",
+  "runId": "24802874467",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24802874467",
   "reproduction": {
     "scripts": "  build: tsc -p ./tsconfig.json\n  debug: tsc && node --inspect=9229 dist/server.js\n  lint: tsc --noEmit && eslint . --quiet --fix --resolve-plugins-relative-to .\n  start: node dist/server.js\n  prestart: npm run build\n  dev: nodemon --watch src --exec ts-node-dev src/server.ts\n  test: jest\n  unitTest: jest --testPathPattern=ut.test\\.ts$\n  integrationTest: jest --testPathPattern=it.test\\.ts$ --detectOpenHandles --passWithNoTests --forceExit\n",
     "lintErrors": [],
