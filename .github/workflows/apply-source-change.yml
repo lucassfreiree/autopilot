@@ -141,7 +141,9 @@ jobs:
           echo "skip_ci=$SKIP_CI" >> "$GITHUB_OUTPUT"
           echo "promote=$PROMOTE" >> "$GITHUB_OUTPUT"
           echo "agent_repo=$(echo "$WS_JSON" | jq -r '.agent.sourceRepo')" >> "$GITHUB_OUTPUT"
+          echo "agent_branch=$(echo "$WS_JSON" | jq -r '.agent.deployBranch // "main"')" >> "$GITHUB_OUTPUT"
           echo "controller_repo=$(echo "$WS_JSON" | jq -r '.controller.sourceRepo')" >> "$GITHUB_OUTPUT"
+          echo "controller_branch=$(echo "$WS_JSON" | jq -r '.controller.deployBranch // "main"')" >> "$GITHUB_OUTPUT"
           echo "cap_repo=$(echo "$WS_JSON" | jq -r '.agent.capRepo')" >> "$GITHUB_OUTPUT"
           echo "cap_branch=$(echo "$WS_JSON" | jq -r '.agent.capBranch // "main"')" >> "$GITHUB_OUTPUT"
           echo "cap_values=$(echo "$WS_JSON" | jq -r '.agent.capValuesPath')" >> "$GITHUB_OUTPUT"
@@ -267,8 +269,10 @@ jobs:
         run: |
           if [ "${{ matrix.component }}" = "agent" ]; then
             echo "repo=${{ needs.setup.outputs.agent_repo }}" >> "$GITHUB_OUTPUT"
+            echo "branch=${{ needs.setup.outputs.agent_branch }}" >> "$GITHUB_OUTPUT"
           else
             echo "repo=${{ needs.setup.outputs.controller_repo }}" >> "$GITHUB_OUTPUT"
+            echo "branch=${{ needs.setup.outputs.controller_branch }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: "Clone"
@@ -276,8 +280,9 @@ jobs:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
           REPO="${{ steps.resolve.outputs.repo }}"
-          echo "=== Cloning $REPO ==="
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" /tmp/source
+          BRANCH="${{ steps.resolve.outputs.branch }}"
+          echo "=== Cloning $REPO@$BRANCH ==="
+          git clone --branch "$BRANCH" --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" /tmp/source
           cd /tmp/source
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
@@ -525,6 +530,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
         run: |
+          BRANCH="${{ steps.resolve.outputs.branch }}"
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -534,7 +540,7 @@ jobs:
           fi
           echo "=== Changes ===" && git diff --cached --stat
           git commit -m "${{ needs.setup.outputs.commit_message }}"
-          git push origin main
+          git push origin "HEAD:${BRANCH}"
           SHA=$(git rev-parse HEAD)
           echo "pushed=true" >> "$GITHUB_OUTPUT"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
@@ -758,6 +764,7 @@ jobs:
           CAP_VALUES="${{ needs.setup.outputs.cap_values }}"
           IMAGE_PATTERN="${{ needs.setup.outputs.image_pattern }}"
           SOURCE_REPO="${{ needs.apply-and-push.outputs.repo }}"
+          SOURCE_BRANCH="${{ needs.setup.outputs.agent_branch }}"
 
           if [ -z "$CAP_REPO" ] || [ "$CAP_REPO" = "null" ]; then
             echo "No CAP repo configured"
@@ -766,7 +773,7 @@ jobs:
           fi
 
           # Get version from source repo
-          VERSION=$(gh api "repos/$SOURCE_REPO/contents/package.json?ref=main" \
+          VERSION=$(gh api "repos/$SOURCE_REPO/contents/package.json?ref=$SOURCE_BRANCH" \
             --jq '.content' | base64 -d | jq -r '.version')
           TAG="$VERSION"
           echo "=== Promoting $TAG to $CAP_REPO ==="
@@ -806,6 +813,7 @@ jobs:
           CAP_VALUES="${{ needs.setup.outputs.controller_cap_values }}"
           IMAGE_PATTERN="${{ needs.setup.outputs.controller_image_pattern }}"
           SOURCE_REPO="${{ needs.apply-and-push.outputs.repo }}"
+          SOURCE_BRANCH="${{ needs.setup.outputs.controller_branch }}"
 
           if [ -z "$CAP_REPO" ] || [ "$CAP_REPO" = "null" ] || [ "$CAP_REPO" = "" ]; then
             echo "No controller CAP repo configured — skipping"
@@ -814,7 +822,7 @@ jobs:
           fi
 
           # Get version from source repo
-          VERSION=$(gh api "repos/$SOURCE_REPO/contents/package.json?ref=main" \
+          VERSION=$(gh api "repos/$SOURCE_REPO/contents/package.json?ref=$SOURCE_BRANCH" \
             --jq '.content' | base64 -d | jq -r '.version')
           TAG="$VERSION"
           echo "=== Promoting controller $TAG to $CAP_REPO ==="
