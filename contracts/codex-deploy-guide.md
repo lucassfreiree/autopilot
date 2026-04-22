@@ -1,8 +1,8 @@
 # Codex Deploy Guide — Using the Existing Pipeline
 
 > This guide teaches Codex how to use the EXISTING deploy pipeline (`apply-source-change.yml`)
-> to deploy code changes to corporate repos. NO new workflows needed.
-> This is the SAME flow Claude uses. Follow it step by step.
+> to deploy code changes to corporate repos through the autopilot control plane.
+> Corporate repos are never edited directly from the session. Follow this flow step by step.
 
 ## Prerequisites
 
@@ -13,13 +13,15 @@ Before deploying, you need:
 
 ## The Flow (Same as Claude)
 
-```
-1. Fetch current corporate files (know what exists today)
+```text
+1. Fetch current corporate files through autopilot (know what exists today)
 2. Create patch files in patches/
-3. Update trigger/source-change.json (increment run!)
-4. Push to codex/* branch → auto-pr-codex.yml creates PR
-5. Merge PR → apply-source-change.yml triggers automatically
-6. Monitor until complete
+3. Validate locally in autopilot before any trigger
+4. Update trigger/source-change.json (increment run!)
+5. Push to codex/* branch -> PR -> merge
+6. Monitor apply-source-change until the corporate source SHA is known
+7. Monitor the corporate source SHA, workloads/check-runs, and image publication
+8. Only then is CAP/deploy tag promotion valid
 ```
 
 ---
@@ -75,9 +77,28 @@ No file needed — configured directly in trigger/source-change.json:
 
 ---
 
-## Step 3: Update trigger/source-change.json
+## Step 3: Run Local Validation in Autopilot
 
-This is the MOST IMPORTANT file. The workflow `apply-source-change.yml` reads this.
+Before opening the PR that will trigger the corporate flow, validate the local autopilot side:
+
+```bash
+# Recommended minimums for deploy metadata changes
+jq empty trigger/source-change.json
+jq empty contracts/codex-agent-contract.json
+
+# If workflows/contracts changed, parse them too
+scripts/codex/preflight-autopilot.sh
+```
+
+If the change also updates code patches, validate the patch content against the fetched corporate base and run the relevant local checks before triggering the corporate source pipeline.
+
+**RULE**: If local validation fails, do not trigger the corporate pipeline.
+
+---
+
+## Step 4: Update trigger/source-change.json
+
+This is the MOST IMPORTANT file. The workflow `apply-source-change.yml` reads this and it is the only valid path to reach the corporate source repo.
 
 ```json
 {
@@ -127,7 +148,7 @@ This is the MOST IMPORTANT file. The workflow `apply-source-change.yml` reads th
 
 ---
 
-## Step 4: Push to codex/* Branch
+## Step 5: Push to codex/* Branch
 
 ```bash
 # Create branch from latest main
@@ -160,7 +181,7 @@ gh pr create --base main --head codex/deploy-v3.6.4 \
 
 ---
 
-## Step 5: Merge the PR
+## Step 6: Merge the PR
 
 ```bash
 # Check PR status
@@ -171,10 +192,11 @@ gh pr merge <PR_NUMBER> --squash
 ```
 
 **After merge**: `apply-source-change.yml` triggers AUTOMATICALLY because `trigger/source-change.json` changed.
+This does not mean deploy is complete. It only means the corporate source change path started.
 
 ---
 
-## Step 6: Monitor the Deploy
+## Step 7: Monitor the Deploy
 
 ```bash
 # Check if workflow triggered (wait ~30s after merge)
@@ -192,10 +214,33 @@ gh api repos/lucassfreiree/autopilot/actions/runs/<RUN_ID>/jobs \
 | Setup | Reads workspace config | Check workspace.json |
 | Session Guard | Acquires lock | Wait if another agent has lock |
 | Apply & Push | Clone corporate repo, apply patches, push | Check patches are valid |
-| CI Gate | Waits for corporate CI (Esteira de Build NPM) | Check ci-logs |
-| Promote | Updates CAP values.yaml (agent + controller — BOTH auto-promote via GitHub API) | Check workspace.json CAP config |
+| CI Gate | Waits for the corporate source pipeline signal for the pushed SHA | Check ci-logs and phase 09 |
+| Promote | CAP/deploy tag update is only valid after source CI is green and image publication is confirmed | Block/correct if it happened early |
 | Save State | Records in autopilot-state | Retry |
 | Audit | Audit trail + release lock | Usually succeeds |
+
+### Mandatory source-repo follow-up
+
+After Stage 2, keep monitoring the exact corporate source SHA:
+
+```bash
+SHA="<corporate_source_sha>"
+REPO="bbvinet/psc-sre-automacao-controller"
+
+gh api "repos/$REPO/commits/$SHA/check-runs" \
+  --jq '.check_runs[] | {name, status, conclusion}'
+```
+
+If `workflow_runs` do not show the configured workflow name, do not assume nothing arrived. Some repos expose the source pipeline primarily via commit check-runs or differently named workloads. In that case, the source of truth is still the corporate commit SHA plus its checks and image publication evidence.
+
+### Promotion rule
+
+Only after all of the following are true is the deploy valid:
+
+1. The correct corporate source SHA finished green.
+2. The expected corporate workload/check-runs finished green.
+3. The target image version was published.
+4. The CAP/deploy repo tag matches that published version.
 
 ### If Deploy Fails:
 1. Check which step failed: `gh api repos/lucassfreiree/autopilot/actions/runs/<RUN_ID>/jobs`
@@ -235,6 +280,9 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/locks
 | Branch not codex/* | auto-pr doesn't trigger | Use `codex/deploy-*` prefix |
 | Duplicate version tag | CI rejects | Check registry, use next version |
 | Patch based on old code | Patch doesn't apply | Fetch current files first |
+| Missing source SHA monitoring | CAP can drift from source CI result | Always monitor the pushed corporate SHA |
+| Assume missing workflow_run means no CI | Source checks may exist only as check-runs/workloads | Check `commits/<sha>/check-runs` first |
+| Promote CAP before image publish | Deploy repo points to a version not validated in source CI | Block promotion until publish is confirmed |
 | Missing version bump in swagger | Version mismatch | Always bump all 3: package.json, package-lock.json, swagger.json |
 | validateTrustedUrl in fetch | Tests break (mock URLs) | NEVER — use parseSafeIdentifier on input |
 | ESLint no-use-before-define | CI fails | Define functions BEFORE using them |
@@ -479,9 +527,9 @@ gh api "repos/lucassfreiree/autopilot/contents/state/workspaces/ws-default/<LATE
 
 ---
 
-## ADVANCED: CAP Promote (Auto-promote for Agent + Controller)
+## ADVANCED: CAP Promote (Only After Source Repo Green)
 
-Stage 4 of `apply-source-change.yml` now auto-promotes BOTH components:
+Stage 4 of `apply-source-change.yml` or `promote-cap.yml` only becomes valid AFTER the source repo is green for the correct SHA and the expected image was published:
 
 | Component | CAP Repo (GitHub) | Values Path |
 |-----------|-------------------|-------------|
@@ -489,15 +537,15 @@ Stage 4 of `apply-source-change.yml` now auto-promotes BOTH components:
 | Controller | `bbvinet/psc_releases_cap_sre-aut-controller` | `releases/openshift/hml/deploy/values.yaml` |
 
 ### How it works:
-1. After CI Gate passes (corporate CI green)
+1. After the correct source SHA is green and image publication is confirmed
 2. Workflow reads `workspace.json` for CAP config (agent.capRepo or controller.capRepo)
 3. Reads current `values.yaml` from GitHub
 4. Updates image tag line: `image: docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-<component>:<NEW_TAG>`
 5. Commits to CAP repo via GitHub API with `BBVINET_TOKEN`
 
 ### When promote=true in trigger:
-- Promote runs AUTOMATICALLY after CI passes
-- No manual intervention needed
+- Promote may run from the workflow, but it is only valid after source CI/workloads and publish confirmation
+- Never use promote as a shortcut around a failing or unknown source pipeline
 - Both agent and controller CAP repos are on GitHub
 
 ### Image line in values.yaml:

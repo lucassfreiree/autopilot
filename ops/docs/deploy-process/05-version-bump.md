@@ -117,12 +117,12 @@ Se usar search-replace com `"3.6.6"` e o swagger estiver com `"3.5.14"`, o sed n
 **Metodo de atualizacao:** Edicao manual no autopilot
 
 ```yaml
-# Controller CAP Values - GitHub (auto-promote enabled)
+# Controller CAP Values - GitHub (promotion only after source CI + publish)
 # ...
 # Current tag: 3.6.6   <-- Atualizar aqui
 ```
 
-**NOTA**: Este arquivo e uma referencia LOCAL. A atualizacao REAL no CAP repo e feita automaticamente pelo Stage 4 (Promote) do workflow. Mas e importante manter a referencia local atualizada.
+**NOTA**: Este arquivo e uma referencia LOCAL. A atualizacao REAL no CAP repo so e valida depois que o source repo ficar verde e a imagem for publicada. Mas e importante manter a referencia local atualizada.
 
 Alem disso, a tag da imagem Docker dentro do values.yaml:
 ```yaml

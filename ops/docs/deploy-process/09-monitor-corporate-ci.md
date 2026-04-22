@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Acompanhar a Esteira de Build NPM que roda no repo corporativo APOS o push feito pelo Stage 2 do apply-source-change. Esta esteira e INDEPENDENTE do workflow do autopilot.
+Acompanhar o pipeline do source repo corporativo APOS o push feito pelo Stage 2 do apply-source-change. A esteira e INDEPENDENTE do workflow do autopilot e deve ser rastreada pelo commit SHA corporativo correto.
 
 ## CRITICO: apply-source-change SUCCESS != Deploy Completo
 
@@ -19,11 +19,13 @@ O workflow `apply-source-change.yml` verifica o CI Gate (Stage 3), mas isso e ap
 Use este protocolo como regra obrigatoria para qualquer deploy de source code:
 
 1. Monitorar o **commit SHA corporativo correto** gerado pelo Stage 2 do `apply-source-change.yml`
-2. Filtrar apenas a **esteira configurada no `workspace.json`** (`ciWorkflowName`)
+2. Usar a **esteira configurada no `workspace.json`** (`ciWorkflowName`) como pista inicial, mas validar sempre pelo commit SHA corporativo
 3. Esperar a esteira terminar com **`success`** para o SHA certo
 4. Confirmar nos logs do workflow bem-sucedido a **publicacao da imagem** da versao esperada
 5. So depois disso promover a tag no repositorio de deploy
 6. Se a esteira falhar, expirar ou terminar sem evidencia de publish, **bloquear a promocao**
+
+Se `workflow_runs` vier vazio, mas o SHA tiver `check-runs` ou workloads ativos, isso NAO significa ausencia de CI. Nesse caso, o source of truth continua sendo o commit SHA corporativo, seus checks e a evidencia de publish.
 
 Resumo direto:
 
@@ -91,7 +93,7 @@ Dispara o workflow `ci-status-check.yml` que verifica o status de CI no repo cor
   },
   "checkRuns": [
     {
-      "name": "Esteira de Build NPM",
+      "name": "CI / workflow-npm",
       "status": "completed",
       "conclusion": "success"
     }
@@ -119,6 +121,8 @@ WORKFLOW="Esteira de Build NPM"
 gh api "repos/$REPO/actions/runs?head_sha=$SHA&per_page=20" \
   --jq --arg wf "$WORKFLOW" '.workflow_runs[] | select(.name == $wf) | {id, name, status, conclusion, html_url}'
 ```
+
+**Regra importante**: Se esse filtro nao retornar nada, volte para `check-runs` do commit. Alguns repositorios expoem a execucao real por nomes como `CI / workflow-npm`, `CI / sonarQube`, `CI / xRay` ou apenas como checks do SHA.
 
 ### Metodo 3: Via Audit Trail no autopilot-state
 
@@ -205,10 +209,21 @@ Check-runs: gh api "repos/bbvinet/psc-sre-automacao-controller/commits/def5678/c
 | Workflow run do autopilot | `gh api repos/lucassfreiree/autopilot/actions/runs/<run_id>` |
 | SHA do commit corporativo | `controller-release-state.json` no autopilot-state, campo `lastReleasedSha` |
 | Status da esteira | `ci-monitor-controller.json` no autopilot-state |
-| Workflow corporativo validado | `ci-monitor-controller.json`, campos `ciWorkflowName`, `matchedWorkflowRunId`, `matchedWorkflowRunUrl` |
+| Workflow corporativo validado | `ci-monitor-controller.json`, campos `ciWorkflowName`, `matchedWorkflowRunId`, `matchedWorkflowRunUrl`, ou os `checkRuns` do mesmo SHA |
 | Evidencia de publish | `ci-monitor-controller.json`, campos `artifactVerified`, `artifactEvidence` |
 | Logs da esteira | `ci-logs-controller-<job_id>.txt` no autopilot-state |
 | Tag promovida no CAP | `audit/source-change-*.json` no autopilot-state, campo `promoted` |
+
+## Quando parecer que nao chegou nada
+
+Se o monitor nao encontrar `workflow_runs` com o nome exato do `workspace.json`, faca esta validacao antes de concluir que a esteira nao disparou:
+
+1. Confirmar o SHA corporativo salvo pelo Stage 2.
+2. Ler `commits/<sha>/check-runs`.
+3. Verificar workloads/checks corporativos para o mesmo SHA.
+4. Procurar evidencia de publish da versao esperada.
+
+Se os checks do SHA existem, o commit chegou na esteira. O problema passa a ser de correlacao/observabilidade, nao de disparo.
 
 ## Se a Esteira Falhar
 
@@ -259,9 +274,9 @@ Agent:
 ## Checklist da Fase 09
 
 - [ ] SHA do commit corporativo identificado (output do Stage 2)
-- [ ] Esteira configurada no workspace acionada
+- [ ] Esteira configurada no workspace ou checks/workloads equivalentes acionados para o SHA correto
 - [ ] Status monitorado ate conclusao (success ou failure) para o SHA correto
-- [ ] Workflow corporativo correto identificado
+- [ ] Workflow corporativo correto identificado, ou checks corporativos do mesmo SHA identificados
 - [ ] Se failure: logs baixados e analisados
 - [ ] Se success: evidencia de publish da imagem da versao esperada confirmada
 - [ ] Se failure: patch corrigido e re-deploy iniciado

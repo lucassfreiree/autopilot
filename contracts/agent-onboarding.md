@@ -2,7 +2,7 @@
 
 > This guide enables ANY AI agent to operate the Autopilot control plane.
 > Read this ENTIRELY before performing any operation.
-> Last updated: 2026-03-29
+> Last updated: 2026-04-22
 
 ## 1. What is Autopilot
 
@@ -67,7 +67,7 @@ File: state/workspaces/ws-default/locks/session-lock.json
 | bbvinet/psc_releases_cap_sre-aut-controller | Controller K8s deploy |
 | bbvinet/psc_releases_cap_sre-aut-agent | Agent K8s deploy |
 
-**Access**: Only via workflows (BBVINET_TOKEN). NEVER push directly.
+**Access**: Only via autopilot workflows with `BBVINET_TOKEN`. ALWAYS fetch current files into autopilot, patch and validate there, and NEVER push directly.
 
 ## 5. How to Make Changes
 
@@ -82,16 +82,20 @@ File: state/workspaces/ws-default/locks/session-lock.json
 
 ### To corporate repos (code deploy):
 ```
-1. Create patches in patches/ directory
-2. Update trigger/source-change.json (increment run!)
-3. Branch + PR + merge to main
-4. apply-source-change.yml triggers automatically
-5. Pipeline: Setup → Guard → Apply → CI Gate → Promote → State → Audit
+1. Fetch/pull the live corporate base through autopilot
+2. Create patches in patches/ directory
+3. Validate locally in autopilot before any trigger
+4. Update trigger/source-change.json (increment run!)
+5. Branch + PR + merge to main
+6. apply-source-change.yml triggers automatically
+7. Monitor the exact source SHA, workloads/check-runs, and image publication
+8. Only after source CI is green and the image is published may the CAP/deploy tag be considered valid
 ```
 
 ## 6. Deploy Flow (Step by Step)
 
 ### Phase 1: Prepare
+- Fetch current corporate files first; never patch against stale local assumptions
 - Read trigger/source-change.json for current run number
 - Decide new version (after X.Y.9 → X.(Y+1).0, NEVER X.Y.10)
 - Create patches in patches/ (replace-file or search-replace)
@@ -121,9 +125,10 @@ All files in 1 commit → branch → PR → squash merge → workflow auto-trigg
 
 ### Phase 5: Monitor
 - apply-source-change runs 7 stages
-- ci-monitor-loop polls corporate CI every 2 min
-- If CI passes: promote-cap updates CAP tag
-- If CI fails: ci-diagnose + fix-corporate-ci auto-fix
+- source of truth is the pushed corporate commit SHA plus its workloads/check-runs
+- if workflow_runs are missing, check commit check-runs and image publication evidence
+- CAP/deploy tag update is blocked until source CI is green and the image is published
+- if CI fails: ci-diagnose + fix-corporate-ci auto-fix
 
 ## 7. Compliance Pipeline (4 Stages)
 
@@ -223,7 +228,8 @@ PR → compliance-gate.yml (14 checks) → apply-source-change (7 stages)
 7. ALWAYS monitor workflow after triggering
 8. NEVER assume success — verify via API
 9. After X.Y.9 → X.(Y+1).0 — NEVER X.Y.10
-10. Corporate CI success ≠ deploy complete (build runs after)
+10. Corporate CI success ≠ deploy complete (image publication must be confirmed)
+11. CAP/deploy promotion is invalid while source CI is failing, unknown, or unpublished
 
 ## 13. Auth Architecture (Getronics)
 
