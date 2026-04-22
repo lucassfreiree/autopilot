@@ -75,11 +75,25 @@ jobs:
         run: |
           set -e
 
+          read_state() {
+            gh api \
+              "repos/$AUTOPILOT_REPO/contents/state/workspaces/${WS_ID}/${1}-release-state.json?ref=$STATE_BRANCH" \
+              --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}'
+          }
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             WS_ID="${{ github.event.inputs.workspace_id }}"
             COMPONENT="${{ github.event.inputs.component }}"
             COMMIT_SHA="${{ github.event.inputs.commit_sha }}"
             VERSION="${{ github.event.inputs.version }}"
+
+            if [ -n "$COMPONENT" ] && { [ -z "$COMMIT_SHA" ] || [ -z "$VERSION" ] || [ "$VERSION" = "source-change" ]; }; then
+              STATE=$(read_state "$COMPONENT")
+              [ -z "$COMMIT_SHA" ] && COMMIT_SHA=$(echo "$STATE" | jq -r '.lastReleasedSha // ""')
+              if [ -z "$VERSION" ] || [ "$VERSION" = "source-change" ]; then
+                VERSION=$(echo "$STATE" | jq -r '.lastTag // ""')
+              fi
+            fi
           else
             # Triggered by apply-source-change — read last release state for each component.
             # apply-source-change runs only for ws-default today; extend here when other
@@ -90,9 +104,7 @@ jobs:
             COMPONENT=""
 
             for COMP in controller agent; do
-              STATE=$(gh api \
-                "repos/$AUTOPILOT_REPO/contents/state/workspaces/${WS_ID}/${COMP}-release-state.json?ref=$STATE_BRANCH" \
-                --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
+              STATE=$(read_state "$COMP")
 
               RUN_ID=$(echo "$STATE" | jq -r '.runId // ""')
               TRIGGER_RUN="${{ github.event.workflow_run.id }}"
@@ -111,9 +123,7 @@ jobs:
             if [ -z "$COMPONENT" ]; then
               echo "::warning ::Could not match run ID to a release state entry; falling back to most recent controller state."
               COMPONENT="controller"
-              STATE=$(gh api \
-                "repos/$AUTOPILOT_REPO/contents/state/workspaces/${WS_ID}/controller-release-state.json?ref=$STATE_BRANCH" \
-                --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
+              STATE=$(read_state "$COMPONENT")
               COMMIT_SHA=$(echo "$STATE" | jq -r '.lastReleasedSha // ""')
               VERSION=$(echo "$STATE" | jq -r '.lastTag // ""')
             fi

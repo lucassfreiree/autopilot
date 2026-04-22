@@ -799,8 +799,13 @@ jobs:
             echo "promoted=true" >> "$GITHUB_OUTPUT"
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
             echo "Promoted!"
+          elif echo "$VALUES" | grep -Eq "${IMAGE_PATTERN}${TAG}([[:space:]]|$|[\"'])"; then
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "promoted=true" >> "$GITHUB_OUTPUT"
+            echo "Values already point to $TAG. Nothing to update."
           else
             echo "::warning ::Image pattern didn't match in values.yaml"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
             echo "promoted=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -848,8 +853,13 @@ jobs:
             echo "promoted=true" >> "$GITHUB_OUTPUT"
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
             echo "Promoted controller to $TAG!"
+          elif echo "$VALUES" | grep -Eq "${IMAGE_PATTERN}${TAG}([[:space:]]|$|[\"'])"; then
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "promoted=true" >> "$GITHUB_OUTPUT"
+            echo "Controller values already point to $TAG. Nothing to update."
           else
             echo "::warning ::Image pattern didn't match in controller values.yaml"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
             echo "promoted=false" >> "$GITHUB_OUTPUT"
           fi
 
