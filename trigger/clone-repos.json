@@ -1,6 +1,6 @@
 {
   "_context": "GETRONICS | ws-default | BBVINET_TOKEN",
-  "repos": "all",
-  "note": "Clone all 4 corporate repos into corporate-repos/ directory",
-  "run": 1
+  "repos": "bbvinet/psc-sre-automacao-controller",
+  "note": "Clone controller corporate repo into corporate-repos/ directory",
+  "run": 2
 }
