@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 552,
+  "branch": "codex/deploy-controller-v3.9.3",
+  "timestamp": "2026-04-22T18:50:13Z",
+  "runId": "24796510537",
+  "healthStatus": "degraded"
+}
