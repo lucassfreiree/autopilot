@@ -2,18 +2,18 @@
   "workspaceId": "ws-default",
   "component": "controller",
   "sourceRepo": "bbvinet/psc-sre-automacao-controller",
-  "commitSha": "f4fdc8a20e8b0dc2fd5ae7c6eafe14708c7f8025",
-  "commitMessage": "fix(controller): generate outbound JWT for agent dispatch + bump to 3.8.1 (v3.8.1)",
+  "commitSha": "cf65c809dbe20d87faee7ecdf08ff6d4ee08dc46",
+  "commitMessage": "fix(controller): accept OAS functions and copy_resources contract (3.6.8)",
   "commitAuthor": "github-actions",
-  "diagnosedAt": "2026-04-02T17:13:13Z",
-  "runId": "23912582967",
-  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23912582967",
+  "diagnosedAt": "2026-04-22T18:41:57Z",
+  "runId": "24796068889",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24796068889",
   "reproduction": {
     "scripts": "  build: tsc -p ./tsconfig.json\n  debug: tsc && node --inspect=9229 dist/server.js\n  lint: tsc --noEmit && eslint . --quiet --fix --resolve-plugins-relative-to .\n  start: node dist/server.js\n  prestart: npm run build\n  dev: nodemon --watch src --exec ts-node-dev src/server.ts\n  test: jest\n  unitTest: jest --testPathPattern=ut.test\\.ts$\n  integrationTest: jest --testPathPattern=it.test\\.ts$ --detectOpenHandles --passWithNoTests --forceExit\n",
     "lintErrors": [],
     "buildSuccess": false,
-    "buildLog": "\n> psc-sre-automacao-controller@3.8.1 build\n> tsc -p ./tsconfig.json\n\ntsconfig.json(5,25): error TS5107: Option 'moduleResolution=node10' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '\"ignoreDeprecations\": \"6.0\"' to silence this error.\n  Visit https://aka.ms/ts6 for migration information.\n",
+    "buildLog": "\n> psc-sre-automacao-controller@3.9.2 build\n> tsc -p ./tsconfig.json\n\ntsconfig.json(5,25): error TS5107: Option 'moduleResolution=node10' is deprecated and will stop functioning in TypeScript 7.0. Specify compilerOption '\"ignoreDeprecations\": \"6.0\"' to silence this error.\n  Visit https://aka.ms/ts6 for migration information.\n",
     "testSuccess": true,
-    "testLog": "\n> psc-sre-automacao-controller@3.8.1 test\n> jest\n\nsh: 1: jest: not found\n"
+    "testLog": "\n> psc-sre-automacao-controller@3.9.2 test\n> jest\n\nsh: 1: jest: not found\n"
   }
 }
