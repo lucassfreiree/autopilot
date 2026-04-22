@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 549,
+  "branch": "codex/deploy-controller-oas-v3.6.8",
+  "timestamp": "2026-04-22T18:35:39Z",
+  "runId": "24795836128",
+  "healthStatus": "degraded"
+}
