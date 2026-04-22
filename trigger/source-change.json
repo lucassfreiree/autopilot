@@ -3,7 +3,7 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.6.8",
+  "version": "3.9.3",
   "changes": [
     {
       "action": "replace-file",
@@ -23,24 +23,24 @@
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.6.4\"",
-      "replace": "\"version\": \"3.6.8\""
+      "search": "\"version\": \"3.9.2\"",
+      "replace": "\"version\": \"3.9.3\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.6.4\"",
-      "replace": "\"version\": \"3.6.8\""
+      "search": "\"version\": \"3.9.2\"",
+      "replace": "\"version\": \"3.9.3\""
     },
     {
       "action": "search-replace",
       "target_path": "src/swagger/swagger.json",
-      "search": "\"version\": \"3.5.14\"",
-      "replace": "\"version\": \"3.6.8\""
+      "search": "\"version\": \"3.6.8\"",
+      "replace": "\"version\": \"3.9.3\""
     }
   ],
-  "commit_message": "fix(controller): accept OAS functions and copy_resources contract (3.6.8)",
+  "commit_message": "fix(controller): accept OAS functions and copy_resources contract (3.9.3)",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 105
+  "run": 106
 }
