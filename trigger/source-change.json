@@ -7,40 +7,36 @@
   "changes": [
     {
       "action": "replace-file",
-      "target_path": "src/controllers/oas-sre-controller.controller.ts",
-      "content_ref": "patches/oas-sre-controller.controller.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/__tests__/unit/oas-sre-controller.route.test.ts",
-      "content_ref": "patches/oas-sre-controller.route.test.ts"
-    },
-    {
-      "action": "replace-file",
-      "target_path": "src/swagger/swagger.json",
-      "content_ref": "patches/swagger.json"
+      "target_path": "tsconfig.json",
+      "content_ref": "patches/controller-tsconfig.json"
     },
     {
       "action": "search-replace",
       "target_path": "package.json",
-      "search": "\"version\": \"3.9.2\"",
-      "replace": "\"version\": \"3.9.3\""
+      "search": "\"better-sqlite3\": \"^9.4.0\"",
+      "replace": "\"better-sqlite3\": \"^12.9.0\""
     },
     {
       "action": "search-replace",
       "target_path": "package-lock.json",
-      "search": "\"version\": \"3.9.2\"",
-      "replace": "\"version\": \"3.9.3\""
+      "search": "\"better-sqlite3\": \"^9.4.0\"",
+      "replace": "\"better-sqlite3\": \"^12.9.0\""
     },
     {
       "action": "search-replace",
-      "target_path": "src/swagger/swagger.json",
-      "search": "\"version\": \"3.6.8\"",
-      "replace": "\"version\": \"3.9.3\""
+      "target_path": "package-lock.json",
+      "search": "https://registry.npmjs.org/better-sqlite3/-/better-sqlite3-9.4.0.tgz",
+      "replace": "https://registry.npmjs.org/better-sqlite3/-/better-sqlite3-12.9.0.tgz"
+    },
+    {
+      "action": "search-replace",
+      "target_path": "package-lock.json",
+      "search": "sha512-5kynxekMxSjCMiFyUBLHggFcJkCmiZi6fUkiGz/B5GZOvdRWQJD0klqCx5/Y+bm2AKP7I/DHbSFx26AxjruWNg==",
+      "replace": "sha512-wqUv4Gm3toFpHDQmaKD4QhZm3g1DjUBI0yzS4UBl6lElUmXFYdTQmmEDpAFa5o8FiFiymURypEnfVHzILKaxqQ=="
     }
   ],
-  "commit_message": "fix(controller): accept OAS functions and copy_resources contract (3.9.3)",
+  "commit_message": "fix(controller): restore node 22 CI for sqlite runtime",
   "skip_ci_wait": false,
-  "promote": true,
-  "run": 106
+  "promote": false,
+  "run": 107
 }
