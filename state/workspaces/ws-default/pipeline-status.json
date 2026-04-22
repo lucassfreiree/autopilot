@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-04-22T22:10:47Z",
+  "updatedAt": "2026-04-22T23:25:57Z",
   "workspaceId": "ws-default",
-  "overallHealth": "degraded",
-  "monitorRunId": "24805303297",
+  "overallHealth": "ok",
+  "monitorRunId": "24807892508",
   "triggerEvent": "schedule",
   "autoDispatched": "",
   "components": {
@@ -20,7 +20,7 @@
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "21725min"
+      "deployAge": "21800min"
     },
     "controller": {
       "version": "source-change",
@@ -33,10 +33,10 @@
       "ciWorkflowName": "Esteira de Build NPM",
       "artifactVerified": false,
       "artifactEvidence": "",
-      "stage": "ci-timeout",
-      "health": "warning",
+      "stage": "idle",
+      "health": "ok",
       "actionTaken": "none",
-      "deployAge": "123min"
+      "deployAge": "198min"
     }
   }
 }
