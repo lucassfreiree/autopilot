@@ -3,7 +3,7 @@
   "info": {
     "title": "PSC SRE Automacao Controller",
     "description": "API do Controller de automacao SRE. Orquestra a execucao de automacoes nos Agents distribuidos por cluster, gerencia logs de execucao, autenticacao JWT e integracao com o OAS (Orquestrador de Automacao de Servicos).",
-    "version": "3.7.8",
+    "version": "3.6.8",
     "contact": {
       "name": "PSC SRE Automacao"
     }
@@ -360,14 +360,106 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["image", "envs", "CLUSTERS_NAMES"],
-                "properties": {
-                  "image": { "type": "string", "example": "psc-sre-ns-migration-preflight" },
-                  "envs": { "type": "object", "additionalProperties": { "type": "string" } },
-                  "CLUSTERS_NAMES": { "type": "array", "items": { "type": "string" } }
+              "examples": {
+                "legacyImageContract": {
+                  "summary": "Contrato legado por imagem",
+                  "value": {
+                    "image": "psc-sre-ns-migration-preflight",
+                    "envs": {
+                      "NAMESPACE": "meu-namespace",
+                      "CLUSTER_DE_ORIGEM": true,
+                      "CLUSTER_DE_DESTINO": false
+                    },
+                    "CLUSTERS_NAMES": ["k8shmlbb111b"]
+                  }
+                },
+                "functionContract": {
+                  "summary": "Consulta por function",
+                  "value": {
+                    "execId": "550e8400-e29b-41d4-a716-446655440000",
+                    "cluster": "k8shmlbb111b",
+                    "namespace": "meu-namespace",
+                    "function": "get_all_resources"
+                  }
+                },
+                "copyResourcesContract": {
+                  "summary": "copy_resources_origem com ACTION=copy",
+                  "value": {
+                    "execId": "550e8400-e29b-41d4-a716-446655440001",
+                    "cluster": "k8shmlbb111",
+                    "namespace": "psc-sre-dummy-migration",
+                    "function": "copy_resources_origem",
+                    "envs": {
+                      "ACTION": "copy",
+                      "NAMESPACE_ENVIRONMENT": "hml",
+                      "RESOURCE_TYPES": "secrets,configmaps"
+                    }
+                  }
                 }
+              },
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": ["image", "envs", "CLUSTERS_NAMES"],
+                    "properties": {
+                      "execId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Opcional. Se informado e valido, sera reutilizado como identificador da execucao."
+                      },
+                      "image": { "type": "string", "example": "psc-sre-ns-migration-preflight" },
+                      "envs": {
+                        "type": "object",
+                        "additionalProperties": { "type": "string" }
+                      },
+                      "CLUSTERS_NAMES": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["cluster", "namespace", "function"],
+                    "properties": {
+                      "execId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Opcional. Se informado e valido, sera reutilizado como identificador da execucao.",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                      },
+                      "cluster": {
+                        "type": "string",
+                        "example": "k8shmlbb111b"
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "example": "meu-namespace"
+                      },
+                      "function": {
+                        "type": "string",
+                        "enum": [
+                          "migration_origem",
+                          "migration_destino",
+                          "migration",
+                          "manage_namespace_origem",
+                          "manage_namespace_destino",
+                          "copy_resources_origem",
+                          "copy_resources_destino",
+                          "get_pods",
+                          "get_all_resources"
+                        ],
+                        "example": "get_pods"
+                      },
+                      "envs": {
+                        "type": "object",
+                        "description": "Para copy_resources_* exige ACTION e NAMESPACE_ENVIRONMENT. RESOURCE_TYPES e opcional e assume secrets,configmaps quando ausente.",
+                        "additionalProperties": { "type": "string" }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
@@ -375,7 +467,9 @@
         "responses": {
           "200": { "description": "Execucao concluida (sync)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SyncOasResponse" } } } },
           "202": { "description": "Execucao aceita (async)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AsyncOasResponse" } } } },
-          "400": { "description": "Payload invalido" },
+          "400": {
+            "description": "Payload invalido - imagem ou function nao suportada, contrato inconsistente, envs ausente quando obrigatorio, ou clusters invalidos"
+          },
           "404": { "description": "Agent nao registrado" },
           "502": { "description": "Falha na comunicacao" },
           "504": { "description": "Timeout" }

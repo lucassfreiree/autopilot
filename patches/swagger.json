@@ -3,7 +3,7 @@
   "info": {
     "title": "PSC SRE Automacao Controller",
     "description": "API do Controller de automacao SRE. Orquestra a execucao de automacoes nos Agents distribuidos por cluster, gerencia logs de execucao, autenticacao JWT e integracao com o OAS (Orquestrador de Automacao de Servicos).",
-    "version": "3.5.6",
+    "version": "3.5.14",
     "contact": {
       "name": "PSC SRE Automacao"
     }
@@ -638,31 +638,124 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["image", "envs", "CLUSTERS_NAMES"],
-                "properties": {
-                  "image": {
-                    "type": "string",
-                    "description": "Nome da imagem de automacao permitida (deve estar na lista de imagens autorizadas)",
-                    "example": "psc-sre-ns-migration-preflight"
-                  },
-                  "envs": {
-                    "type": "object",
-                    "description": "Variaveis de ambiente passadas para o container da automacao no Agent",
-                    "additionalProperties": { "type": "string" },
-                    "example": {
-                      "NAMESPACE_ORIGEM": "app-old",
-                      "NAMESPACE_DESTINO": "app-new"
+              "examples": {
+                "legacyImageContract": {
+                  "summary": "Contrato legado por imagem",
+                  "value": {
+                    "image": "psc-sre-ns-migration-preflight",
+                    "envs": {
+                      "NAMESPACE": "meu-namespace",
+                      "CLUSTER_DE_ORIGEM": true,
+                      "CLUSTER_DE_DESTINO": false
+                    },
+                    "CLUSTERS_NAMES": ["k8shmlbb111b"]
+                  }
+                },
+                "functionContract": {
+                  "summary": "Consulta de pods por function",
+                  "value": {
+                    "execId": "550e8400-e29b-41d4-a716-446655440000",
+                    "cluster": "k8shmlbb111b",
+                    "namespace": "meu-namespace",
+                    "function": "get_pods"
+                  }
+                },
+                "copyResourcesContract": {
+                  "summary": "copy_resources_destino com ACTION=apply",
+                  "value": {
+                    "execId": "550e8400-e29b-41d4-a716-446655440001",
+                    "cluster": "k8shmlbb111b",
+                    "namespace": "psc-sre-dummy-migration",
+                    "function": "copy_resources_destino",
+                    "envs": {
+                      "ACTION": "apply",
+                      "NAMESPACE_ENVIRONMENT": "hml"
                     }
-                  },
-                  "CLUSTERS_NAMES": {
-                    "type": "array",
-                    "description": "Lista de clusters onde a automacao sera executada",
-                    "items": { "type": "string" },
-                    "example": ["k8shmlbb111b", "k8shmlbb222b"]
                   }
                 }
+              },
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": ["image", "envs", "CLUSTERS_NAMES"],
+                    "properties": {
+                      "execId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Opcional. Se informado e valido, sera reutilizado como identificador da execucao."
+                      },
+                      "image": {
+                        "type": "string",
+                        "description": "Nome da imagem de automacao permitida (deve estar na lista de imagens autorizadas)",
+                        "example": "psc-sre-ns-migration-preflight"
+                      },
+                      "envs": {
+                        "type": "object",
+                        "description": "Variaveis de ambiente passadas para o container da automacao no Agent",
+                        "additionalProperties": { "type": "string" },
+                        "example": {
+                          "NAMESPACE_ORIGEM": "app-old",
+                          "NAMESPACE_DESTINO": "app-new"
+                        }
+                      },
+                      "CLUSTERS_NAMES": {
+                        "type": "array",
+                        "description": "Lista de clusters onde a automacao sera executada",
+                        "items": { "type": "string" },
+                        "example": ["k8shmlbb111b", "k8shmlbb222b"]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["cluster", "namespace", "function"],
+                    "properties": {
+                      "execId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Opcional. Se informado e valido, sera reutilizado como identificador da execucao.",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                      },
+                      "cluster": {
+                        "type": "string",
+                        "description": "Cluster de destino",
+                        "example": "k8shmlbb111b"
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "description": "Namespace de destino",
+                        "example": "meu-namespace"
+                      },
+                      "function": {
+                        "type": "string",
+                        "description": "Funcao suportada pelo controller",
+                        "enum": [
+                          "migration_origem",
+                          "migration_destino",
+                          "migration",
+                          "manage_namespace_origem",
+                          "manage_namespace_destino",
+                          "copy_resources_origem",
+                          "copy_resources_destino",
+                          "get_pods",
+                          "get_all_resources"
+                        ],
+                        "example": "get_pods"
+                      },
+                      "envs": {
+                        "type": "object",
+                        "description": "Parametros adicionais da funcao. Para copy_resources_* exige ACTION e NAMESPACE_ENVIRONMENT. RESOURCE_TYPES e opcional e assume secrets,configmaps quando ausente.",
+                        "additionalProperties": { "type": "string" },
+                        "example": {
+                          "ACTION": "copy",
+                          "NAMESPACE_ENVIRONMENT": "hml",
+                          "RESOURCE_TYPES": "secrets,configmaps"
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
@@ -685,7 +778,7 @@
             }
           },
           "400": {
-            "description": "Payload invalido - imagem nao permitida, envs ausente, ou clusters invalidos",
+            "description": "Payload invalido - imagem ou function nao suportada, contrato inconsistente, envs ausente quando obrigatorio, ou clusters invalidos",
             "content": {
               "application/json": {
                 "schema": {

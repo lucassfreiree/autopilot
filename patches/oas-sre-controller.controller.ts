@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
-import jwt from "jsonwebtoken";
 import {
   initExecution,
   type ExecutionSnapshot,
@@ -8,7 +7,10 @@ import {
 } from "./agents-execute-logs.controller";
 import type { OasOriginAuthDecision } from "../middleware/oas-origin-auth";
 import { timestampSP } from "../util/time";
-import { resolveTrustedRegisteredAgentExecuteUrlByCluster } from "../util/trusted-agent";
+import {
+  resolveTrustedRegisteredAgentExecuteUrl,
+  resolveTrustedRegisteredAgentExecuteUrlByCluster,
+} from "../util/trusted-agent";
 import { readSyncTimeoutMs } from "../util/sync-timeout";
 
 type JsonRecord = Record<string, unknown>;
@@ -29,8 +31,20 @@ type ResolvedDispatchPlan = DispatchPlan & {
 type ValidationResult =
   | {
       ok: true;
+      requestType: "legacy";
+      execId?: string;
       image: string;
       envs: JsonRecord;
+      clustersNames: string[];
+    }
+  | {
+      ok: true;
+      requestType: "function";
+      execId?: string;
+      functionName: string;
+      cluster: string;
+      namespace: string;
+      envs?: JsonRecord;
       clustersNames: string[];
     }
   | {
@@ -46,7 +60,11 @@ type AgentCallResult = {
 
 type SyncResponseContext = {
   execId: string;
-  image: string;
+  requestType: "legacy" | "function";
+  image?: string;
+  functionName?: string;
+  cluster?: string;
+  namespace?: string;
   clustersNames: string[];
   authMode: string;
   dispatches: AgentCallResult[];
@@ -61,54 +79,23 @@ type AllowedImage = {
 
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 const DEFAULT_AGENT_CALL_TIMEOUT_MS = 35_000;
-const TRUSTED_AGENT_URL_PATTERN =
-  /^https?:\/\/(?!.*@)[a-zA-Z0-9._-]+(?::[0-9]{1,5})?(?:\/[^\s<>"']*)?$/;
-
-const BLOCKED_SSRF_HOSTS = [
-  "169.254.169.254",
-  "metadata.google.internal",
-  "metadata.goog",
-  "localhost",
-  "127.0.0.1",
-  "[::1]",
-  "0.0.0.0",
+const DEFAULT_COPY_RESOURCE_TYPES = "secrets,configmaps";
+const SUPPORTED_SRE_FUNCTIONS = [
+  "migration_origem",
+  "migration_destino",
+  "migration",
+  "manage_namespace_origem",
+  "manage_namespace_destino",
+  "copy_resources_origem",
+  "copy_resources_destino",
+  "get_pods",
+  "get_all_resources",
 ];
-
-function isBlockedSsrfHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
-  if (BLOCKED_SSRF_HOSTS.includes(host)) return true;
-  if (host.startsWith("169.254.")) return true;
-  return false;
-}
-
-function parseAllowedAgentDomains(): string[] {
-  return (process.env.ALLOWED_AGENT_DOMAINS || "")
-    .split(",")
-    .map((d) => d.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function isAllowedAgentHost(hostname: string): boolean {
-  const allowedDomains = parseAllowedAgentDomains();
-  if (allowedDomains.length === 0) return true;
-  const host = hostname.toLowerCase();
-  return allowedDomains.some(
-    (domain) => host === domain || host.endsWith(`.${domain}`),
-  );
-}
-
-function validateTrustedUrl(url: string): boolean {
-  if (!url || !TRUSTED_AGENT_URL_PATTERN.test(url)) return false;
-  try {
-    const parsed = new URL(url);
-    if (isBlockedSsrfHost(parsed.hostname)) return false;
-    if (!isAllowedAgentHost(parsed.hostname)) return false;
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
+const COPY_RESOURCES_FUNCTIONS = new Set([
+  "copy_resources_origem",
+  "copy_resources_destino",
+]);
+const ALLOWED_COPY_RESOURCE_ACTIONS = ["copy", "apply", "remove"];
 
 function asRecord(value: unknown): JsonRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -125,17 +112,6 @@ function sanitizeForOutput(value: unknown): string {
     .replace(/[\r\n\t]+/g, " ")
     .trim()
     .slice(0, 256);
-}
-
-function sanitizeEnvValues(envs: JsonRecord): JsonRecord {
-  return Object.fromEntries(
-    Object.entries(envs).map(([key, value]) => [
-      key,
-      typeof value === "string"
-        ? value.replace(/[<>"'&]/g, "").replace(/[\r\n\t]+/g, " ").trim()
-        : value,
-    ]),
-  ) as JsonRecord;
 }
 
 function safeLogValue(value: unknown): string {
@@ -158,6 +134,10 @@ function parseSafeIdentifier(value: unknown): string {
   const normalized = safeString(value);
   if (!normalized || !SAFE_IDENTIFIER_PATTERN.test(normalized)) return "";
   return encodeURIComponent(normalized);
+}
+
+function normalizeFunctionName(value: string): string {
+  return value.replace(/-/g, "_").trim().toLowerCase();
 }
 
 function normalizeMode(req: Request): "sync" | "async" {
@@ -281,15 +261,40 @@ function cloneEnvs(value: unknown): JsonRecord | null {
   }
 }
 
-function validateSreControllerPayload(body: unknown): ValidationResult {
-  const errors: string[] = [];
+function readEnvsSource(source: JsonRecord): unknown {
+  return (
+    source["envs"] ??
+    source["ENVS"] ??
+    source["variables"] ??
+    source["vars"]
+  );
+}
 
-  const source = asRecord(body);
-  if (!source) {
-    return { ok: false, errors: ["Request body must be a JSON object."] };
+function readEnvString(envs: JsonRecord, keys: string[]): string {
+  return keys.reduce<string>((acc, key) => acc || safeString(envs[key]), "");
+}
+
+function parseOptionalExecId(
+  source: JsonRecord,
+  errors: string[],
+): string | undefined {
+  if (source["execId"] === undefined) return undefined;
+
+  const execId = parseSafeIdentifier(source["execId"]);
+  if (!execId) {
+    errors.push(
+      "Field 'execId' must match the allowed identifier pattern.",
+    );
+    return undefined;
   }
 
-  // image
+  return execId;
+}
+
+function validateLegacyPayload(source: JsonRecord): ValidationResult {
+  const errors: string[] = [];
+  const execId = parseOptionalExecId(source, errors);
+
   const imageRaw = safeString(source["image"] ?? source["IMAGE"]);
   if (!imageRaw) {
     errors.push("Field 'image' is required.");
@@ -305,13 +310,7 @@ function validateSreControllerPayload(body: unknown): ValidationResult {
     return { ok: false, errors };
   }
 
-  // envs — required object, passed as-is to the agent
-  const envsRaw =
-    source["envs"] ??
-    source["ENVS"] ??
-    source["variables"] ??
-    source["vars"];
-  const envs = cloneEnvs(envsRaw);
+  const envs = cloneEnvs(readEnvsSource(source));
   if (!envs) {
     errors.push(
       "Field 'envs' is required and must be a JSON object with the environment variables for the image.",
@@ -319,7 +318,6 @@ function validateSreControllerPayload(body: unknown): ValidationResult {
     return { ok: false, errors };
   }
 
-  // CLUSTERS_NAMES
   const clustersNamesRaw =
     source["CLUSTERS_NAMES"] ??
     source["clusters_names"] ??
@@ -329,58 +327,156 @@ function validateSreControllerPayload(body: unknown): ValidationResult {
 
   return {
     ok: true,
+    requestType: "legacy",
+    execId,
     image: imageRaw,
-    envs: sanitizeEnvValues(envs),
+    envs,
     clustersNames,
   };
 }
 
-function parseExpiresIn(raw: string): number {
-  if (!raw) return 0;
-  const num = Number(raw);
-  if (Number.isFinite(num) && num > 0) return Math.floor(num);
-  const match = raw.match(/^(\d+)\s*(s|m|h|d)$/i);
-  if (!match) return 0;
-  const value = Number(match[1]);
-  const unit = match[2].toLowerCase();
-  if (unit === "s") return value;
-  if (unit === "m") return value * 60;
-  if (unit === "h") return value * 3600;
-  if (unit === "d") return value * 86400;
-  return 0;
-}
+function validateFunctionPayload(source: JsonRecord): ValidationResult {
+  const errors: string[] = [];
+  const execId = parseOptionalExecId(source, errors);
 
-function generateOutboundAgentJwt(execId: string): string | undefined {
-  const secret = safeString(process.env.JWT_SECRET);
-  if (!secret) {
-    const fromEnv = safeString(process.env.AGENT_EXECUTE_AUTHORIZATION);
-    return fromEnv || undefined;
+  const cluster = parseSafeIdentifier(source["cluster"]);
+  if (!cluster) {
+    errors.push(
+      "Field 'cluster' is required and must match the allowed identifier pattern.",
+    );
   }
 
-  const issuer =
-    safeString(process.env.JWT_ISSUER) || "psc-sre-automacao-controller";
-  const audience =
-    safeString(process.env.JWT_AUDIENCE) || "psc-sre-automacao-agent";
-  const subject =
-    safeString(process.env.JWT_DEFAULT_SUBJECT) || "oas-sre-controller";
-  const expiresInRaw = safeString(process.env.JWT_EXPIRES_IN);
-  const expiresIn = parseExpiresIn(expiresInRaw) || 300;
-  const algorithm = (safeString(process.env.JWT_SIGN_ALG) ||
-    "HS256") as jwt.Algorithm;
+  const namespace = parseSafeIdentifier(source["namespace"]);
+  if (!namespace) {
+    errors.push(
+      "Field 'namespace' is required and must match the allowed identifier pattern.",
+    );
+  }
 
-  const scopeExecute = safeString(process.env.SCOPE_EXECUTE_AUTOMATION);
-
-  const token = jwt.sign(
-    {
-      sub: subject,
-      scope: scopeExecute ? [scopeExecute] : [],
-      execId,
-    },
-    secret,
-    { algorithm, expiresIn, issuer, audience },
+  const rawFunctionName = safeString(source["function"]);
+  const functionName = normalizeFunctionName(
+    parseSafeIdentifier(rawFunctionName),
   );
+  if (!functionName) {
+    errors.push(
+      "Field 'function' is required and must match the allowed identifier pattern.",
+    );
+  } else if (!SUPPORTED_SRE_FUNCTIONS.includes(functionName)) {
+    errors.push(
+      `Function ${sanitizeForOutput(functionName)} is not recognized. Available: ${SUPPORTED_SRE_FUNCTIONS.join(", ")}.`,
+    );
+  }
 
-  return `Bearer ${token}`;
+  const envsRaw = readEnvsSource(source);
+  let envs: JsonRecord | undefined;
+  if (envsRaw !== undefined) {
+    const clonedEnvs = cloneEnvs(envsRaw);
+    if (!clonedEnvs) {
+      errors.push("Field 'envs' must be a JSON object when provided.");
+    } else {
+      envs = clonedEnvs;
+    }
+  }
+
+  if (functionName && COPY_RESOURCES_FUNCTIONS.has(functionName)) {
+    if (!envs) {
+      errors.push(`Field 'envs' is required for function '${functionName}'.`);
+    } else {
+      const action = readEnvString(envs, ["ACTION", "action"]).toLowerCase();
+      if (!action) {
+        errors.push(
+          `Field 'envs.ACTION' is required for function '${functionName}'. Allowed values: ${ALLOWED_COPY_RESOURCE_ACTIONS.join(", ")}.`,
+        );
+      } else if (!ALLOWED_COPY_RESOURCE_ACTIONS.includes(action)) {
+        errors.push(
+          `Field 'envs.ACTION' has invalid value '${sanitizeForOutput(action)}'. Allowed values: ${ALLOWED_COPY_RESOURCE_ACTIONS.join(", ")}.`,
+        );
+      } else {
+        envs.ACTION = action;
+      }
+
+      const namespaceEnvironment = readEnvString(envs, [
+        "NAMESPACE_ENVIRONMENT",
+        "namespace_environment",
+      ]);
+      if (!namespaceEnvironment) {
+        errors.push(
+          `Field 'envs.NAMESPACE_ENVIRONMENT' is required for function '${functionName}'.`,
+        );
+      } else {
+        envs.NAMESPACE_ENVIRONMENT = namespaceEnvironment;
+      }
+
+      const resourceTypes = readEnvString(envs, [
+        "RESOURCE_TYPES",
+        "resource_types",
+      ]);
+      envs.RESOURCE_TYPES = resourceTypes || DEFAULT_COPY_RESOURCE_TYPES;
+    }
+  }
+
+  if (errors.length > 0) return { ok: false, errors };
+
+  return {
+    ok: true,
+    requestType: "function",
+    execId,
+    functionName,
+    cluster,
+    namespace,
+    envs,
+    clustersNames: [cluster],
+  };
+}
+
+function validateSreControllerPayload(body: unknown): ValidationResult {
+  const source = asRecord(body);
+  if (!source) {
+    return { ok: false, errors: ["Request body must be a JSON object."] };
+  }
+
+  const hasLegacyContract = Boolean(safeString(source["image"] ?? source["IMAGE"]));
+  const hasFunctionContract =
+    source["function"] !== undefined ||
+    source["cluster"] !== undefined ||
+    source["namespace"] !== undefined;
+
+  if (hasLegacyContract && hasFunctionContract) {
+    return {
+      ok: false,
+      errors: [
+        "Payload must use either the legacy image/envs/CLUSTERS_NAMES contract or the function/cluster/namespace contract, but not both.",
+      ],
+    };
+  }
+
+  if (hasFunctionContract) {
+    return validateFunctionPayload(source);
+  }
+
+  if (hasLegacyContract) {
+    return validateLegacyPayload(source);
+  }
+
+  return {
+    ok: false,
+    errors: [
+      "Payload must include either field 'image' or the fields 'function', 'cluster', and 'namespace'.",
+    ],
+  };
+}
+
+function getIncomingAuthorization(req: Request): string | undefined {
+  const auth = safeString(req.headers.authorization);
+  return auth || undefined;
+}
+
+function getAgentAuthorization(req: Request): string | undefined {
+  const incoming = getIncomingAuthorization(req);
+  if (incoming) return incoming;
+
+  const fromEnv = safeString(process.env.AGENT_EXECUTE_AUTHORIZATION);
+  return fromEnv || undefined;
 }
 
 async function callAgent(
@@ -388,9 +484,6 @@ async function callAgent(
   headers: Record<string, string>,
   payload: unknown,
 ): Promise<{ status: number; ok: boolean }> {
-  if (!validateTrustedUrl(url)) {
-    return { status: 400, ok: false };
-  }
   const timeoutMs = readAgentCallTimeoutMs();
   const abort = new AbortController();
   const timeoutId = setTimeout(() => abort.abort(), timeoutMs);
@@ -423,17 +516,42 @@ function summarizeDispatches(dispatches: AgentCallResult[]) {
   }));
 }
 
+function buildBaseResponsePayload(context: {
+  execId: string;
+  requestType: "legacy" | "function";
+  image?: string;
+  functionName?: string;
+  cluster?: string;
+  namespace?: string;
+  clustersNames: string[];
+  authMode: string;
+  dispatches: AgentCallResult[];
+}) {
+  return {
+    ...(context.requestType === "legacy" && context.image
+      ? { image: sanitizeForOutput(context.image) }
+      : {}),
+    ...(context.requestType === "function"
+      ? {
+          function: sanitizeForOutput(context.functionName),
+          cluster: sanitizeForOutput(context.cluster),
+          namespace: sanitizeForOutput(context.namespace),
+        }
+      : {}),
+    execId: context.execId,
+    clustersNames: context.clustersNames.map(sanitizeForOutput),
+    authMode: sanitizeForOutput(context.authMode),
+    dispatches: summarizeDispatches(context.dispatches),
+    statusEndpoint: `/agent/execute?uuid=${encodeURIComponent(context.execId)}`,
+  };
+}
+
 function buildSyncResponsePayload(context: SyncResponseContext) {
   const MAX_SYNC_ENTRIES = 500;
   const boundedEntries = context.snapshot.entries.slice(0, MAX_SYNC_ENTRIES);
   return {
     mode: "sync" as const,
-    execId: context.execId,
-    image: sanitizeForOutput(context.image),
-    clustersNames: context.clustersNames.map(sanitizeForOutput),
-    authMode: sanitizeForOutput(context.authMode),
-    dispatches: summarizeDispatches(context.dispatches),
-    statusEndpoint: `/agent/execute?uuid=${encodeURIComponent(context.execId)}`,
+    ...buildBaseResponsePayload(context),
     status: context.snapshot.status,
     statusLabel: context.snapshot.statusLabel,
     finished: context.snapshot.finished,
@@ -459,20 +577,22 @@ export async function postOasSreController(
     return;
   }
 
-  const safeImage = sanitizeForOutput(validation.image);
-  const safeClusters = validation.clustersNames.map(sanitizeForOutput);
-
-  const execId = crypto.randomUUID();
+  const execId = validation.execId || crypto.randomUUID();
   initExecution(execId);
 
   const requestId = safeString(req.header("x-request-id")) || execId;
   const authDecision = readAuthDecision(res);
-  const outboundAuthorization = generateOutboundAgentJwt(execId);
+  const outboundAuthorization = getAgentAuthorization(req);
+  const safeRequestName = safeLogValue(
+    validation.requestType === "legacy"
+      ? validation.image
+      : validation.functionName,
+  );
 
   console.info(
-    "[oas-sre-controller] start execId=%s image=%s clusters=%d authMode=%s",
+    "[oas-sre-controller] start execId=%s request=%s clusters=%d authMode=%s",
     safeLogValue(execId),
-    safeLogValue(validation.image),
+    safeRequestName,
     validation.clustersNames.length,
     safeLogValue(authDecision?.mode || "jwt"),
   );
@@ -480,29 +600,57 @@ export async function postOasSreController(
   let dispatches: AgentCallResult[] = [];
 
   try {
-    const resolvedPlans: Array<ResolvedDispatchPlan | null> =
-      validation.clustersNames.map((cluster) => {
-        const agentUrl =
-          resolveTrustedRegisteredAgentExecuteUrlByCluster(cluster);
-        return agentUrl ? { cluster, agentUrl } : null;
+    let plans: ResolvedDispatchPlan[] = [];
+
+    if (validation.requestType === "legacy") {
+      const resolvedPlans: Array<ResolvedDispatchPlan | null> =
+        validation.clustersNames.map((cluster) => {
+          const agentUrl =
+            resolveTrustedRegisteredAgentExecuteUrlByCluster(cluster);
+          return agentUrl ? { cluster, agentUrl } : null;
+        });
+
+      const missingTargets = validation.clustersNames.filter(
+        (_, i) => resolvedPlans[i] === null,
+      );
+
+      if (missingTargets.length > 0) {
+        res.status(404).json({
+          ok: false,
+          error: "Agent not registered for one or more cluster targets",
+          missingTargets: missingTargets.map(sanitizeForOutput),
+        });
+        return;
+      }
+
+      plans = resolvedPlans.filter(
+        (plan): plan is ResolvedDispatchPlan => plan !== null,
+      );
+    } else {
+      const agentUrl = resolveTrustedRegisteredAgentExecuteUrl({
+        cluster: validation.cluster,
+        namespace: validation.namespace,
       });
+      if (!agentUrl) {
+        res.status(404).json({
+          ok: false,
+          error: "Agent not registered for given cluster/namespace",
+          cluster: sanitizeForOutput(validation.cluster),
+          namespace: sanitizeForOutput(validation.namespace),
+        });
+        return;
+      }
 
-    const missingTargets = validation.clustersNames.filter(
-      (_, i) => resolvedPlans[i] === null,
-    );
+      plans = [{ cluster: validation.cluster, agentUrl }];
+    }
 
-    if (missingTargets.length > 0) {
+    if (plans.length === 0) {
       res.status(404).json({
         ok: false,
-        error: "Agent not registered for one or more cluster targets",
-        missingTargets: missingTargets.map(sanitizeForOutput),
+        error: "Agent not registered for the requested execution target",
       });
       return;
     }
-
-    const plans = resolvedPlans.filter(
-      (p): p is ResolvedDispatchPlan => p !== null,
-    );
 
     dispatches = await Promise.all(
       plans.map(async (plan) => {
@@ -516,12 +664,21 @@ export async function postOasSreController(
           headers.authorization = outboundAuthorization;
         }
 
-        const forwardBody = {
-          execId,
-          cluster: encodeURIComponent(plan.cluster),
-          image: encodeURIComponent(validation.image),
-          envs: validation.envs,
-        };
+        const forwardBody =
+          validation.requestType === "legacy"
+            ? {
+                execId,
+                cluster: plan.cluster,
+                image: validation.image,
+                envs: validation.envs,
+              }
+            : {
+                execId,
+                cluster: validation.cluster,
+                namespace: validation.namespace,
+                function: validation.functionName,
+                envs: validation.envs,
+              };
 
         console.info(
           "[oas-sre-controller] dispatch execId=%s cluster=%s url=%s",
@@ -576,8 +733,16 @@ export async function postOasSreController(
       );
       const syncPayload = buildSyncResponsePayload({
         execId,
-        image: safeImage,
-        clustersNames: safeClusters,
+        requestType: validation.requestType,
+        image: validation.requestType === "legacy" ? validation.image : undefined,
+        functionName:
+          validation.requestType === "function"
+            ? validation.functionName
+            : undefined,
+        cluster: validation.requestType === "function" ? validation.cluster : undefined,
+        namespace:
+          validation.requestType === "function" ? validation.namespace : undefined,
+        clustersNames: validation.clustersNames,
         authMode: sanitizeForOutput(authDecision?.mode || "jwt"),
         dispatches,
         snapshot,
@@ -616,14 +781,23 @@ export async function postOasSreController(
     res.status(202).json({
       ok: true,
       mode: "async",
-      execId,
       status: "RUNNING",
       startedAt: timestampSP(),
-      image: safeImage,
-      clustersNames: safeClusters,
-      authMode: sanitizeForOutput(authDecision?.mode || "jwt"),
-      dispatches: summarizeDispatches(dispatches),
-      statusEndpoint: `/agent/execute?uuid=${encodeURIComponent(execId)}`,
+      ...buildBaseResponsePayload({
+        execId,
+        requestType: validation.requestType,
+        image: validation.requestType === "legacy" ? validation.image : undefined,
+        functionName:
+          validation.requestType === "function"
+            ? validation.functionName
+            : undefined,
+        cluster: validation.requestType === "function" ? validation.cluster : undefined,
+        namespace:
+          validation.requestType === "function" ? validation.namespace : undefined,
+        clustersNames: validation.clustersNames,
+        authMode: authDecision?.mode || "jwt",
+        dispatches,
+      }),
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
