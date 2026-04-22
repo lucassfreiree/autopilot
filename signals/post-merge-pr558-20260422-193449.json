@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 558,
+  "branch": "codex/fix-controller-lockfile",
+  "timestamp": "2026-04-22T19:34:49Z",
+  "runId": "24798557524",
+  "healthStatus": "degraded"
+}
