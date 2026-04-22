@@ -109,6 +109,7 @@ describe("POST /oas/sre-controller", () => {
     const app = await makeApp();
     const res = await request(app).post("/oas/sre-controller").send({
       image: "psc-sre-ns-migration-preflight",
+      namespace: "teste",
       envs: { NAMESPACE: "teste" },
       CLUSTERS_NAMES: ["k8scluster01"],
     });
@@ -131,6 +132,7 @@ describe("POST /oas/sre-controller", () => {
       .set("x-service-account", "default")
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -148,6 +150,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([READ_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -169,6 +172,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: {
           CLUSTER_DE_ORIGEM: true,
           CLUSTER_DE_DESTINO: false,
@@ -207,6 +211,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "vip-autorizador-auditoria-transacoes",
         envs: {
           NAMESPACE: ["vip-autorizador-auditoria-transacoes"],
           CLUSTER_DE_ORIGEM: true,
@@ -250,13 +255,14 @@ describe("POST /oas/sre-controller", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("rejects payload when envs field is missing", async () => {
+  test("rejects payload when namespace field is missing", async () => {
     const app = await makeApp();
     const res = await request(app)
       .post("/oas/sre-controller")
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
 
@@ -272,6 +278,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
       });
 
@@ -293,6 +300,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -318,6 +326,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -340,6 +349,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         variables: { NAMESPACE: "teste", SOME_FLAG: true },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -411,6 +421,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -480,6 +491,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
@@ -506,6 +518,7 @@ describe("POST /oas/sre-controller", () => {
       .set("Authorization", bearer([EXECUTE_SCOPE]))
       .send({
         image: "psc-sre-ns-migration-preflight",
+        namespace: "teste",
         envs: { NAMESPACE: "teste" },
         CLUSTERS_NAMES: ["k8scluster01"],
       });
