@@ -1,7 +1,7 @@
 # Autopilot Shared Agent Context
 > This file is injected into ALL agent prompts (Claude, Codex, Copilot).
 > It contains the essential context every agent needs to operate correctly.
-> Last updated: 2026-04-04
+> Last updated: 2026-04-22
 
 ## What is Autopilot
 Web-only CI/CD control plane for multi-workspace, multi-agent release orchestration.
@@ -45,11 +45,11 @@ Internal autopilot references (CLAUDE.md, session memory, contracts) are OK — 
 - Every commit, issue, and PR for workspace-specific work MUST include workspace_id
 
 ## Current State (ws-default — Getronics/BB)
-- **Controller version**: 3.8.2 (deployed and verified)
+- **Controller target version**: 3.9.3 (source change prepared and under source CI gating)
 - **Agent version**: 2.3.3 (deployed and verified)
 - **Last successful deploy run**: #103
-- **Last trigger run**: 103
-- **Pipeline status**: operational
+- **Last trigger run**: 111
+- **Pipeline status**: source CI must pass and publish the image before CAP promotion is valid
 - **Autopilot product version**: 1.0.3
 
 ## Current State (ws-cit — CIT/Itau)
@@ -68,15 +68,16 @@ Internal autopilot references (CLAUDE.md, session memory, contracts) are OK — 
 ## Deploy Flow (Mandatory Steps)
 1. Fetch current corporate files via `fetch-files.yml`
 2. Create minimal patches in `patches/` from CURRENT corporate base
-3. Validate via `validate-patches.yml` (clone + npm ci + tsc + eslint + jest)
+3. Validate in autopilot first (`validate-patches.yml` and local preflight/checks when applicable)
 4. Update `trigger/source-change.json` (increment `run` field!)
 5. Update `references/controller-cap/values.yaml` + session memory
 6. Branch `claude/*` or `codex/*` > PR > squash merge to main
 7. Workflow auto-triggers on merge (path: trigger/source-change.json)
-8. Monitor workflow + corporate CI until Docker image published
+8. Monitor the exact pushed corporate source SHA plus check-runs/workloads until Docker image is published
+9. Only then is CAP/deploy tag promotion valid
 
 ## Versioning Rules
-- Current: 3.6.3. Next: 3.6.4 (or 3.7.0 if after 3.6.9)
+- Current controller target: 3.9.3. Next: 3.9.4 (or 3.10.0 if after 3.9.9)
 - Pattern: After X.Y.9 goes to X.(Y+1).0 - NEVER X.Y.10
 - 4 files must be aligned: package.json, package-lock.json (2 places), swagger.json
 - CI rejects duplicate tags - always check before bumping
@@ -117,7 +118,7 @@ Codex can commit via `codex-apply.yml` workflow:
 | Agent 401 internal-origin | Controller must mint JWT via mintInternalOriginJwt() | `Unauthorized` + internal-origin |
 | JWT scope claim wrong | Agent reads `payload.scope` (singular), NEVER `scopes` | `Insufficient scope` |
 | validateTrustedUrl in fetch | NEVER - breaks mock tests. Use parseSafeIdentifier on input | Test failures with mock URLs |
-| CI Gate pre-existing bug | CI Gate NOT reliable. Check ci-logs-controller-*.txt for REAL status | ci-failed-preexisting |
+| CI Gate / workflow name mismatch | Workflow runs may be absent or renamed. Check the pushed corporate SHA, commit check-runs, workloads, and image evidence for the REAL status | ci-failed-preexisting |
 | Swagger garbled chars | ASCII only, NEVER accents | UTF-8 encoding errors |
 | Push to main 403 | Always use branch + PR + squash merge | HTTP 403 |
 

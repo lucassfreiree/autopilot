@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Verificar e confirmar que a tag da imagem Docker foi atualizada no arquivo `values.yaml` do repositorio CAP. Esta e a etapa que efetivamente atualiza qual versao esta deployada no cluster Kubernetes.
+Verificar e confirmar que a tag da imagem Docker foi atualizada no arquivo `values.yaml` do repositorio CAP somente DEPOIS que o source repo corporativo ficou verde e publicou a imagem da versao esperada. Esta e a etapa que efetivamente atualiza qual versao esta deployada no cluster Kubernetes.
 
 ## O que e o CAP
 
@@ -28,7 +28,9 @@ image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 
 ### Stage 4 do apply-source-change.yml
 
-O Stage 4 (Promote) roda **automaticamente** se `promote=true` no trigger E o CI Gate passou.
+O Stage 4 (Promote) so pode ser considerado VALIDO se `promote=true` no trigger, o source repo corporativo estiver verde para o SHA correto e a imagem da versao esperada estiver publicada.
+
+Se existir atualizacao de CAP com source CI falhando, desconhecido, sem publish confirmado ou sem correlacao com o SHA correto, trate isso como inconsistencia operacional e bloqueie a promocao.
 
 **Fluxo interno:**
 
@@ -62,6 +64,13 @@ Branch: main
 ```
 
 ## Verificar se a Promocao Ocorreu
+
+Antes de aceitar a promocao como valida, confirme os 4 gates:
+
+1. `lastReleasedSha` aponta para o SHA corporativo correto
+2. O source repo terminou verde para esse SHA
+3. A imagem da versao esperada foi publicada
+4. O `values.yaml` do CAP aponta para a mesma versao publicada
 
 ### Metodo 1: Via Release State
 
@@ -126,6 +135,8 @@ Se o Stage 4 falhar por algum motivo, usar o workflow standalone `promote-cap.ym
 ### Mergear em main:
 O workflow `promote-cap.yml` dispara e atualiza a tag no CAP repo.
 
+**Regra**: o promote manual segue o mesmo gate. Nunca usar `promote-cap.yml` para contornar source CI falhando ou imagem ainda nao publicada.
+
 ## Atualizar Referencia Local
 
 Apos promote confirmado, atualizar a referencia local no autopilot:
@@ -152,19 +163,22 @@ image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
    → npm ci → build → lint → test → Docker build → Docker push
    → Imagem: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 
-3. CI Gate detecta success (Stage 3)
-   → check-runs: all completed, all success
+3. Source CI/workloads terminam verdes
+   → check-runs/workloads do SHA correto finalizados com success
 
-4. Promote atualiza CAP (Stage 4)
+4. Imagem da versao esperada e publicada
+   → registry corporativo contem a nova tag
+
+5. Promote atualiza CAP (Stage 4 ou promote-cap)
    → values.yaml: image tag → 3.6.7
    → Commit no CAP repo
 
-5. Pipeline de deploy do cluster le o CAP (externo ao autopilot)
+6. Pipeline de deploy do cluster le o CAP (externo ao autopilot)
    → Detecta mudanca no values.yaml
    → Faz rolling update do Deployment
    → Pod com nova imagem 3.6.7 sobe
 
-6. Aplicacao rodando com versao 3.6.7
+7. Aplicacao rodando com versao 3.6.7
    → Verificar: curl -s https://sre-aut-controller.psc.k8shmlbb111b.bb.com.br/health
 ```
 
@@ -177,10 +191,13 @@ image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 | `promoted=false` (sem erro) | sed nao encontrou o padrao | Verificar formato da linha `image:` no values.yaml |
 | `promoted=skipped` | Component nao tem CAP configurado | Configurar capRepo no workspace.json |
 | 403 no commit | Token sem permissao de escrita no CAP | Verificar scopes do BBVINET_TOKEN |
+| CAP atualizado antes do source verde | Gate operacional foi violado | Reverter o promote, corrigir o monitor/gate e aguardar source CI + publish |
 
 ## Checklist da Fase 10
 
-- [ ] Stage 4 (Promote) completou com `promoted=true`
+- [ ] Source CI/workloads do SHA correto terminaram verdes
+- [ ] Imagem da versao esperada foi publicada antes do promote
+- [ ] Stage 4 (Promote) ou promote-cap completou com `promoted=true`
 - [ ] Tag no CAP values.yaml atualizada para nova versao
 - [ ] Release state no autopilot-state mostra `status: "promoted"`
 - [ ] Referencia local (`references/controller-cap/values.yaml`) atualizada

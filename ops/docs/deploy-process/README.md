@@ -50,16 +50,21 @@
        +---> Stage 1: Setup (le workspace config)
        +---> Stage 1.5: Session Guard (adquire lock)
        +---> Stage 2: Apply & Push (clona repo corp, aplica patches, push)
-       +---> Stage 3: CI Gate (espera esteira corporativa)
-       +---> Stage 4: Promote (atualiza tag no CAP values.yaml)
+       +---> Stage 3: CI Gate inicial (identifica o sinal de CI do SHA pushado)
        +---> Stage 5: Save State (salva estado no autopilot-state)
        +---> Stage 6: Audit (registra trail + libera lock)
        |
        v
-[Monitorar Esteira de Build NPM (build, test, lint, Docker image)]
+[Monitorar commit SHA do source repo + check-runs/workloads]
        |
        v
-[Imagem Docker publicada no registry = DEPLOY COMPLETO]
+[Confirmar CI verde + imagem Docker publicada]
+       |
+       v
+[Promover repositorio CAP / atualizar tag de release]
+       |
+       v
+[Deploy consistente: source repo verde + CAP apontando para a versao publicada]
 ```
 
 ## Regras de Ouro
@@ -68,10 +73,11 @@
 2. **NUNCA** esquecer de incrementar o campo `run` no trigger — sem incremento o workflow NAO dispara
 3. **NUNCA** assumir que o workflow rodou — SEMPRE monitorar e verificar
 4. **NUNCA** criar patches sem ter a base corporativa ATUAL (fetch primeiro)
-5. **SEMPRE** fazer version bump nos 5 arquivos
-6. **SEMPRE** monitorar a esteira corporativa APOS o workflow do autopilot
+5. **SEMPRE** fazer version bump nos arquivos obrigatorios do source e da referencia local
+6. **SEMPRE** monitorar o commit SHA do source repo corporativo APOS o workflow do autopilot
 7. **SEMPRE** registrar falhas e solucoes na session memory
 8. Deploy so esta COMPLETO quando a imagem Docker e publicada no registry
+9. Promocao de tag no deploy repo so e valida depois que o source repo estiver verde
 
 ## Contexto
 
@@ -80,11 +86,12 @@
 - **Repo agent**: `bbvinet/psc-sre-automacao-agent` (codigo fonte)
 - **Repo CAP controller**: `bbvinet/psc_releases_cap_sre-aut-controller` (deploy K8s)
 - **Repo CAP agent**: `bbvinet/psc_releases_cap_sre-aut-agent` (deploy K8s)
+- **Regra operacional**: repos corporativos sao sempre acessados via autopilot + `BBVINET_TOKEN`, nunca por commit direto da sessao
 - **State branch**: `autopilot-state` (estado runtime, locks, audit)
 - **Token corporativo**: `BBVINET_TOKEN` (acesso repos bbvinet)
 - **Token autopilot**: `RELEASE_TOKEN` (acesso ao autopilot)
 
 ---
 
-*Ultima atualizacao: 2026-03-27*
+*Ultima atualizacao: 2026-04-22*
 *Gerado a partir do processo validado e operacional nas sessoes de 2026-03-23 a 2026-03-27*

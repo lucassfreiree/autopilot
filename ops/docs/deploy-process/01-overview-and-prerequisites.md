@@ -178,8 +178,9 @@ autopilot/
    --> Clone repo corporativo (BBVINET_TOKEN)
    --> Aplica patches no clone
    --> Push para main do repo corporativo
-   --> Esteira de Build NPM roda (CI corporativo)
-   --> Se CI passou: atualiza tag no CAP (auto-promote)
+   --> Esteira de Build NPM / workloads do source repo rodam
+   --> Confirmar source CI verde + imagem publicada
+   --> So entao atualizar tag no CAP
    --> Salva estado no autopilot-state
    --> Registra audit trail
 ```

@@ -26,7 +26,7 @@
     "authentication": {
       "autopilotRepo": "GITHUB_TOKEN (disponivel automaticamente no Codex quando rodando no repo lucassfreiree/autopilot)",
       "corporateRepo": "BBVINET_TOKEN (secret do repo — so acessivel dentro de workflows GitHub Actions, NAO diretamente pelo Codex)",
-      "note": "Codex NAO tem acesso direto ao BBVINET_TOKEN. Para acessar repos corporativos, usar workflows (fetch-files.yml, ci-diagnose.yml, apply-source-change.yml)"
+      "note": "Codex NAO tem acesso direto ao BBVINET_TOKEN. Repos corporativos sao operados somente pelo autopilot via workflows (fetch-files.yml, ci-diagnose.yml, apply-source-change.yml, promote-cap.yml)."
     },
     "readState": {
       "description": "Ler estado do autopilot-state branch",
@@ -102,28 +102,30 @@
     }
   },
   "deployFlow": {
-    "description": "FLUXO COMPLETO de deploy — Codex DEVE seguir estes passos na ordem",
+    "description": "FLUXO COMPLETO de deploy — o autopilot e a unica porta para repos corporativos e Codex DEVE seguir estes passos na ordem",
     "steps": [
-      "0. OBRIGATORIO: Buscar arquivos corporativos ATUAIS via fetch-files (base correta)",
-      "1. Verificar versao REAL no repo corporativo (nao confiar so em session memory)",
-      "2. Criar patches MINIMOS a partir da base corporativa ATUAL",
-      "3. OBRIGATORIO: Validar patches (diff vs corporativo, verificar testes, dead code)",
-      "4. Configurar trigger/source-change.json com run incrementado",
-      "5. Atualizar references + CLAUDE.md + session memory",
-      "6. Commit tudo em 1 commit, push branch claude/*, PR, squash merge",
-      "7. Monitorar workflow apply-source-change (polling 30-60s)",
-      "8. Monitorar esteira corporativa ate imagem Docker ser publicada",
-      "9. Stage 4 (Promote) atualiza tag AUTOMATICAMENTE no CAP repo apos CI passar — agent (bbvinet/psc_releases_cap_sre-aut-agent) E controller (bbvinet/psc_releases_cap_sre-aut-controller)",
-      "10. Se falhar: ler logs, diagnosticar, corrigir, re-deploy AUTOMATICAMENTE"
+      "0. OBRIGATORIO: Usar o autopilot como unica porta para repos corporativos; nunca editar ou commitar diretamente neles",
+      "1. OBRIGATORIO: Buscar arquivos corporativos ATUAIS via fetch-files (base correta)",
+      "2. Verificar versao REAL no repo corporativo e no CAP antes de alterar qualquer patch",
+      "3. Criar patches MINIMOS a partir da base corporativa ATUAL",
+      "4. OBRIGATORIO: Validar patches localmente no autopilot (diff, JSON/YAML, testes/checks relevantes, dead code)",
+      "5. Configurar trigger/source-change.json com run incrementado",
+      "6. Atualizar references + memoria + docs operacionais necessarios",
+      "7. Commit tudo no autopilot em 1 commit, push branch claude/* ou codex/*, PR, squash merge",
+      "8. Monitorar workflow apply-source-change ate obter o commit SHA exato do source repo corporativo",
+      "9. Monitorar o commit SHA corporativo correto pelos check-runs/workloads e pela esteira configurada no workspace ate conclusao verde",
+      "10. Confirmar evidencia de publicacao da imagem da versao esperada",
+      "11. So entao considerar valida a promocao da tag no CAP/deploy repo",
+      "12. Se falhar: ler logs, diagnosticar, corrigir, re-deploy AUTOMATICAMENTE sem promover o CAP antes do source repo ficar verde"
     ],
     "preDeployValidation": {
       "workflow": "validate-patches.yml",
       "triggeredBy": "PR com changes em patches/ ou trigger/source-change.json",
       "whatItDoes": "Clona repo corporativo, aplica patches, roda npm ci + tsc + eslint + jest",
-      "rule": "NUNCA mergear PR de deploy se validate-patches falhar"
+      "rule": "NUNCA mergear PR de deploy se validate-patches ou o preflight local falharem"
     },
     "versioningRules": {
-      "currentVersion": "3.6.3",
+      "currentVersion": "3.9.3",
       "pattern": "Apos X.Y.9 vai para X.(Y+1).0 — NUNCA X.Y.10",
       "checkRegistry": "SEMPRE verificar se tag ja existe antes de bumpar",
       "versionFiles": [
@@ -154,11 +156,11 @@
     "stateAccess": "Use gh CLI to read/write state on autopilot-state branch. See githubConnection.readState for commands.",
     "lockProtocol": "Check locks/ directory via gh api before starting operations. Always release locks on completion.",
     "sessionGuard": "CRITICAL: Before any state-changing operation, check session-lock.json. If locked by claude-code, ABORT and create a handoff instead.",
-    "releaseProtocol": "Follow workspace.json config, use gh CLI for API operations. Follow deployFlow steps exactly.",
+    "releaseProtocol": "Follow workspace.json config, use gh CLI for API operations, and operate corporate repos only through autopilot workflows. Follow deployFlow steps exactly.",
     "handoffProtocol": "Read pending handoffs via gh api, update status on completion",
     "auditProtocol": "Record actions via gh api to audit directory after every state mutation",
-    "sourceCodeChanges": "Use apply-source-change.yml workflow or trigger file. ALWAYS validate patches first. Never push directly to corporate repos.",
-    "monitoringProtocol": "ALWAYS monitor both autopilot workflow AND corporate esteira. Deploy is NOT complete until Docker image is published. Poll every 30-60s.",
+    "sourceCodeChanges": "Corporate source changes live in autopilot. Always fetch the current corporate files first, implement patches only in autopilot, validate locally, then use apply-source-change.yml or trigger/source-change.json. Never push directly to corporate repos.",
+    "monitoringProtocol": "ALWAYS monitor the autopilot workflow plus the exact corporate source commit SHA. Use commit check-runs/workloads as the primary signal when workflow_runs are absent or renamed. Deploy is NOT complete until the expected Docker image is published, and CAP promotion is NOT valid before that. Poll every 30-60s.",
     "errorRecovery": "If deploy fails: read ci-logs-controller-*.txt from autopilot-state, diagnose, fix, re-deploy AUTOMATICALLY without asking user."
   },
   "memoryProtocol": {
@@ -194,6 +196,7 @@
       "Nunca operar sem workspace_id identificado",
       "Nunca misturar contextos entre workspaces",
       "Nunca mergear PR de deploy se validate-patches falhar",
+      "Nunca promover tag CAP/deploy se o source repo nao estiver verde com a imagem publicada",
       "Sempre monitorar workflows e esteira corporativa apos merge"
     ],
     "sourceOfTruth": [
@@ -209,9 +212,11 @@
       "5. Push da branch de trabalho",
       "6. Abrir PR para main com contexto tecnico completo",
       "7. Monitorar checks/workflows ate conclusao",
-      "8. Resolver conflitos/falhas automaticamente quando possivel",
-      "9. Realizar squash merge quando policy gates passarem",
-      "10. Monitorar pos-merge (workflows + esteira corporativa quando aplicavel)"
+      "8. Monitorar o commit SHA do source repo corporativo ate a esteira/workloads ficarem verdes e a imagem ser publicada",
+      "9. So depois disso permitir a promocao do deploy repo/CAP",
+      "10. Resolver conflitos/falhas automaticamente quando possivel",
+      "11. Realizar squash merge quando policy gates passarem",
+      "12. Monitorar pos-merge (workflows + esteira corporativa quando aplicavel)"
     ],
     "autopilotCommitWorkflowChain": [
       "[Agent] Auto PR + Auto-Merge (Codex) (push)",

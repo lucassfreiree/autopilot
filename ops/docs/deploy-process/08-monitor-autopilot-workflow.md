@@ -253,9 +253,9 @@ DATA=$(gh api "repos/$REPO/commits/$SHA/check-runs" --jq '{
 | Resultado | Significado | Proxima acao |
 |-----------|-------------|--------------|
 | `success` | Todos os checks passaram | Prosseguir para Stage 4 |
-| `failure` | Algum check falhou | Verificar se pre-existente |
-| `no-ci` | Nenhum check encontrado | Prosseguir com warning |
-| `timeout` | Checks nao completaram em 20 min | Prosseguir com warning |
+| `failure` | Algum check falhou | Bloquear promote e verificar logs/source SHA |
+| `no-ci` | Nenhum check encontrado | Bloquear promote ate encontrar checks/workloads do SHA |
+| `timeout` | Checks nao completaram em 20 min | Bloquear promote ate concluir source CI/workloads |
 
 #### Fase 3: Smart CI — Pre-existing Detection
 Se CI falhou, verifica se a falha ja existia ANTES do nosso commit:
@@ -269,12 +269,12 @@ Se CI falhou, verifica se a falha ja existia ANTES do nosso commit:
 | CI Result | Pre-existing | Decision | Acao |
 |-----------|:------------:|----------|------|
 | success | - | `pass` | Continua normalmente |
-| no-ci | - | `pass` | Continua com warning |
-| failure | true | `pass-preexisting` | Continua (falha nao e nossa) |
-| failure | unknown | `pass-unknown` | Continua com cautela |
+| no-ci | - | `block-no-ci` | **PARA** — sem evidencia suficiente do source pipeline |
+| failure | true | `block-preexisting` | **PARA** — falha pode ser pre-existente, mas promocao continua bloqueada |
+| failure | unknown | `block-unknown` | **PARA** — sem prova de source pipeline verde |
 | failure | false | `block` | **PARA** — nossa mudanca quebrou o CI |
 
-**ATENCAO**: A deteccao de pre-existing tem um bug conhecido. Pode reportar `failure` mesmo quando a esteira passou. Para resultado REAL, verificar os logs da esteira corporativa (ver fase 09).
+**ATENCAO**: A deteccao de pre-existing e o nome exato do workflow nao sao suficientes para aprovar o deploy. Para resultado REAL, verificar o SHA corporativo, seus check-runs/workloads e a evidencia de publish da imagem (ver fase 09).
 
 ---
 
@@ -283,7 +283,7 @@ Se CI falhou, verifica se a falha ja existia ANTES do nosso commit:
 **Job name**: `4. Promote to CAP (<component>)`
 **Runner**: `ubuntu-latest`
 **Depends on**: Setup, Apply & Push, CI Gate
-**Condicao**: `promote == 'true'` AND CI Gate nao falhou
+**Condicao**: `promote == 'true'` AND source CI/workloads verdes para o SHA correto AND imagem publicada
 **Duracao tipica**: 10-30 segundos
 
 **O que faz:**
@@ -291,6 +291,8 @@ Se CI falhou, verifica se a falha ja existia ANTES do nosso commit:
 2. Le o `values.yaml` atual do repo CAP via GitHub API
 3. Substitui a tag da imagem Docker usando sed com o `imagePattern`
 4. Faz commit no CAP repo via GitHub API
+
+**Regra operacional**: Se houver qualquer duvida sobre o estado do source repo, a promocao deve continuar bloqueada mesmo que o job exista ou o CI Gate inicial tenha retornado algum status parcial.
 
 **Para Controller:**
 ```bash
@@ -351,10 +353,10 @@ state/workspaces/<ws_id>/<component>-release-state.json
 **Status possiveis:**
 | Status | Significado |
 |--------|-------------|
-| `promoted` | CI passou + CAP atualizado |
-| `promoted-preexisting-ci-fail` | CI falhou (pre-existente) + CAP atualizado |
-| `ci-passed` | CI passou, promote nao habilitado |
-| `ci-failed-preexisting` | CI falhou (pre-existente), sem promote |
+| `promoted` | Source CI passou + imagem publicada + CAP atualizado |
+| `promoted-preexisting-ci-fail` | Estado historico invalido; investigar se houve promocao antecipada |
+| `ci-passed` | Source CI passou, promote nao habilitado |
+| `ci-failed-preexisting` | Source CI falhou/pre-existente, sem promote valido |
 | `ci-failed` | CI falhou por nossa mudanca |
 | `pending` | Status indefinido |
 
@@ -439,8 +441,9 @@ gh api repos/lucassfreiree/autopilot/actions/runs/<RUN_ID>/jobs \
 - [ ] Stage 1 (Setup) completou com sucesso
 - [ ] Stage 1.5 (Session Guard) adquiriu lock
 - [ ] Stage 2 (Apply & Push) pushou com sucesso (sha != null)
-- [ ] Stage 3 (CI Gate) completou (success/pass-preexisting)
-- [ ] Stage 4 (Promote) atualizou tag no CAP
+- [ ] Stage 3 (CI Gate) completou com um sinal valido para o SHA certo
+- [ ] Source CI/workloads do SHA correto terminaram verdes e com publish confirmado
+- [ ] Stage 4 (Promote) atualizou tag no CAP somente depois desse gate
 - [ ] Stage 5 (Save State) salvou estado
 - [ ] Stage 6 (Audit) registrou trail e liberou lock
 - [ ] Usuario notificado do resultado

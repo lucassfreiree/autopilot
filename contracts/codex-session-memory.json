@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-02T14:24:00Z",
-  "sessionCount": 8,
+  "lastUpdated": "2026-04-22T21:07:44Z",
+  "sessionCount": 9,
   "currentState": {
-    "controllerVersion": "3.8.0-run94",
+    "controllerVersion": "3.9.3",
     "agentVersion": "2.2.9",
-    "lastTriggerRun": 94,
+    "lastTriggerRun": 111,
     "lastSuccessfulRun": 66,
     "workspace": "ws-default",
-    "pipelineStatus": "controller-run94-tsconfig-fix"
+    "pipelineStatus": "controller-source-ci-must-pass-before-cap-promotion"
   },
   "sessionsLog": [
     {
@@ -30,6 +30,11 @@
       "timestamp": "2026-04-02T14:24:00Z",
       "topic": "controller-run94-fix",
       "action": "Confirmed run 93 was a no-op because its tsconfig search string expected ignoreDeprecations to already exist. Triggered run 94 against the live 3.8.0 tsconfig prefix and kept the release line on 3.8.0."
+    },
+    {
+      "timestamp": "2026-04-22T21:07:44Z",
+      "topic": "controller-source-ci-promotion-protocol",
+      "action": "Registered the permanent rule that corporate source and deploy repos must be operated only through autopilot: fetch the live corporate base first, implement patches and validations in autopilot, trigger the corporate source pipeline through BBVINET_TOKEN, monitor the exact source commit SHA plus corporate workloads/check-runs, confirm image publication for the target version, and only then treat CAP/deploy tag promotion as valid."
     }
   ],
   "decisions": [
@@ -52,6 +57,11 @@
       "timestamp": "2026-04-02T14:24:00Z",
       "decision": "Run 94 must target the live tsconfig prefix \"compilerOptions\": {  \"types\": [\"node\"], rather than the intermediate ignoreDeprecations form used by run 93.",
       "reason": "The fresh fetch-files result proved that the corporate file never received the earlier patch, so reusing the run 93 search string would stay a no-op."
+    },
+    {
+      "timestamp": "2026-04-22T21:07:44Z",
+      "decision": "Corporate repos must always be changed through autopilot fetch/patch/test/trigger flow, and CAP release tag changes are blocked until the source repo is green with image publication confirmed.",
+      "reason": "Direct assumptions or premature promotion can desynchronize source and deploy state. The source repo commit, workloads/check-runs, and image publication are the required release gate."
     }
   ],
   "lessonsLearned": [
@@ -78,6 +88,14 @@
     {
       "timestamp": "2026-04-02T14:24:00Z",
       "lesson": "When a source-change run is a no-op, the fastest proof is the fetched corporate file itself; if it still shows the old prefix, fix the trigger search string before waiting on stale diagnosis output."
+    },
+    {
+      "timestamp": "2026-04-22T21:07:44Z",
+      "lesson": "Corporate repos are not edited directly from the session. Autopilot is the only control plane: fetch current files, prepare patches locally, validate locally, and let BBVINET_TOKEN workflows push to the corporate source repo."
+    },
+    {
+      "timestamp": "2026-04-22T21:07:44Z",
+      "lesson": "If workflow_runs are missing or differently named, that does not mean the corporate CI did not start. The source-of-truth monitor is the pushed corporate commit SHA plus its check-runs/workloads and image publication evidence."
     }
   ],
   "errorPatterns": {
@@ -111,6 +129,16 @@
       ],
       "rootCause": "The trigger searched for an intermediate tsconfig shape with ignoreDeprecations already present, but the live file never had that prefix.",
       "fix": "Patch the live prefix directly in a new source-change run while keeping the release on 3.8.0."
+    },
+    "corporate_ci_observability_gap": {
+      "observedAt": "2026-04-22T21:07:44Z",
+      "symptoms": [
+        "source commit was pushed to the corporate repo",
+        "actions workflow_runs do not show the expected workflow name",
+        "commit check-runs or workloads exist for the same SHA"
+      ],
+      "rootCause": "Monitoring relied too heavily on exact workflow_run name matching. Some corporate repos expose the source pipeline primarily through commit check-runs or differently named workloads.",
+      "fix": "Track the exact corporate commit SHA, use check-runs/workloads as the primary signal, confirm image publication for the expected version, and keep CAP promotion blocked until those signals are green."
     }
   }
 }
