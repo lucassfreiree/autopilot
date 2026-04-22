@@ -24,8 +24,8 @@ on:
     workflows:
       - "[Corp] Deploy: Apply Source Change"
       - "[Core] CI Monitor Loop"
-      - "[Corp] Fix: CI Lint Errors"
-      - "[Corp] Diagnose: CI Failure"
+      - "[Corp] Fix: CI Lint + Test Errors"
+      - "[Corp] CI: Diagnose Error Logs"
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -106,9 +106,12 @@ jobs:
 
             # Read ci-monitor result
             MONITOR=$(read_state "state/workspaces/${WS_ID}/ci-monitor-${COMP}.json")
-            MONITOR_AT=$(echo "$MONITOR"     | jq -r '.monitoredAt // ""')
-            MONITOR_RESULT=$(echo "$MONITOR" | jq -r '.ciOutcome // ""')
-            MONITOR_RUN=$(echo "$MONITOR"    | jq -r '.monitorRunId // ""')
+            MONITOR_AT=$(echo "$MONITOR"          | jq -r '.monitoredAt // ""')
+            MONITOR_RESULT=$(echo "$MONITOR"      | jq -r '.ciOutcome // ""')
+            MONITOR_RUN=$(echo "$MONITOR"         | jq -r '.monitorRunId // ""')
+            MONITOR_WORKFLOW=$(echo "$MONITOR"    | jq -r '.ciWorkflowName // ""')
+            ARTIFACT_VERIFIED=$(echo "$MONITOR"   | jq -r '.artifactVerified // false')
+            ARTIFACT_EVIDENCE=$(echo "$MONITOR"   | jq -r '.artifactEvidence // ""')
 
             MONITOR_AGE=$(age_min "$MONITOR_AT")
 
@@ -141,8 +144,24 @@ jobs:
                 STAGE="ci-monitoring"
                 HEALTH="ok"
               elif [ "$MONITOR_RESULT" = "success" ]; then
-                STAGE="complete"
-                HEALTH="ok"
+                if [ "$ARTIFACT_VERIFIED" = "true" ]; then
+                  STAGE="complete"
+                  HEALTH="ok"
+                else
+                  STAGE="artifact-unverified"
+                  HEALTH="warning"
+                  OVERALL_STATUS="degraded"
+                  if [ "$MONITOR_AGE" -gt "$ALERT_THRESHOLD_MIN" ]; then
+                    ALERT_NEEDED="${ALERT_NEEDED}${COMP},"
+                  fi
+                fi
+              elif [ "$MONITOR_RESULT" = "artifact-unverified" ]; then
+                STAGE="artifact-unverified"
+                HEALTH="warning"
+                OVERALL_STATUS="degraded"
+                if [ "$MONITOR_AGE" -gt "$ALERT_THRESHOLD_MIN" ]; then
+                  ALERT_NEEDED="${ALERT_NEEDED}${COMP},"
+                fi
               elif [ "$MONITOR_RESULT" = "failure" ]; then
                 STAGE="ci-failed"
                 HEALTH="error"
@@ -175,6 +194,9 @@ jobs:
               --arg gate "$GATE" \
               --arg monitor_at "$MONITOR_AT" \
               --arg monitor_result "$MONITOR_RESULT" \
+              --arg monitor_workflow "$MONITOR_WORKFLOW" \
+              --arg artifact_verified "$ARTIFACT_VERIFIED" \
+              --arg artifact_evidence "$ARTIFACT_EVIDENCE" \
               --arg stage "$STAGE" \
               --arg health "$HEALTH" \
               --arg action "$ACTION_TAKEN" \
@@ -187,6 +209,9 @@ jobs:
                 gateDecision: $gate,
                 ciMonitorResult: $monitor_result,
                 ciMonitorAt: $monitor_at,
+                ciWorkflowName: $monitor_workflow,
+                artifactVerified: ($artifact_verified == "true"),
+                artifactEvidence: $artifact_evidence,
                 stage: $stage,
                 health: $health,
                 actionTaken: $action,
@@ -230,36 +255,13 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           ALERT="${{ steps.status.outputs.alert_needed }}"
-          BODY="Deploy pipeline stuck for components: ${ALERT}. ci-monitor ran but CI still failing after 60+ min. Manual investigation may be needed. Auto-dispatch already triggered."
+          BODY="Deploy pipeline stuck for components: ${ALERT}. The monitor detected a blocked state for more than 60 minutes and promotion is still not complete. Manual investigation may be needed. Auto-dispatch already triggered."
           gh issue create \
             --repo "$AUTOPILOT_REPO" \
             --title "[Pipeline Alert] Stuck deploy pipeline: $ALERT" \
             --body "$BODY" \
             --label "pipeline-alert,autonomous" 2>/dev/null || \
             echo "::warning ::Could not create alert issue"
-
-          # Escalate to Claude Code for intelligent pipeline diagnosis
-          ESCALATION_BODY=$(cat <<'ESCEOF'
-          ## Auto-Escalation from Deploy Pipeline Monitor
-
-          Deploy pipeline stuck for 60+ minutes. ci-monitor-loop was dispatched but CI is still failing.
-
-          ### What to do
-          @claude The deploy pipeline is stuck. Read the latest CI logs from state/workspaces/ws-default/ci-logs-*.txt on autopilot-state. Diagnose the corporate CI failure, create a fix patch, bump the version, and redeploy. Use ci-fix and deploy-monitor skills.
-
-          ### Context
-          - Session memory: contracts/claude-session-memory.json
-          - CI fix patterns: .claude/skills/ci-fix.md
-          - Deploy monitor: .claude/skills/deploy-monitor.md
-          - CI logs: state/workspaces/ws-default/ci-logs-*.txt (autopilot-state)
-          ESCEOF
-          )
-          gh issue create \
-            --repo "$AUTOPILOT_REPO" \
-            --title "[AutoPilot] @claude Pipeline stuck — $ALERT needs intelligent diagnosis" \
-            --label "automated,needs-claude,pipeline-alert" \
-            --body "$ESCALATION_BODY" 2>/dev/null || \
-            echo "::warning ::Could not create Claude escalation issue"
 
       - name: "Write pipeline-status.json to autopilot-state"
         if: always()
@@ -314,15 +316,17 @@ jobs:
           echo "| Trigger | ${{ github.event_name }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Component Status" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Component | Version | Stage | CI Monitor | Health |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-----------|---------|-------|------------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Component | Version | Stage | CI Monitor | Artifact | Health |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----------|---------|-------|------------|----------|--------|" >> "$GITHUB_STEP_SUMMARY"
           AGENT_VER=$(echo "$COMP_STATUS"    | jq -r '.agent.version // "-"')
           AGENT_STAGE=$(echo "$COMP_STATUS"  | jq -r '.agent.stage // "-"')
           AGENT_CI=$(echo "$COMP_STATUS"     | jq -r '.agent.ciMonitorResult // "-"')
+          AGENT_ART=$(echo "$COMP_STATUS"    | jq -r '.agent.artifactVerified // "-"')
           AGENT_H=$(echo "$COMP_STATUS"      | jq -r '.agent.health // "-"')
           CTRL_VER=$(echo "$COMP_STATUS"     | jq -r '.controller.version // "-"')
           CTRL_STAGE=$(echo "$COMP_STATUS"   | jq -r '.controller.stage // "-"')
           CTRL_CI=$(echo "$COMP_STATUS"      | jq -r '.controller.ciMonitorResult // "-"')
+          CTRL_ART=$(echo "$COMP_STATUS"     | jq -r '.controller.artifactVerified // "-"')
           CTRL_H=$(echo "$COMP_STATUS"       | jq -r '.controller.health // "-"')
-          echo "| agent | $AGENT_VER | $AGENT_STAGE | $AGENT_CI | $AGENT_H |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| controller | $CTRL_VER | $CTRL_STAGE | $CTRL_CI | $CTRL_H |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| agent | $AGENT_VER | $AGENT_STAGE | $AGENT_CI | $AGENT_ART | $AGENT_H |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| controller | $CTRL_VER | $CTRL_STAGE | $CTRL_CI | $CTRL_ART | $CTRL_H |" >> "$GITHUB_STEP_SUMMARY"

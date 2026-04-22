@@ -14,6 +14,25 @@ O workflow `apply-source-change.yml` verifica o CI Gate (Stage 3), mas isso e ap
 
 **O deploy so esta COMPLETO quando a imagem Docker e publicada no registry corporativo.**
 
+## Protocolo Operacional Endurecido
+
+Use este protocolo como regra obrigatoria para qualquer deploy de source code:
+
+1. Monitorar o **commit SHA corporativo correto** gerado pelo Stage 2 do `apply-source-change.yml`
+2. Filtrar apenas a **esteira configurada no `workspace.json`** (`ciWorkflowName`)
+3. Esperar a esteira terminar com **`success`** para o SHA certo
+4. Confirmar nos logs do workflow bem-sucedido a **publicacao da imagem** da versao esperada
+5. So depois disso promover a tag no repositorio de deploy
+6. Se a esteira falhar, expirar ou terminar sem evidencia de publish, **bloquear a promocao**
+
+Resumo direto:
+
+```text
+source push aceito != deploy pronto
+ci verde sem publish confirmado != deploy pronto
+deploy pronto = esteira certa verde + imagem publicada + so entao promocao
+```
+
 ## O que e a Esteira de Build NPM
 
 A esteira corporativa e um pipeline CI/CD que roda em runner corporativo (nao no GitHub Actions do autopilot). Ela executa:
@@ -30,6 +49,16 @@ A esteira corporativa e um pipeline CI/CD que roda em runner corporativo (nao no
 ```
 
 ## Como Monitorar a Esteira
+
+### Regra de Ouro
+
+Nao basta encontrar qualquer workflow verde no repo corporativo. O monitor precisa validar, para o mesmo SHA:
+
+- nome da esteira correto
+- conclusao `success`
+- evidencia de build/publish da imagem da versao esperada
+
+Se qualquer um desses tres pontos faltar, o estado correto e **nao promover**.
 
 ### Metodo 1: Via ci-status-check.yml (Recomendado)
 
@@ -80,6 +109,15 @@ REPO="bbvinet/psc-sre-automacao-controller"
 # Verificar check-runs
 gh api "repos/$REPO/commits/$SHA/check-runs" \
   --jq '.check_runs[] | {name, status, conclusion}'
+```
+
+Para validar a esteira certa no repo corporativo:
+
+```bash
+WORKFLOW="Esteira de Build NPM"
+
+gh api "repos/$REPO/actions/runs?head_sha=$SHA&per_page=20" \
+  --jq --arg wf "$WORKFLOW" '.workflow_runs[] | select(.name == $wf) | {id, name, status, conclusion, html_url}'
 ```
 
 ### Metodo 3: Via Audit Trail no autopilot-state
@@ -166,7 +204,9 @@ Check-runs: gh api "repos/bbvinet/psc-sre-automacao-controller/commits/def5678/c
 |----------------------|----------------|
 | Workflow run do autopilot | `gh api repos/lucassfreiree/autopilot/actions/runs/<run_id>` |
 | SHA do commit corporativo | `controller-release-state.json` no autopilot-state, campo `lastReleasedSha` |
-| Status da esteira | `ci-status-controller.json` no autopilot-state |
+| Status da esteira | `ci-monitor-controller.json` no autopilot-state |
+| Workflow corporativo validado | `ci-monitor-controller.json`, campos `ciWorkflowName`, `matchedWorkflowRunId`, `matchedWorkflowRunUrl` |
+| Evidencia de publish | `ci-monitor-controller.json`, campos `artifactVerified`, `artifactEvidence` |
 | Logs da esteira | `ci-logs-controller-<job_id>.txt` no autopilot-state |
 | Tag promovida no CAP | `audit/source-change-*.json` no autopilot-state, campo `promoted` |
 
@@ -219,10 +259,13 @@ Agent:
 ## Checklist da Fase 09
 
 - [ ] SHA do commit corporativo identificado (output do Stage 2)
-- [ ] Esteira de Build NPM acionada (check-runs aparecendo)
-- [ ] Status monitorado ate conclusao (success ou failure)
+- [ ] Esteira configurada no workspace acionada
+- [ ] Status monitorado ate conclusao (success ou failure) para o SHA correto
+- [ ] Workflow corporativo correto identificado
 - [ ] Se failure: logs baixados e analisados
+- [ ] Se success: evidencia de publish da imagem da versao esperada confirmada
 - [ ] Se failure: patch corrigido e re-deploy iniciado
+- [ ] Promocao so ocorreu depois da confirmacao de publish
 - [ ] Imagem Docker publicada no registry (deploy COMPLETO)
 - [ ] Resultado registrado na session memory
 

@@ -144,14 +144,16 @@ jobs:
             "repos/$AUTOPILOT_REPO/contents/state/workspaces/${WS_ID}/workspace.json?ref=$STATE_BRANCH" \
             --jq '.content' | base64 -d)
           SOURCE_REPO=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.sourceRepo // \"\"")
+          CI_WORKFLOW_NAME=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.ciWorkflowName // \"\"")
 
           echo "ws_id=$WS_ID"          >> "$GITHUB_OUTPUT"
           echo "component=$COMPONENT"  >> "$GITHUB_OUTPUT"
           echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION"       >> "$GITHUB_OUTPUT"
           echo "source_repo=$SOURCE_REPO" >> "$GITHUB_OUTPUT"
+          echo "ci_workflow_name=$CI_WORKFLOW_NAME" >> "$GITHUB_OUTPUT"
 
-          echo "=== Monitor: ws=$WS_ID component=$COMPONENT sha=$COMMIT_SHA version=$VERSION repo=$SOURCE_REPO ==="
+          echo "=== Monitor: ws=$WS_ID component=$COMPONENT sha=$COMMIT_SHA version=$VERSION repo=$SOURCE_REPO workflow=${CI_WORKFLOW_NAME:-any} ==="
 
       # ── 2. Poll corporate CI ─────────────────────────────────────────────────
       - name: "Poll corporate CI"
@@ -166,6 +168,7 @@ jobs:
           SOURCE_REPO="${{ steps.inputs.outputs.source_repo }}"
           COMMIT_SHA="${{ steps.inputs.outputs.commit_sha }}"
           COMPONENT="${{ steps.inputs.outputs.component }}"
+          CI_WORKFLOW_NAME="${{ steps.inputs.outputs.ci_workflow_name }}"
 
           if [ -z "$SOURCE_REPO" ] || [ "$SOURCE_REPO" = "null" ]; then
             echo "::error ::No source repo configured for $COMPONENT — cannot poll CI."
@@ -173,6 +176,9 @@ jobs:
           fi
 
           OVERALL="unknown"
+          SUCCESS_RUN_ID=""
+          SUCCESS_RUN_URL=""
+          SUCCESS_RUN_NAME=""
           FAILED_RUN_URL=""
           TOTAL_ATTEMPTS=$(( FAST_ATTEMPTS + SLOW_ATTEMPTS ))
 
@@ -188,26 +194,35 @@ jobs:
             echo "=== Attempt $ATTEMPT / $TOTAL_ATTEMPTS (${PHASE} phase, ${INTERVAL}s interval) ==="
 
             if [ -n "$COMMIT_SHA" ] && [ "$COMMIT_SHA" != "null" ]; then
-              RUNS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
+              RAW_RUNS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
                 "repos/$SOURCE_REPO/actions/runs?head_sha=${COMMIT_SHA}&per_page=10" \
                 2>/dev/null || echo '{"workflow_runs":[]}')
             else
               # Fallback: check the last 5 runs in the repo
-              RUNS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
+              RAW_RUNS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
                 "repos/$SOURCE_REPO/actions/runs?per_page=5" \
                 2>/dev/null || echo '{"workflow_runs":[]}')
+            fi
+
+            if [ -n "$CI_WORKFLOW_NAME" ] && [ "$CI_WORKFLOW_NAME" != "null" ]; then
+              RUNS=$(echo "$RAW_RUNS" | jq --arg wf "$CI_WORKFLOW_NAME" '{workflow_runs: [.workflow_runs[] | select(.name == $wf)]}')
+            else
+              RUNS="$RAW_RUNS"
             fi
 
             TOTAL=$(echo "$RUNS"       | jq '.workflow_runs | length')
             IN_PROG=$(echo "$RUNS"     | jq '[.workflow_runs[] | select(.status != "completed")] | length')
             SUCCESS=$(echo "$RUNS"     | jq '[.workflow_runs[] | select(.conclusion == "success")] | length')
             FAILED=$(echo "$RUNS"      | jq '[.workflow_runs[] | select(.conclusion == "failure")] | length')
+            SUCCESS_RUN_ID=$(echo "$RUNS" | jq -r '[.workflow_runs[] | select(.conclusion == "success")] | first | .id // ""')
+            SUCCESS_RUN_URL=$(echo "$RUNS" | jq -r '[.workflow_runs[] | select(.conclusion == "success")] | first | .html_url // ""')
+            SUCCESS_RUN_NAME=$(echo "$RUNS" | jq -r '[.workflow_runs[] | select(.conclusion == "success")] | first | .name // ""')
             FAILED_RUN_URL=$(echo "$RUNS" | jq -r '[.workflow_runs[] | select(.conclusion == "failure")] | first | .html_url // ""')
 
-            echo "  total=$TOTAL in_progress=$IN_PROG success=$SUCCESS failed=$FAILED"
+            echo "  total=$TOTAL in_progress=$IN_PROG success=$SUCCESS failed=$FAILED workflow=${CI_WORKFLOW_NAME:-any}"
 
             if [ "$TOTAL" -eq 0 ]; then
-              echo "  No runs found yet — waiting..."
+              echo "  No matching workflow run found yet — waiting..."
               OVERALL="pending"
             elif [ "$SUCCESS" -gt 0 ] && [ "$IN_PROG" -eq 0 ]; then
               OVERALL="success"
@@ -234,12 +249,83 @@ jobs:
           fi
 
           echo "overall=$OVERALL"            >> "$GITHUB_OUTPUT"
+          echo "success_run_id=$SUCCESS_RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "success_run_url=$SUCCESS_RUN_URL" >> "$GITHUB_OUTPUT"
+          echo "success_run_name=$SUCCESS_RUN_NAME" >> "$GITHUB_OUTPUT"
           echo "failed_run_url=$FAILED_RUN_URL" >> "$GITHUB_OUTPUT"
           echo "=== Final CI status: $OVERALL ==="
 
-      # ── 3a. On success → promote CAP ─────────────────────────────────────────
-      - name: "Trigger promote-cap (on success)"
+      # ── 3a. On success → verify publish evidence ─────────────────────────────
+      - name: "Verify image publication"
+        id: publish
         if: steps.poll.outputs.overall == 'success'
+        env:
+          BBVINET_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          set -e
+
+          SOURCE_REPO="${{ steps.inputs.outputs.source_repo }}"
+          VERSION="${{ steps.inputs.outputs.version }}"
+          RUN_ID="${{ steps.poll.outputs.success_run_id }}"
+          IMAGE_NAME=$(echo "$SOURCE_REPO" | awk -F/ '{print $2}')
+
+          VERIFIED=false
+          EVIDENCE=""
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::warning ::Successful workflow run not available for artifact verification."
+          else
+            JOBS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
+              "repos/$SOURCE_REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+              2>/dev/null || echo '{"jobs":[]}')
+
+            JOB_IDS=$(echo "$JOBS" | jq -r '[.jobs[] | select((.name | ascii_downcase | test("publish|push|docker|image|build"))) | .id] | unique | .[]')
+            if [ -z "$JOB_IDS" ]; then
+              JOB_IDS=$(echo "$JOBS" | jq -r '[.jobs[] | .id] | .[:5] | .[]')
+            fi
+
+            for JOB_ID in $JOB_IDS; do
+              JOB_NAME=$(echo "$JOBS" | jq -r --arg id "$JOB_ID" '.jobs[] | select((.id | tostring) == $id) | .name // ""')
+              JOB_LOGS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
+                "repos/$SOURCE_REPO/actions/jobs/$JOB_ID/logs" \
+                2>/dev/null || echo "")
+
+              HAS_VERSION=false
+              HAS_PUBLISH=false
+
+              echo "$JOB_LOGS" | grep -Fq "$VERSION" && HAS_VERSION=true || true
+              echo "$JOB_LOGS" | grep -Eiq "docker\\.binarios\\.intranet|docker push|published|publish|registry|push refer|${IMAGE_NAME}:${VERSION}" && HAS_PUBLISH=true || true
+
+              if [ "$HAS_VERSION" = "true" ] && [ "$HAS_PUBLISH" = "true" ]; then
+                VERIFIED=true
+                EVIDENCE="workflow=${{ steps.poll.outputs.success_run_name }} job=${JOB_NAME} run=${RUN_ID}"
+                echo "Artifact verified via $JOB_NAME"
+                break
+              fi
+            done
+          fi
+
+          echo "verified=$VERIFIED" >> "$GITHUB_OUTPUT"
+          echo "evidence=$EVIDENCE" >> "$GITHUB_OUTPUT"
+
+      - name: "Finalize monitor result"
+        id: final
+        if: always()
+        run: |
+          POLL_RESULT="${{ steps.poll.outputs.overall || 'unknown' }}"
+          VERIFIED="${{ steps.publish.outputs.verified || 'false' }}"
+          FINAL_RESULT="$POLL_RESULT"
+
+          if [ "$POLL_RESULT" = "success" ] && [ "$VERIFIED" != "true" ]; then
+            FINAL_RESULT="artifact-unverified"
+          fi
+
+          echo "overall=$FINAL_RESULT" >> "$GITHUB_OUTPUT"
+          echo "=== Final monitored status: $FINAL_RESULT ==="
+
+      # ── 3b. On verified success → promote CAP ────────────────────────────────
+      - name: "Trigger promote-cap (on success)"
+        if: steps.final.outputs.overall == 'success'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
@@ -258,18 +344,18 @@ jobs:
 
           echo "Promote-CAP workflow dispatched for $COMPONENT $VERSION."
 
-      # ── 3b. On failure/timeout → diagnose + fix ───────────────────────────────
+      # ── 3c. On failure/timeout → diagnose + fix ───────────────────────────────
       - name: "Trigger ci-diagnose (on failure)"
         if: >
-          steps.poll.outputs.overall == 'failure' ||
-          steps.poll.outputs.overall == 'timeout'
+          steps.final.outputs.overall == 'failure' ||
+          steps.final.outputs.overall == 'timeout'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           WS_ID="${{ steps.inputs.outputs.ws_id }}"
           COMPONENT="${{ steps.inputs.outputs.component }}"
           COMMIT_SHA="${{ steps.inputs.outputs.commit_sha }}"
-          OVERALL="${{ steps.poll.outputs.overall }}"
+          OVERALL="${{ steps.final.outputs.overall }}"
 
           echo "=== CI $OVERALL — diagnosing $COMPONENT ==="
 
@@ -287,11 +373,12 @@ jobs:
       # diagnosis and apply smarter fixes. Chain: ci-diagnose → fix-corporate-ci.
       # Previous behavior: both dispatched in parallel (fix couldn't read diagnosis).
 
-      # ── 3c. Create failure notification issue ─────────────────────────────────
+      # ── 3d. Create failure notification issue ─────────────────────────────────
       - name: "Create CI failure notification issue"
         if: >
-          steps.poll.outputs.overall == 'failure' ||
-          steps.poll.outputs.overall == 'timeout'
+          steps.final.outputs.overall == 'failure' ||
+          steps.final.outputs.overall == 'timeout' ||
+          steps.final.outputs.overall == 'artifact-unverified'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
@@ -299,8 +386,10 @@ jobs:
           VERSION="${{ steps.inputs.outputs.version }}"
           COMMIT_SHA="${{ steps.inputs.outputs.commit_sha }}"
           FAILED_URL="${{ steps.poll.outputs.failed_run_url }}"
-          OVERALL="${{ steps.poll.outputs.overall }}"
+          SUCCESS_URL="${{ steps.poll.outputs.success_run_url }}"
+          OVERALL="${{ steps.final.outputs.overall }}"
           SOURCE_REPO="${{ steps.inputs.outputs.source_repo }}"
+          PUBLISH_EVIDENCE="${{ steps.publish.outputs.evidence }}"
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           # Dedup: check if an open issue already exists for this component CI failure
@@ -317,12 +406,12 @@ jobs:
             gh issue comment "$EXISTING_ISSUE" \
               --repo "$AUTOPILOT_REPO" \
               --body "**Update**: CI still failing at $NOW
-          Outcome: $OVERALL | SHA: $COMMIT_SHA | Run: $FAILED_URL
-          Auto-fix dispatched again (ci-diagnose + fix-corporate-ci)." \
+          Outcome: $OVERALL | SHA: $COMMIT_SHA | Failed run: $FAILED_URL | Success run: $SUCCESS_URL
+          Publish evidence: ${PUBLISH_EVIDENCE:-not-found}" \
               2>/dev/null || true
           else
             TITLE="[AutoPilot] Corporate CI $OVERALL: $COMPONENT $VERSION"
-            BODY="Corporate CI failed and auto-fix has been dispatched.
+            BODY="Corporate pipeline requires remediation.
 
           Component: $COMPONENT
           Version: $VERSION
@@ -330,13 +419,15 @@ jobs:
           Source repo: $SOURCE_REPO
           Outcome: $OVERALL
           Failed run: $FAILED_URL
+          Successful run: $SUCCESS_URL
+          Publish evidence: ${PUBLISH_EVIDENCE:-not-found}
 
           Actions taken:
-          - ci-diagnose dispatched (logs saved to autopilot-state)
-          - fix-corporate-ci dispatched (will attempt lint/build auto-fix)
-          - ci-monitor-loop will be re-dispatched by fix-corporate-ci with the fix SHA
+          - promotion blocked
+          - ci-diagnose dispatched when CI failed or timed out
+          - monitor state saved on autopilot-state
 
-          If this issue persists after auto-fix, manual intervention is needed.
+          If this issue persists, manual intervention is needed.
           Check: state/workspaces/ws-default/ci-logs-${COMPONENT}-*.txt on autopilot-state branch."
 
             gh issue create \
@@ -356,7 +447,7 @@ jobs:
           set -e
           WS_ID="${{ steps.inputs.outputs.ws_id }}"
           COMPONENT="${{ steps.inputs.outputs.component }}"
-          OVERALL="${{ steps.poll.outputs.overall || 'unknown' }}"
+          OVERALL="${{ steps.final.outputs.overall || 'unknown' }}"
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           RESULT=$(jq -n \
@@ -367,6 +458,12 @@ jobs:
             --arg ts "$NOW" \
             --arg overall "$OVERALL" \
             --arg run "${{ github.run_id }}" \
+            --arg ci_workflow "${{ steps.inputs.outputs.ci_workflow_name }}" \
+            --arg workflow_run_id "${{ steps.poll.outputs.success_run_id }}" \
+            --arg workflow_run_url "${{ steps.poll.outputs.success_run_url }}" \
+            --arg workflow_run_name "${{ steps.poll.outputs.success_run_name }}" \
+            --arg artifact_verified "${{ steps.publish.outputs.verified || 'false' }}" \
+            --arg artifact_evidence "${{ steps.publish.outputs.evidence || '' }}" \
             --arg failed_url "${{ steps.poll.outputs.failed_run_url || '' }}" \
             '{
               workspaceId: $ws,
@@ -376,6 +473,12 @@ jobs:
               monitoredAt: $ts,
               ciOutcome: $overall,
               monitorRunId: $run,
+              ciWorkflowName: $ci_workflow,
+              matchedWorkflowRunId: $workflow_run_id,
+              matchedWorkflowRunUrl: $workflow_run_url,
+              matchedWorkflowRunName: $workflow_run_name,
+              artifactVerified: ($artifact_verified == "true"),
+              artifactEvidence: $artifact_evidence,
               failedRunUrl: $failed_url
             }')
 
@@ -400,7 +503,16 @@ jobs:
           echo "| Version | \`${{ steps.inputs.outputs.version }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${{ steps.inputs.outputs.commit_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| CI Outcome | **$OVERALL** |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Workflow | \`${{ steps.inputs.outputs.ci_workflow_name || 'any' }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Source Repo | \`${{ steps.inputs.outputs.source_repo }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Artifact Verified | ${{ steps.publish.outputs.verified || 'false' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Artifact Evidence | ${{ steps.publish.outputs.evidence || 'n/a' }} |" >> "$GITHUB_STEP_SUMMARY"
+          MATCHED_RUN_URL="${{ steps.poll.outputs.success_run_url || steps.poll.outputs.failed_run_url }}"
+          if [ -n "$MATCHED_RUN_URL" ]; then
+            echo "| Matched Run | [$MATCHED_RUN_URL]($MATCHED_RUN_URL) |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| Matched Run | n/a |" >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "$OVERALL" = "failure" ] && [ -n "${{ steps.poll.outputs.failed_run_url }}" ]; then
             echo "| Failed Run | [${{ steps.poll.outputs.failed_run_url }}](${{ steps.poll.outputs.failed_run_url }}) |" >> "$GITHUB_STEP_SUMMARY"
           fi
