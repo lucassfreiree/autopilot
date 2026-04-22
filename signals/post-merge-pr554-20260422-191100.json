@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 554,
+  "branch": "codex/fix-controller-ci-node22",
+  "timestamp": "2026-04-22T19:11:00Z",
+  "runId": "24797482077",
+  "healthStatus": "degraded"
+}
