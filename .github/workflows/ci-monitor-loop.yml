@@ -144,6 +144,7 @@ jobs:
             "repos/$AUTOPILOT_REPO/contents/state/workspaces/${WS_ID}/workspace.json?ref=$STATE_BRANCH" \
             --jq '.content' | base64 -d)
           SOURCE_REPO=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.sourceRepo // \"\"")
+          SOURCE_BRANCH=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.deployBranch // \"main\"")
           CI_WORKFLOW_NAME=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.ciWorkflowName // \"\"")
 
           echo "ws_id=$WS_ID"          >> "$GITHUB_OUTPUT"
@@ -151,9 +152,10 @@ jobs:
           echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION"       >> "$GITHUB_OUTPUT"
           echo "source_repo=$SOURCE_REPO" >> "$GITHUB_OUTPUT"
+          echo "source_branch=$SOURCE_BRANCH" >> "$GITHUB_OUTPUT"
           echo "ci_workflow_name=$CI_WORKFLOW_NAME" >> "$GITHUB_OUTPUT"
 
-          echo "=== Monitor: ws=$WS_ID component=$COMPONENT sha=$COMMIT_SHA version=$VERSION repo=$SOURCE_REPO workflow=${CI_WORKFLOW_NAME:-any} ==="
+          echo "=== Monitor: ws=$WS_ID component=$COMPONENT sha=$COMMIT_SHA version=$VERSION repo=$SOURCE_REPO branch=$SOURCE_BRANCH workflow=${CI_WORKFLOW_NAME:-any} ==="
 
       # ── 2. Poll corporate CI ─────────────────────────────────────────────────
       - name: "Poll corporate CI"
@@ -323,6 +325,35 @@ jobs:
           echo "overall=$FINAL_RESULT" >> "$GITHUB_OUTPUT"
           echo "=== Final monitored status: $FINAL_RESULT ==="
 
+      - name: "Capture source head"
+        id: source_head
+        if: always()
+        env:
+          BBVINET_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          set -e
+
+          SOURCE_REPO="${{ steps.inputs.outputs.source_repo }}"
+          SOURCE_BRANCH="${{ steps.inputs.outputs.source_branch }}"
+          COMMIT_SHA="${{ steps.inputs.outputs.commit_sha }}"
+          CHECKED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          HEAD_SHA=""
+          MATCHES="false"
+
+          if [ -n "$SOURCE_REPO" ] && [ "$SOURCE_REPO" != "null" ]; then
+            HEAD_SHA=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
+              "repos/$SOURCE_REPO/commits/$SOURCE_BRANCH" \
+              --jq '.sha' 2>/dev/null || echo "")
+          fi
+
+          if [ -n "$HEAD_SHA" ] && [ -n "$COMMIT_SHA" ] && [ "$HEAD_SHA" = "$COMMIT_SHA" ]; then
+            MATCHES="true"
+          fi
+
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "checked_at=$CHECKED_AT" >> "$GITHUB_OUTPUT"
+          echo "matches_released=$MATCHES" >> "$GITHUB_OUTPUT"
+
       # ── 3b. On verified success → promote CAP ────────────────────────────────
       - name: "Trigger promote-cap (on success)"
         if: steps.final.outputs.overall == 'success'
@@ -455,6 +486,8 @@ jobs:
             --arg comp "$COMPONENT" \
             --arg sha "${{ steps.inputs.outputs.commit_sha }}" \
             --arg ver "${{ steps.inputs.outputs.version }}" \
+            --arg source_repo "${{ steps.inputs.outputs.source_repo }}" \
+            --arg source_branch "${{ steps.inputs.outputs.source_branch }}" \
             --arg ts "$NOW" \
             --arg overall "$OVERALL" \
             --arg run "${{ github.run_id }}" \
@@ -465,11 +498,19 @@ jobs:
             --arg artifact_verified "${{ steps.publish.outputs.verified || 'false' }}" \
             --arg artifact_evidence "${{ steps.publish.outputs.evidence || '' }}" \
             --arg failed_url "${{ steps.poll.outputs.failed_run_url || '' }}" \
+            --arg source_head_sha "${{ steps.source_head.outputs.head_sha || '' }}" \
+            --arg source_head_checked_at "${{ steps.source_head.outputs.checked_at || '' }}" \
+            --arg source_head_matches "${{ steps.source_head.outputs.matches_released || 'false' }}" \
             '{
               workspaceId: $ws,
               component: $comp,
               commitSha: $sha,
               version: $ver,
+              sourceRepo: $source_repo,
+              sourceBranch: $source_branch,
+              sourceHeadSha: $source_head_sha,
+              sourceHeadCheckedAt: $source_head_checked_at,
+              sourceHeadMatchesReleased: ($source_head_matches == "true"),
               monitoredAt: $ts,
               ciOutcome: $overall,
               monitorRunId: $run,
@@ -496,12 +537,45 @@ jobs:
             --method PUT "${ARGS[@]}" > /dev/null 2>&1 || \
             echo "::warning ::Could not save monitor state — continuing."
 
+          RELEASE_FILE="state/workspaces/${WS_ID}/${COMPONENT}-release-state.json"
+          RELEASE_SHA=$(gh api \
+            "repos/$AUTOPILOT_REPO/contents/${RELEASE_FILE}?ref=$STATE_BRANCH" \
+            --jq '.sha' 2>/dev/null || echo "")
+          RELEASE_CONTENT=$(gh api \
+            "repos/$AUTOPILOT_REPO/contents/${RELEASE_FILE}?ref=$STATE_BRANCH" \
+            --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo '{}')
+
+          RELEASE_UPDATED=$(echo "$RELEASE_CONTENT" | jq \
+            --arg source_repo "${{ steps.inputs.outputs.source_repo }}" \
+            --arg source_branch "${{ steps.inputs.outputs.source_branch }}" \
+            --arg source_head_sha "${{ steps.source_head.outputs.head_sha || '' }}" \
+            --arg source_head_checked_at "${{ steps.source_head.outputs.checked_at || '' }}" \
+            --arg source_head_matches "${{ steps.source_head.outputs.matches_released || 'false' }}" \
+            '.sourceRepo = $source_repo
+             | .sourceBranch = $source_branch
+             | .sourceHeadSha = $source_head_sha
+             | .sourceHeadCheckedAt = $source_head_checked_at
+             | .sourceHeadMatchesReleased = ($source_head_matches == "true")' 2>/dev/null || echo "$RELEASE_CONTENT")
+
+          if [ -n "$RELEASE_SHA" ] && [ "$RELEASE_SHA" != "null" ]; then
+            gh api "repos/$AUTOPILOT_REPO/contents/${RELEASE_FILE}" \
+              --method PUT \
+              -f "branch=$STATE_BRANCH" \
+              -f "message=state: refresh ${COMPONENT} source-head [skip ci]" \
+              -f "content=$(echo "$RELEASE_UPDATED" | base64 -w0)" \
+              -f "sha=$RELEASE_SHA" > /dev/null 2>&1 || \
+              echo "::warning ::Could not refresh release state with source head."
+          fi
+
           echo "## CI Monitor Loop" >> "$GITHUB_STEP_SUMMARY"
           echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Component | $COMPONENT |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Version | \`${{ steps.inputs.outputs.version }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit | \`${{ steps.inputs.outputs.commit_sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Source Branch | \`${{ steps.inputs.outputs.source_branch }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Source HEAD | \`${{ steps.source_head.outputs.head_sha || 'n/a' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| HEAD Matches Released | ${{ steps.source_head.outputs.matches_released || 'false' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| CI Outcome | **$OVERALL** |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Workflow | \`${{ steps.inputs.outputs.ci_workflow_name || 'any' }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Source Repo | \`${{ steps.inputs.outputs.source_repo }}\` |" >> "$GITHUB_STEP_SUMMARY"

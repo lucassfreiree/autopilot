@@ -13,7 +13,7 @@
       "type": "object",
       "properties": {
         "version": { "type": "string" },
-        "status": { "type": "string", "enum": ["idle", "releasing", "promoted", "failed"] },
+        "status": { "type": "string", "enum": ["idle", "releasing", "promoted", "failed", "ci-passed", "ci-failed", "ci-failed-preexisting", "ci-fix-applied", "pending"] },
         "ciResult": { "type": "string", "enum": ["success", "failure", "unknown", "no-ci", "timeout"] },
         "lastReleasedSha": { "type": "string" },
         "lastTag": { "type": "string" },
@@ -24,7 +24,7 @@
       "type": "object",
       "properties": {
         "version": { "type": "string" },
-        "status": { "type": "string", "enum": ["idle", "releasing", "promoted", "failed"] },
+        "status": { "type": "string", "enum": ["idle", "releasing", "promoted", "failed", "ci-passed", "ci-failed", "ci-failed-preexisting", "ci-fix-applied", "pending"] },
         "ciResult": { "type": "string", "enum": ["success", "failure", "unknown", "no-ci", "timeout"] },
         "lastReleasedSha": { "type": "string" },
         "lastTag": { "type": "string" },

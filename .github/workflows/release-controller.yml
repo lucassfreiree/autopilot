@@ -99,10 +99,12 @@ jobs:
             --jq '.content' | base64 -d)
           DEPLOY_REPO=$(echo "$WS_JSON" | jq -r '.controller.deployRepo')
           DEPLOY_BRANCH=$(echo "$WS_JSON" | jq -r '.controller.deployBranch // "main"')
+          SOURCE_REPO=$(echo "$WS_JSON" | jq -r '.controller.sourceRepo // ""')
           VALUES_PATH=$(echo "$WS_JSON" | jq -r '.controller.deployValuesPath')
           IMAGE_PATTERN=$(echo "$WS_JSON" | jq -r '.controller.imagePattern')
           echo "deploy_repo=$DEPLOY_REPO" >> "$GITHUB_OUTPUT"
           echo "deploy_branch=$DEPLOY_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "source_repo=$SOURCE_REPO" >> "$GITHUB_OUTPUT"
           echo "values_path=$VALUES_PATH" >> "$GITHUB_OUTPUT"
           echo "image_pattern=$IMAGE_PATTERN" >> "$GITHUB_OUTPUT"
           echo "ws_path=$WS_PATH" >> "$GITHUB_OUTPUT"
@@ -232,11 +234,13 @@ jobs:
             --arg sha "${{ steps.state.outputs.current_sha }}" \
             --arg tag "${{ steps.ver.outputs.tag }}" \
             --arg ver "${{ steps.ver.outputs.version }}" \
+            --arg source_repo "${{ steps.ws.outputs.source_repo }}" \
+            --arg source_branch "${{ steps.ws.outputs.deploy_branch }}" \
             --arg ts "$NOW" \
             --arg run "${{ github.run_id }}" \
             --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --argjson promo "$PROMOTIONS" \
-            '{schemaVersion:2, workspaceId:$ws, component:"controller", lastReleasedSha:$sha, lastTag:$tag, lastVersion:$ver, updatedAt:$ts, runId:$run, runUrl:$url, promotions:$promo, status:"promoted"}')
+            '{schemaVersion:2, workspaceId:$ws, component:"controller", lastReleasedSha:$sha, lastTag:$tag, lastVersion:$ver, sourceRepo:$source_repo, sourceBranch:$source_branch, sourceHeadSha:$sha, sourceHeadCheckedAt:$ts, sourceHeadMatchesReleased:true, updatedAt:$ts, runId:$run, runUrl:$url, promotions:$promo, status:"promoted"}')
           ENCODED=$(echo "$NEW_STATE" | base64 -w0)
           ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: controller -> ${{ steps.ver.outputs.tag }} [skip ci]" -f "content=$ENCODED")
           [ -n "$FILE_SHA" ] && [ "$FILE_SHA" != "null" ] && ARGS+=(-f "sha=$FILE_SHA")

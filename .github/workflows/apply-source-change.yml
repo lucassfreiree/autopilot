@@ -898,6 +898,16 @@ jobs:
           FILE="${WS_PATH}/${COMP}-release-state.json"
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           SHA="${{ needs.apply-and-push.outputs.sha }}"
+          SOURCE_REPO=""
+          SOURCE_BRANCH=""
+
+          if [ "$COMP" = "controller" ]; then
+            SOURCE_REPO="${{ needs.setup.outputs.controller_repo }}"
+            SOURCE_BRANCH="${{ needs.setup.outputs.controller_branch }}"
+          else
+            SOURCE_REPO="${{ needs.setup.outputs.agent_repo }}"
+            SOURCE_BRANCH="${{ needs.setup.outputs.agent_branch }}"
+          fi
 
           CI_RES="${{ needs.ci-gate.outputs.ci_result }}"
           [ -z "$CI_RES" ] && CI_RES="unknown"
@@ -928,6 +938,8 @@ jobs:
             --arg ws "${{ needs.setup.outputs.ws_id }}" \
             --arg sha "$SHA" \
             --arg tag "$TAG" \
+            --arg source_repo "$SOURCE_REPO" \
+            --arg source_branch "$SOURCE_BRANCH" \
             --arg ts "$NOW" \
             --arg run "${{ github.run_id }}" \
             --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
@@ -938,7 +950,7 @@ jobs:
             --arg promoted "$PROMOTED" \
             --arg pre "$PRE_EXISTING" \
             --arg gate "$GATE" \
-            '{schemaVersion:2,workspaceId:$ws,component:$comp,lastReleasedSha:$sha,lastTag:$tag,updatedAt:$ts,runId:$run,runUrl:$url,ciResult:$ci,status:$st,changeType:"source-code",commitMessage:$msg,promoted:($promoted == "true"),preExistingFailure:($pre == "true"),gateDecision:$gate}')
+            '{schemaVersion:2,workspaceId:$ws,component:$comp,lastReleasedSha:$sha,lastTag:$tag,sourceRepo:$source_repo,sourceBranch:$source_branch,sourceHeadSha:$sha,sourceHeadCheckedAt:$ts,sourceHeadMatchesReleased:true,updatedAt:$ts,runId:$run,runUrl:$url,ciResult:$ci,status:$st,changeType:"source-code",commitMessage:$msg,promoted:($promoted == "true"),preExistingFailure:($pre == "true"),gateDecision:$gate}')
 
           ARGS=(-f "branch=$STATE_BRANCH" -f "message=state: $COMP source-change -> $TAG [skip ci]" -f "content=$(echo "$STATE"|base64 -w0)")
           [ -n "$FSHA" ] && [ "$FSHA" != "null" ] && ARGS+=(-f "sha=$FSHA")

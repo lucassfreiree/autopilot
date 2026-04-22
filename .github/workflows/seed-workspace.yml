@@ -96,8 +96,11 @@ jobs:
                 CONTENT=$(jq -n --arg ws "$WS_ID" --arg now "$NOW" \
                   '{schemaVersion:2, workspaceId:$ws, checkedAt:$now, overall:"unknown", checks:{}, summary:"Not yet checked"}')
               else
+                SOURCE_REPO=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.sourceRepo // \"\"")
+                SOURCE_BRANCH=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.deployBranch // \"main\"")
                 CONTENT=$(jq -n --arg ws "$WS_ID" --arg comp "$COMPONENT" --arg now "$NOW" \
-                  '{schemaVersion:2, workspaceId:$ws, component:$comp, lastReleasedSha:"", lastTag:"", lastVersion:"", updatedAt:$now, runId:"", runUrl:"", promotions:[], status:"idle"}')
+                  --arg source_repo "$SOURCE_REPO" --arg source_branch "$SOURCE_BRANCH" \
+                  '{schemaVersion:2, workspaceId:$ws, component:$comp, lastReleasedSha:"", lastTag:"", lastVersion:"", sourceRepo:$source_repo, sourceBranch:$source_branch, sourceHeadSha:"", sourceHeadCheckedAt:$now, sourceHeadMatchesReleased:false, updatedAt:$now, runId:"", runUrl:"", promotions:[], status:"idle"}')
               fi
               gh api "repos/$REPO/contents/${WS_PATH}/${FILE}" \
                 --method PUT \
