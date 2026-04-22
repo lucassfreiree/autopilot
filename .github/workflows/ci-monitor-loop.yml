@@ -146,6 +146,10 @@ jobs:
           SOURCE_REPO=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.sourceRepo // \"\"")
           SOURCE_BRANCH=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.deployBranch // \"main\"")
           CI_WORKFLOW_NAME=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.ciWorkflowName // \"\"")
+          CAP_REPO=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.capRepo // \"\"")
+          CAP_BRANCH=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.capBranch // \"main\"")
+          CAP_VALUES=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.capValuesPath // \"\"")
+          IMAGE_PATTERN=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.imagePattern // \"\"")
 
           echo "ws_id=$WS_ID"          >> "$GITHUB_OUTPUT"
           echo "component=$COMPONENT"  >> "$GITHUB_OUTPUT"
@@ -154,8 +158,12 @@ jobs:
           echo "source_repo=$SOURCE_REPO" >> "$GITHUB_OUTPUT"
           echo "source_branch=$SOURCE_BRANCH" >> "$GITHUB_OUTPUT"
           echo "ci_workflow_name=$CI_WORKFLOW_NAME" >> "$GITHUB_OUTPUT"
+          echo "cap_repo=$CAP_REPO" >> "$GITHUB_OUTPUT"
+          echo "cap_branch=$CAP_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "cap_values=$CAP_VALUES" >> "$GITHUB_OUTPUT"
+          echo "image_pattern=$IMAGE_PATTERN" >> "$GITHUB_OUTPUT"
 
-          echo "=== Monitor: ws=$WS_ID component=$COMPONENT sha=$COMMIT_SHA version=$VERSION repo=$SOURCE_REPO branch=$SOURCE_BRANCH workflow=${CI_WORKFLOW_NAME:-any} ==="
+          echo "=== Monitor: ws=$WS_ID component=$COMPONENT sha=$COMMIT_SHA version=$VERSION repo=$SOURCE_REPO branch=$SOURCE_BRANCH workflow=${CI_WORKFLOW_NAME:-any} cap_repo=${CAP_REPO:-none} ==="
 
       # ── 2. Poll corporate CI ─────────────────────────────────────────────────
       - name: "Poll corporate CI"
@@ -182,6 +190,9 @@ jobs:
           SUCCESS_RUN_URL=""
           SUCCESS_RUN_NAME=""
           FAILED_RUN_URL=""
+          MONITOR_STRATEGY="workflow-name-exact"
+          ACTIVE_SIGNALS=""
+          CHECK_RUNS_SUMMARY=""
           TOTAL_ATTEMPTS=$(( FAST_ATTEMPTS + SLOW_ATTEMPTS ))
 
           for ATTEMPT in $(seq 1 $TOTAL_ATTEMPTS); do
@@ -208,8 +219,17 @@ jobs:
 
             if [ -n "$CI_WORKFLOW_NAME" ] && [ "$CI_WORKFLOW_NAME" != "null" ]; then
               RUNS=$(echo "$RAW_RUNS" | jq --arg wf "$CI_WORKFLOW_NAME" '{workflow_runs: [.workflow_runs[] | select(.name == $wf)]}')
+              FILTERED_TOTAL=$(echo "$RUNS" | jq '.workflow_runs | length')
+              RAW_TOTAL=$(echo "$RAW_RUNS" | jq '.workflow_runs | length')
+              if [ "$FILTERED_TOTAL" -eq 0 ] && [ "$RAW_TOTAL" -gt 0 ]; then
+                RUNS="$RAW_RUNS"
+                MONITOR_STRATEGY="workflow-sha-fallback-any-name"
+              else
+                MONITOR_STRATEGY="workflow-name-exact"
+              fi
             else
               RUNS="$RAW_RUNS"
+              MONITOR_STRATEGY="workflow-sha-any-name"
             fi
 
             TOTAL=$(echo "$RUNS"       | jq '.workflow_runs | length')
@@ -223,9 +243,49 @@ jobs:
 
             echo "  total=$TOTAL in_progress=$IN_PROG success=$SUCCESS failed=$FAILED workflow=${CI_WORKFLOW_NAME:-any}"
 
-            if [ "$TOTAL" -eq 0 ]; then
+            if [ "$TOTAL" -gt 0 ] && [ "$IN_PROG" -gt 0 ]; then
+              ACTIVE_SIGNALS=$(echo "$RUNS" | jq -r '[.workflow_runs[] | select(.status != "completed") | .name] | unique | join(", ")')
+              [ -z "$ACTIVE_SIGNALS" ] && ACTIVE_SIGNALS="workflow-run-pending"
+            fi
+
+            if [ "$TOTAL" -eq 0 ] && [ -n "$COMMIT_SHA" ] && [ "$COMMIT_SHA" != "null" ]; then
+              CHECKS=$(GH_TOKEN="$BBVINET_TOKEN" gh api \
+                "repos/$SOURCE_REPO/commits/${COMMIT_SHA}/check-runs?per_page=100" \
+                2>/dev/null || echo '{"total_count":0,"check_runs":[]}')
+
+              CHECK_TOTAL=$(echo "$CHECKS" | jq '.check_runs | length')
+              CHECK_IN_PROG=$(echo "$CHECKS" | jq '[.check_runs[] | select(.status != "completed")] | length')
+              CHECK_FAIL=$(echo "$CHECKS" | jq '[.check_runs[] | select(.status == "completed" and (.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled" or .conclusion == "action_required" or .conclusion == "startup_failure"))] | length')
+              CHECK_RUNS_SUMMARY=$(echo "$CHECKS" | jq -r '[.check_runs[] | "\(.name)=\(.status)/\(.conclusion // "null")"] | join("; ")')
+              ACTIVE_SIGNALS=$(echo "$CHECKS" | jq -r '[.check_runs[] | select(.status != "completed") | .name] | unique | join(", ")')
+              REQUIRED_NPM=$(echo "$CHECKS" | jq -r 'any(.check_runs[]?; (.name | ascii_downcase | test("workflow-npm")) and .conclusion == "success")')
+              RELEASE_GATE_BLOCK=$(echo "$CHECKS" | jq -r 'any(.check_runs[]?; (.name | ascii_downcase | test("análise motor liberação|analise motor liberacao")) and .status != "completed")')
+              RELEASE_GATE_FAIL=$(echo "$CHECKS" | jq -r 'any(.check_runs[]?; (.name | ascii_downcase | test("análise motor liberação|analise motor liberacao")) and (.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled" or .conclusion == "action_required" or .conclusion == "startup_failure"))')
+              AUTO_DEPLOY_BLOCK=$(echo "$CHECKS" | jq -r 'any(.check_runs[]?; (.name | ascii_downcase | test("autodeploy|cd \\(desenvolvimento\\)")) and .status != "completed")')
+              AUTO_DEPLOY_FAIL=$(echo "$CHECKS" | jq -r 'any(.check_runs[]?; (.name | ascii_downcase | test("autodeploy|cd \\(desenvolvimento\\)")) and (.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled" or .conclusion == "action_required" or .conclusion == "startup_failure"))')
+
+              MONITOR_STRATEGY="check-runs-fallback"
+              echo "  workflow run not found — fallback to check-runs: total=$CHECK_TOTAL in_progress=$CHECK_IN_PROG fail=$CHECK_FAIL"
+
+              if [ "$CHECK_TOTAL" -eq 0 ]; then
+                echo "  No check-runs found yet — waiting..."
+                OVERALL="pending"
+              elif [ "$CHECK_FAIL" -gt 0 ] || [ "$RELEASE_GATE_FAIL" = "true" ] || [ "$AUTO_DEPLOY_FAIL" = "true" ]; then
+                OVERALL="failure"
+                echo "  Check-runs FAILED ❌"
+                break
+              elif [ "$CHECK_IN_PROG" -eq 0 ] && [ "$REQUIRED_NPM" = "true" ] && [ "$RELEASE_GATE_BLOCK" != "true" ] && [ "$AUTO_DEPLOY_BLOCK" != "true" ]; then
+                OVERALL="success"
+                echo "  Check-runs PASSED ✅"
+                break
+              else
+                OVERALL="in_progress"
+                echo "  Check-runs still running..."
+              fi
+            elif [ "$TOTAL" -eq 0 ]; then
               echo "  No matching workflow run found yet — waiting..."
               OVERALL="pending"
+              ACTIVE_SIGNALS="workflow-run-not-found"
             elif [ "$SUCCESS" -gt 0 ] && [ "$IN_PROG" -eq 0 ]; then
               OVERALL="success"
               echo "  CI PASSED ✅"
@@ -255,6 +315,9 @@ jobs:
           echo "success_run_url=$SUCCESS_RUN_URL" >> "$GITHUB_OUTPUT"
           echo "success_run_name=$SUCCESS_RUN_NAME" >> "$GITHUB_OUTPUT"
           echo "failed_run_url=$FAILED_RUN_URL" >> "$GITHUB_OUTPUT"
+          echo "monitor_strategy=$MONITOR_STRATEGY" >> "$GITHUB_OUTPUT"
+          echo "active_signals=$ACTIVE_SIGNALS" >> "$GITHUB_OUTPUT"
+          echo "check_runs_summary=$CHECK_RUNS_SUMMARY" >> "$GITHUB_OUTPUT"
           echo "=== Final CI status: $OVERALL ==="
 
       # ── 3a. On success → verify publish evidence ─────────────────────────────
@@ -354,9 +417,56 @@ jobs:
           echo "checked_at=$CHECKED_AT" >> "$GITHUB_OUTPUT"
           echo "matches_released=$MATCHES" >> "$GITHUB_OUTPUT"
 
+      - name: "Check CAP alignment"
+        id: cap_align
+        if: steps.final.outputs.overall == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.BBVINET_TOKEN }}
+        run: |
+          set -e
+
+          CAP_REPO="${{ steps.inputs.outputs.cap_repo }}"
+          CAP_BRANCH="${{ steps.inputs.outputs.cap_branch }}"
+          CAP_VALUES="${{ steps.inputs.outputs.cap_values }}"
+          IMAGE_PATTERN="${{ steps.inputs.outputs.image_pattern }}"
+          VERSION="${{ steps.inputs.outputs.version }}"
+
+          CONFIGURED=true
+          ALIGNED=false
+          EVIDENCE=""
+
+          if [ -z "$CAP_REPO" ] || [ "$CAP_REPO" = "null" ] || [ -z "$CAP_VALUES" ] || [ "$CAP_VALUES" = "null" ]; then
+            CONFIGURED=false
+            EVIDENCE="cap-not-configured"
+          else
+            VALUES=$(gh api "repos/$CAP_REPO/contents/${CAP_VALUES}?ref=$CAP_BRANCH" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+            if [ -n "$VALUES" ]; then
+              if [ -n "$IMAGE_PATTERN" ] && echo "$VALUES" | grep -Eq "${IMAGE_PATTERN}${VERSION}([[:space:]]|$|[\"'])"; then
+                ALIGNED=true
+              elif echo "$VALUES" | grep -Eq ":[\"']?${VERSION}([[:space:]]|$|[\"'])"; then
+                ALIGNED=true
+              fi
+            fi
+
+            if [ "$ALIGNED" = "true" ]; then
+              EVIDENCE="repo=${CAP_REPO} path=${CAP_VALUES} tag=${VERSION}"
+              echo "CAP already aligned to $VERSION"
+            else
+              EVIDENCE="repo=${CAP_REPO} path=${CAP_VALUES} tag-missing=${VERSION}"
+              echo "CAP not yet aligned to $VERSION"
+            fi
+          fi
+
+          echo "configured=$CONFIGURED" >> "$GITHUB_OUTPUT"
+          echo "aligned=$ALIGNED" >> "$GITHUB_OUTPUT"
+          echo "evidence=$EVIDENCE" >> "$GITHUB_OUTPUT"
+
       # ── 3b. On verified success → promote CAP ────────────────────────────────
       - name: "Trigger promote-cap (on success)"
-        if: steps.final.outputs.overall == 'success'
+        if: >
+          steps.final.outputs.overall == 'success' &&
+          steps.cap_align.outputs.configured == 'true' &&
+          steps.cap_align.outputs.aligned != 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
@@ -498,9 +608,18 @@ jobs:
             --arg artifact_verified "${{ steps.publish.outputs.verified || 'false' }}" \
             --arg artifact_evidence "${{ steps.publish.outputs.evidence || '' }}" \
             --arg failed_url "${{ steps.poll.outputs.failed_run_url || '' }}" \
+            --arg monitor_strategy "${{ steps.poll.outputs.monitor_strategy || '' }}" \
+            --arg active_signals "${{ steps.poll.outputs.active_signals || '' }}" \
+            --arg check_runs_summary "${{ steps.poll.outputs.check_runs_summary || '' }}" \
             --arg source_head_sha "${{ steps.source_head.outputs.head_sha || '' }}" \
             --arg source_head_checked_at "${{ steps.source_head.outputs.checked_at || '' }}" \
             --arg source_head_matches "${{ steps.source_head.outputs.matches_released || 'false' }}" \
+            --arg cap_repo "${{ steps.inputs.outputs.cap_repo || '' }}" \
+            --arg cap_branch "${{ steps.inputs.outputs.cap_branch || '' }}" \
+            --arg cap_values "${{ steps.inputs.outputs.cap_values || '' }}" \
+            --arg cap_configured "${{ steps.cap_align.outputs.configured || 'false' }}" \
+            --arg cap_aligned "${{ steps.cap_align.outputs.aligned || 'false' }}" \
+            --arg cap_evidence "${{ steps.cap_align.outputs.evidence || '' }}" \
             '{
               workspaceId: $ws,
               component: $comp,
@@ -518,9 +637,18 @@ jobs:
               matchedWorkflowRunId: $workflow_run_id,
               matchedWorkflowRunUrl: $workflow_run_url,
               matchedWorkflowRunName: $workflow_run_name,
+              monitorStrategy: $monitor_strategy,
+              activeSignals: $active_signals,
+              checkRunsSummary: $check_runs_summary,
               artifactVerified: ($artifact_verified == "true"),
               artifactEvidence: $artifact_evidence,
-              failedRunUrl: $failed_url
+              failedRunUrl: $failed_url,
+              capRepo: $cap_repo,
+              capBranch: $cap_branch,
+              capValuesPath: $cap_values,
+              capConfigured: ($cap_configured == "true"),
+              capAligned: ($cap_aligned == "true"),
+              capAlignmentEvidence: $cap_evidence
             }')
 
           STATE_FILE="state/workspaces/${WS_ID}/ci-monitor-${COMPONENT}.json"
@@ -551,11 +679,41 @@ jobs:
             --arg source_head_sha "${{ steps.source_head.outputs.head_sha || '' }}" \
             --arg source_head_checked_at "${{ steps.source_head.outputs.checked_at || '' }}" \
             --arg source_head_matches "${{ steps.source_head.outputs.matches_released || 'false' }}" \
+            --arg overall "$OVERALL" \
+            --arg ver "${{ steps.inputs.outputs.version }}" \
+            --arg cap_repo "${{ steps.inputs.outputs.cap_repo || '' }}" \
+            --arg cap_branch "${{ steps.inputs.outputs.cap_branch || '' }}" \
+            --arg cap_values "${{ steps.inputs.outputs.cap_values || '' }}" \
+            --arg cap_configured "${{ steps.cap_align.outputs.configured || 'false' }}" \
+            --arg cap_aligned "${{ steps.cap_align.outputs.aligned || 'false' }}" \
+            --arg ts "$NOW" \
             '.sourceRepo = $source_repo
              | .sourceBranch = $source_branch
              | .sourceHeadSha = $source_head_sha
              | .sourceHeadCheckedAt = $source_head_checked_at
-             | .sourceHeadMatchesReleased = ($source_head_matches == "true")' 2>/dev/null || echo "$RELEASE_CONTENT")
+             | .sourceHeadMatchesReleased = ($source_head_matches == "true")
+             | if ($overall == "success" and $cap_configured == "true" and $cap_aligned == "true") then
+                 .promoted = true
+                 | .status = "promoted"
+                 | .ciResult = "success"
+                 | .updatedAt = $ts
+                 | .promotions = (
+                     (.promotions // [])
+                     | if any(.[]?; .target == "cap" and .repo == $cap_repo and .path == $cap_values and .tag == $ver and .status == "success") then .
+                       else . + [{
+                         target: "cap",
+                         repo: $cap_repo,
+                         branch: $cap_branch,
+                         path: $cap_values,
+                         tag: $ver,
+                         sha: "",
+                         timestamp: $ts,
+                         status: "success"
+                       }]
+                       end
+                   )
+               else .
+               end' 2>/dev/null || echo "$RELEASE_CONTENT")
 
           if [ -n "$RELEASE_SHA" ] && [ "$RELEASE_SHA" != "null" ]; then
             gh api "repos/$AUTOPILOT_REPO/contents/${RELEASE_FILE}" \
@@ -578,9 +736,13 @@ jobs:
           echo "| HEAD Matches Released | ${{ steps.source_head.outputs.matches_released || 'false' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| CI Outcome | **$OVERALL** |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Workflow | \`${{ steps.inputs.outputs.ci_workflow_name || 'any' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Monitor Strategy | \`${{ steps.poll.outputs.monitor_strategy || 'unknown' }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Active Signals | ${{ steps.poll.outputs.active_signals || 'n/a' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Source Repo | \`${{ steps.inputs.outputs.source_repo }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Artifact Verified | ${{ steps.publish.outputs.verified || 'false' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Artifact Evidence | ${{ steps.publish.outputs.evidence || 'n/a' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| CAP Aligned | ${{ steps.cap_align.outputs.aligned || 'false' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| CAP Evidence | ${{ steps.cap_align.outputs.evidence || 'n/a' }} |" >> "$GITHUB_STEP_SUMMARY"
           MATCHED_RUN_URL="${{ steps.poll.outputs.success_run_url || steps.poll.outputs.failed_run_url }}"
           if [ -n "$MATCHED_RUN_URL" ]; then
             echo "| Matched Run | [$MATCHED_RUN_URL]($MATCHED_RUN_URL) |" >> "$GITHUB_STEP_SUMMARY"

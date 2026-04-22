@@ -14,13 +14,19 @@ O workflow `apply-source-change.yml` verifica o CI Gate (Stage 3), mas isso e ap
 
 **O deploy so esta COMPLETO quando a imagem Docker e publicada no registry corporativo.**
 
+E, na pratica observada no controller, o source so deve ser marcado como **completo** quando o run corporativo inteiro terminar, incluindo os gates posteriores que podem aparecer depois do `workflow-npm`, como:
+
+- `CI / Análise Motor Liberação`
+- `CD (desenvolvimento) / autoDeploy`
+
 ## Protocolo Operacional Endurecido
 
 Use este protocolo como regra obrigatoria para qualquer deploy de source code:
 
 1. Monitorar o **commit SHA corporativo correto** gerado pelo Stage 2 do `apply-source-change.yml`
 2. Usar a **esteira configurada no `workspace.json`** (`ciWorkflowName`) como pista inicial, mas validar sempre pelo commit SHA corporativo
-3. Esperar a esteira terminar com **`success`** para o SHA certo
+3. Se o nome exato nao aparecer, cair para **workflow do mesmo SHA com qualquer nome** e, se ainda assim nao houver `workflow_runs`, cair para **`check-runs` do commit**
+4. Esperar o run corporativo inteiro terminar com **`success`** para o SHA certo, incluindo gates finais como `Análise Motor Liberação` e `autoDeploy` quando existirem
 4. Confirmar nos logs do workflow bem-sucedido a **publicacao da imagem** da versao esperada
 5. So depois disso promover a tag no repositorio de deploy
 6. Se a esteira falhar, expirar ou terminar sem evidencia de publish, **bloquear a promocao**
@@ -32,7 +38,8 @@ Resumo direto:
 ```text
 source push aceito != deploy pronto
 ci verde sem publish confirmado != deploy pronto
-deploy pronto = esteira certa verde + imagem publicada + so entao promocao
+workflow-npm verde != source completo
+deploy pronto = run corporativo completo verde + imagem publicada + so entao promocao
 ```
 
 ## O que e a Esteira de Build NPM
@@ -123,6 +130,12 @@ gh api "repos/$REPO/actions/runs?head_sha=$SHA&per_page=20" \
 ```
 
 **Regra importante**: Se esse filtro nao retornar nada, volte para `check-runs` do commit. Alguns repositorios expoem a execucao real por nomes como `CI / workflow-npm`, `CI / sonarQube`, `CI / xRay` ou apenas como checks do SHA.
+
+**Melhoria aplicada no processo**: o monitor nao depende mais apenas do nome exato do workflow. A ordem correta agora e:
+
+1. procurar o workflow configurado no `workspace.json`
+2. se nao vier nada, usar qualquer `workflow_run` do mesmo SHA
+3. se ainda nao houver `workflow_run`, usar os `check-runs` do SHA
 
 ### Metodo 3: Via Audit Trail no autopilot-state
 

@@ -32,6 +32,8 @@ O Stage 4 (Promote) so pode ser considerado VALIDO se `promote=true` no trigger,
 
 Se existir atualizacao de CAP com source CI falhando, desconhecido, sem publish confirmado ou sem correlacao com o SHA correto, trate isso como inconsistencia operacional e bloqueie a promocao.
 
+Se o `values.yaml` **ja estiver apontando para a versao esperada**, isso deve ser tratado como **CAP ja alinhado**, nao como falha. Nesse caso, a promocao pode ser considerada valida somente depois que o source terminar verde e a publicacao da imagem for confirmada.
+
 **Fluxo interno:**
 
 ```
@@ -52,6 +54,10 @@ Se existir atualizacao de CAP com source CI falhando, desconhecido, sem publish 
    → gh api "repos/$CAP_REPO/contents/$CAP_VALUES" --method PUT
    → Commit message: "chore(release): controller -> 3.6.7 (source change)"
    → Token: BBVINET_TOKEN
+
+5. Se NAO houve mudanca, validar se o `values.yaml` ja estava em `3.6.7`
+   → Se sim: marcar como **already aligned**
+   → Se nao: tratar como inconsistencia de pattern ou promote incompleto
 ```
 
 ### Commit no CAP Repo
@@ -71,6 +77,11 @@ Antes de aceitar a promocao como valida, confirme os 4 gates:
 2. O source repo terminou verde para esse SHA
 3. A imagem da versao esperada foi publicada
 4. O `values.yaml` do CAP aponta para a mesma versao publicada
+
+**Observacao operacional**: o gate 4 pode ser satisfeito de duas formas validas:
+
+- o Stage 4 / `promote-cap.yml` atualizou o arquivo agora
+- o arquivo ja estava corretamente alinhado nessa versao e o source verde validou esse estado
 
 ### Metodo 1: Via Release State
 
@@ -190,6 +201,7 @@ image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 | `Image pattern didn't match` | Pattern do workspace.json nao bate | Verificar `imagePattern` |
 | `promoted=false` (sem erro) | sed nao encontrou o padrao | Verificar formato da linha `image:` no values.yaml |
 | `promoted=skipped` | Component nao tem CAP configurado | Configurar capRepo no workspace.json |
+| Nenhum commit novo no CAP repo, mas values.yaml ja esta na versao alvo | CAP ja estava alinhado | Tratar como promote valido so depois de source verde + publish confirmado |
 | 403 no commit | Token sem permissao de escrita no CAP | Verificar scopes do BBVINET_TOKEN |
 | CAP atualizado antes do source verde | Gate operacional foi violado | Reverter o promote, corrigir o monitor/gate e aguardar source CI + publish |
 
@@ -197,8 +209,8 @@ image: ***REDACTED***/bb/psc/psc-sre-automacao-controller:3.6.7
 
 - [ ] Source CI/workloads do SHA correto terminaram verdes
 - [ ] Imagem da versao esperada foi publicada antes do promote
-- [ ] Stage 4 (Promote) ou promote-cap completou com `promoted=true`
-- [ ] Tag no CAP values.yaml atualizada para nova versao
+- [ ] Stage 4 (Promote) ou promote-cap completou com `promoted=true`, OU o CAP ja estava alinhado na versao correta
+- [ ] Tag no CAP values.yaml esta na nova versao
 - [ ] Release state no autopilot-state mostra `status: "promoted"`
 - [ ] Referencia local (`references/controller-cap/values.yaml`) atualizada
 - [ ] Audit trail registra `promoted: true`

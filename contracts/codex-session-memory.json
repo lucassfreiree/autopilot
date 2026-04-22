@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-22T22:13:56Z",
-  "sessionCount": 10,
+  "lastUpdated": "2026-04-22T22:30:00Z",
+  "sessionCount": 11,
   "currentState": {
     "controllerVersion": "3.9.3",
     "agentVersion": "2.2.9",
@@ -45,6 +45,11 @@
       "timestamp": "2026-04-22T22:13:56Z",
       "topic": "direct-corporate-controller-run-24804944785-success",
       "action": "Recorded that corporate source run 24804944785 finished success end-to-end for controller commit 2034a5e88bd56b0feb6772519fcdb9155b4906f3, including workflow-npm, image publication, release analysis, and CD desenvolvimento autoDeploy."
+    },
+    {
+      "timestamp": "2026-04-22T22:30:00Z",
+      "topic": "autopilot-monitor-hardening",
+      "action": "Applied workflow and dashboard improvements so ci-monitor-loop now falls back from exact workflow name to same-SHA workflow runs and then to commit check-runs, records active signals and monitor strategy, checks CAP alignment before dispatching promote-cap, and marks release state promoted when CAP was already aligned after source success."
     }
   ],
   "decisions": [
@@ -82,6 +87,11 @@
       "timestamp": "2026-04-22T22:13:56Z",
       "decision": "Treat source completion as the full corporate run, not just workflow-npm success.",
       "reason": "After workflow-npm and image publication succeed, the run may still require Análise Motor Liberação and CD desenvolvimento autoDeploy before the source pipeline is truly complete."
+    },
+    {
+      "timestamp": "2026-04-22T22:30:00Z",
+      "decision": "CAP already aligned to the target version must be treated as a valid post-source-success state, not as a failed promotion.",
+      "reason": "The deploy repo may already point to the expected tag before the final source-green moment; after the source pipeline finishes green with publish confirmed, the state should become consistent without forcing a redundant CAP commit."
     }
   ],
   "lessonsLearned": [
@@ -128,6 +138,14 @@
     {
       "timestamp": "2026-04-22T22:13:56Z",
       "lesson": "A green workflow-npm is necessary but not sufficient. Keep monitoring until Análise Motor Liberação and any triggered CD desenvolvimento autoDeploy also conclude, then mark the source line as fully healthy."
+    },
+    {
+      "timestamp": "2026-04-22T22:30:00Z",
+      "lesson": "The corporate CI monitor must use a cascade: exact workflow name from workspace.json, then any workflow_run for the same SHA, then commit check-runs. This avoids false negatives when the configured name drifts from the actual surfaced run."
+    },
+    {
+      "timestamp": "2026-04-22T22:30:00Z",
+      "lesson": "When the deploy repo is already on the expected image tag, mark CAP as aligned and update release-state consistency after source success instead of demanding another commit to values.yaml."
     }
   ],
   "errorPatterns": {
