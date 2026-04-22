@@ -139,11 +139,15 @@ jobs:
             -f "content=$(cat /tmp/ws.b64)"
           for FILE in controller-release-state.json agent-release-state.json; do
             COMPONENT=$(echo "$FILE" | sed 's/-release-state.json//')
+            SOURCE_REPO=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.sourceRepo // \"\"")
+            SOURCE_BRANCH=$(echo "$WS_JSON" | jq -r ".${COMPONENT}.deployBranch // \"main\"")
             STATE_JSON=$(jq -n \
               --arg ws "$WS_ID" \
               --arg comp "$COMPONENT" \
+              --arg source_repo "$SOURCE_REPO" \
+              --arg source_branch "$SOURCE_BRANCH" \
               --arg now "$NOW" \
-              '{schemaVersion:2, workspaceId:$ws, component:$comp, lastReleasedSha:"", lastTag:"", lastVersion:"", updatedAt:$now, runId:"", runUrl:"", promotions:[], status:"idle"}')
+              '{schemaVersion:2, workspaceId:$ws, component:$comp, lastReleasedSha:"", lastTag:"", lastVersion:"", sourceRepo:$source_repo, sourceBranch:$source_branch, sourceHeadSha:"", sourceHeadCheckedAt:$now, sourceHeadMatchesReleased:false, updatedAt:$now, runId:"", runUrl:"", promotions:[], status:"idle"}')
             echo "$STATE_JSON" | base64 -w0 > /tmp/state.b64
             gh api "repos/$REPO/contents/${WS_PATH}/${FILE}" \
               --method PUT \

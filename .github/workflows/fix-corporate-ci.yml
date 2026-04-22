@@ -379,6 +379,7 @@ jobs:
 
           # Update release state with the new SHA so ci-monitor-loop tracks the right commit
           STATE_FILE="state/workspaces/${WS_ID}/${COMPONENT}-release-state.json"
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           EXISTING_FILE_SHA=$(GH_TOKEN="$RELEASE_TOKEN" gh api \
             "repos/$AUTOPILOT_REPO/contents/${STATE_FILE}?ref=$STATE_BRANCH" \
             --jq '.sha' 2>/dev/null || echo "")
@@ -388,7 +389,12 @@ jobs:
           UPDATED_CONTENT=$(echo "$EXISTING_CONTENT" | jq \
             --arg sha "$NEW_SHA" \
             --arg status "ci-fix-applied" \
-            '.lastReleasedSha = $sha | .status = $status' 2>/dev/null || echo "$EXISTING_CONTENT")
+            --arg now "$NOW" \
+            '.lastReleasedSha = $sha
+             | .status = $status
+             | .sourceHeadSha = $sha
+             | .sourceHeadCheckedAt = $now
+             | .sourceHeadMatchesReleased = true' 2>/dev/null || echo "$EXISTING_CONTENT")
 
           FIX_ARGS=(-f "branch=$STATE_BRANCH" \
             -f "message=ci-fix: update SHA to $NEW_SHA [skip ci]" \

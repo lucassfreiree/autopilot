@@ -11,6 +11,11 @@
     "lastReleasedSha": { "type": "string", "default": "" },
     "lastTag": { "type": "string", "default": "" },
     "lastVersion": { "type": "string", "default": "" },
+    "sourceRepo": { "type": "string", "default": "" },
+    "sourceBranch": { "type": "string", "default": "" },
+    "sourceHeadSha": { "type": "string", "default": "" },
+    "sourceHeadCheckedAt": { "type": "string", "format": "date-time" },
+    "sourceHeadMatchesReleased": { "type": "boolean" },
     "updatedAt": { "type": "string", "format": "date-time" },
     "runId": { "type": "string", "default": "" },
     "runUrl": { "type": "string", "default": "" },
@@ -30,7 +35,7 @@
         }
       }
     },
-    "status": { "type": "string", "enum": ["idle", "releasing", "promoted", "failed"], "default": "idle" },
+    "status": { "type": "string", "enum": ["idle", "releasing", "promoted", "failed", "ci-passed", "ci-failed", "ci-failed-preexisting", "ci-fix-applied", "pending"], "default": "idle" },
     "ciResult": { "type": "string", "enum": ["success", "failure", "unknown", "no-ci", "timeout"] },
     "changeType": { "type": "string" },
     "commitMessage": { "type": "string" },
