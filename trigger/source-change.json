@@ -7,12 +7,32 @@
   "changes": [
     {
       "action": "replace-file",
-      "target_path": "tsconfig.json",
-      "content_ref": "patches/controller-tsconfig.json"
+      "target_path": "package.json",
+      "content_ref": "patches/controller-package.json"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/util/trusted-agent.ts",
+      "content_ref": "patches/controller-trusted-agent.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/oas-sre-controller.controller.ts",
+      "content_ref": "patches/oas-sre-controller.controller.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/__tests__/unit/oas-sre-controller.route.test.ts",
+      "content_ref": "patches/oas-sre-controller.route.test.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/swagger/swagger.json",
+      "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "fix(controller): remove invalid ignoreDeprecations from tsconfig",
+  "commit_message": "fix(controller): support new oas sre functions",
   "skip_ci_wait": false,
-  "promote": false,
-  "run": 109
+  "promote": true,
+  "run": 110
 }
