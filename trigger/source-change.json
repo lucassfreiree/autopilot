@@ -7,12 +7,12 @@
   "changes": [
     {
       "action": "replace-file",
-      "target_path": "package-lock.json",
-      "content_ref": "patches/controller-package-lock.json"
+      "target_path": "tsconfig.json",
+      "content_ref": "patches/controller-tsconfig.json"
     }
   ],
-  "commit_message": "fix(controller): sync package-lock for better-sqlite3 12.9.0",
+  "commit_message": "fix(controller): remove invalid ignoreDeprecations from tsconfig",
   "skip_ci_wait": false,
   "promote": false,
-  "run": 108
+  "run": 109
 }
