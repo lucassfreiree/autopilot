@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-04-23T11:13:08Z",
-  "lookbackSince": "2026-04-23T05:13:05Z",
+  "timestamp": "2026-04-23T11:58:22Z",
+  "lookbackSince": "2026-04-23T05:58:19Z",
   "summary": {
     "totalWorkflows": 86,
-    "totalRuns": 39,
+    "totalRuns": 41,
     "workflowsWithFailures": 2,
     "critical": 0,
     "degraded": 0,
-    "healthy": 17,
+    "healthy": 16,
     "overallStatus": "healthy"
   },
   "criticalWorkflows": [],
@@ -56,22 +56,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24830876005"
-    },
-    {
-      "name": "[Infra] Cleanup: Stale Branches",
-      "path": ".github/workflows/cleanup-branches.yml",
-      "workflow_id": 249768723,
-      "status": "healthy",
-      "runs": 1,
-      "successes": 1,
-      "failures": 0,
-      "cancelled": 0,
-      "in_progress": 0,
-      "failRate": 0,
-      "consecutiveFailures": 0,
-      "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24818590524"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24833329771"
     },
     {
       "name": "[Corp] Drift Correction",
@@ -108,6 +93,21 @@
       "path": ".github/workflows/spark-sync-state.yml",
       "workflow_id": 252939431,
       "status": "healthy",
+      "runs": 6,
+      "successes": 6,
+      "failures": 0,
+      "cancelled": 0,
+      "in_progress": 0,
+      "failRate": 0,
+      "consecutiveFailures": 0,
+      "lastConclusion": "success",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24833889282"
+    },
+    {
+      "name": "[Core] Smart PR Manager",
+      "path": ".github/workflows/auto-merge-sweeper.yml",
+      "workflow_id": 253043557,
+      "status": "healthy",
       "runs": 4,
       "successes": 4,
       "failures": 0,
@@ -116,22 +116,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24829021135"
-    },
-    {
-      "name": "[Core] Smart PR Manager",
-      "path": ".github/workflows/auto-merge-sweeper.yml",
-      "workflow_id": 253043557,
-      "status": "healthy",
-      "runs": 3,
-      "successes": 3,
-      "failures": 0,
-      "cancelled": 0,
-      "in_progress": 0,
-      "failRate": 0,
-      "consecutiveFailures": 0,
-      "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24829017534"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24832298907"
     },
     {
       "name": "[Core] Token Auto-Optimize",
@@ -176,7 +161,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "unknown",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24832038006"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24833899440"
     },
     {
       "name": "[Core] Workflow Sentinel",
@@ -198,8 +183,8 @@
       "path": ".github/workflows/intelligent-orchestrator.yml",
       "workflow_id": 253555059,
       "status": "healthy",
-      "runs": 4,
-      "successes": 4,
+      "runs": 3,
+      "successes": 3,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
@@ -213,15 +198,15 @@
       "path": ".github/workflows/deploy-pipeline-monitor.yml",
       "workflow_id": 253834792,
       "status": "healthy",
-      "runs": 4,
-      "successes": 4,
+      "runs": 5,
+      "successes": 5,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24829783264"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24833021651"
     },
     {
       "name": "[Core] Autonomy Improver",
