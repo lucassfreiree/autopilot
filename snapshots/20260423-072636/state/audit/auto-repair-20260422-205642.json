@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-04-22T20:56:42Z",
+  "source": "manual",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24802240930",
+  "repairs": [
+    {
+      "type": "clear-lock",
+      "lock_path": "state/workspaces/ws-default/locks/session-lock.json",
+      "workflow_name": "session-lock (ws-default)",
+      "reason": "Lock expired at 2026-04-22T20:07:33Z (held by none in ws-default)",
+      "action": "Delete expired lock"
+    },
+    {
+      "type": "alert-only",
+      "workflow_id": 253150395,
+      "workflow_name": "[Core] Compliance Gate",
+      "reason": "5 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24801630876"
+    },
+    {
+      "type": "alert-only",
+      "workflow_id": 256290471,
+      "workflow_name": "Security Scorecard",
+      "reason": "5 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24801637497"
+    }
+  ]
+}
