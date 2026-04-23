@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T16:05:53Z",
+  "runId": "23909594623",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23909594623",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): fix cronjob callback routes — /agent/ to /api/ prefix + register routes in agentsRouter (v3.8.0)",
+  "commitSha": "79e068479d068852d40c7e3b898a690cd721c289",
+  "ciResult": "failure",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
