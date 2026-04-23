@@ -136,7 +136,7 @@
       "rule": "NUNCA mergear PR de deploy se validate-patches ou o preflight local falharem"
     },
     "versioningRules": {
-      "currentVersion": "3.9.4",
+      "currentVersion": "3.9.5",
       "pattern": "Apos X.Y.9 vai para X.(Y+1).0 — NUNCA X.Y.10",
       "checkRegistry": "SEMPRE verificar se tag ja existe antes de bumpar",
       "versionFiles": [
