@@ -1,0 +1,16 @@
+{
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "commitSha": "735a427ecf5a0ea7f46a3177f96e0cbd37f8525c",
+  "version": "3.9.3",
+  "monitoredAt": "2026-04-22T21:10:54Z",
+  "ciOutcome": "timeout",
+  "monitorRunId": "24801669600",
+  "ciWorkflowName": "Esteira de Build NPM",
+  "matchedWorkflowRunId": "",
+  "matchedWorkflowRunUrl": "",
+  "matchedWorkflowRunName": "",
+  "artifactVerified": false,
+  "artifactEvidence": "",
+  "failedRunUrl": ""
+}
