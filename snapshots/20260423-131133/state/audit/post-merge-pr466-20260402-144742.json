@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr466-20260402-144742",
+  "event": "post-merge-monitor",
+  "prNumber": 466,
+  "branch": "claude/fix-cronjob-callback-route-6qr6E",
+  "mergeSha": "df85d14733399a9ffc5e8123cd84f20db23745f3",
+  "timestamp": "2026-04-02T14:47:42Z",
+  "runId": "23906374778",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
