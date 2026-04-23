@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr538-20260404-221034",
+  "event": "post-merge-monitor",
+  "prNumber": 538,
+  "branch": "claude/autopilot-versioning-agents-Uw6g2",
+  "mergeSha": "4442b33ba56def2be16859c26f3648071387e915",
+  "timestamp": "2026-04-04T22:10:34Z",
+  "runId": "23988635049",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
