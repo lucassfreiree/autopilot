@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr558-20260422-193449",
+  "event": "post-merge-monitor",
+  "prNumber": 558,
+  "branch": "codex/fix-controller-lockfile",
+  "mergeSha": "0f9b6ad052d099c6b861bebcd902ee576246de12",
+  "timestamp": "2026-04-22T19:34:49Z",
+  "runId": "24798557524",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
