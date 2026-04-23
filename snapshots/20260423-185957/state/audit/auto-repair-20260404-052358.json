@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-04T05:23:58Z",
+  "source": "workflow-health-monitor",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23972189371",
+  "repairs": [
+    {
+      "type": "alert-only",
+      "workflow_id": 256019035,
+      "workflow_name": ".github/workflows/agent-team-orchestrator.yml",
+      "reason": "8 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23969247288"
+    }
+  ]
+}
