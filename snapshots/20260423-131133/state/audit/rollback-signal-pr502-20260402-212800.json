@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 502,
+  "branch": "claude/test-simulation",
+  "mergeSha": "569333fdb96afd5fc59afea0625eb13fbb39bb73",
+  "timestamp": "2026-04-02T21:28:00Z",
+  "runId": "23922829238",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
