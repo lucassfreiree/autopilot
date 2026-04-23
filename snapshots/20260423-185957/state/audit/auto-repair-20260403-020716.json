@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-04-03T02:07:16Z",
+  "source": "workflow-health-monitor",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23930605873",
+  "repairs": [
+    {
+      "type": "alert-only",
+      "workflow_id": 252385865,
+      "workflow_name": "[Core] Post-Merge Monitor",
+      "reason": "6 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23923426734"
+    },
+    {
+      "type": "alert-only",
+      "workflow_id": 252407274,
+      "workflow_name": "[Core] Autonomous Direct Merge",
+      "reason": "6 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23923424528"
+    },
+    {
+      "type": "alert-only",
+      "workflow_id": 253555059,
+      "workflow_name": "[Core] Intelligent Orchestrator",
+      "reason": "5 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23929599869"
+    }
+  ]
+}
