@@ -1,0 +1,16 @@
+{
+  "operation": "e2e-backup-validation",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-07T19:45:00Z",
+  "components": ["agent", "controller"],
+  "mechanism": "MCP direct (no GitHub Actions)",
+  "detail": "Full E2E test via backup system: created buildInfo.ts in autopilot repo, updated both agent and controller release states. GitHub Actions unavailable (account possibly flagged as spam). Backup system operated successfully without any Actions dependency.",
+  "commits": {
+    "file_create": "d3d31076fc0dbb0e9c0fdfa1363cc288aed2ce4d",
+    "agent_state": "4359027dcbb1e749943fe1e543ed6a319d07c80f",
+    "controller_state": "2605fa148e5a7ee4460dd007cc31caa45b15f042"
+  },
+  "status": "success",
+  "agent": "claude-code",
+  "sessionType": "backup-system-e2e-mcp-direct"
+}
