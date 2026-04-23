@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-22T22:51:46Z",
+  "source": "workflow-health-monitor",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24806766502",
+  "repairs": [
+    {
+      "type": "alert-only",
+      "workflow_id": 256290471,
+      "workflow_name": "Security Scorecard",
+      "reason": "5 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24805890437"
+    }
+  ]
+}
