@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-04-22T23:25:57Z",
+  "updatedAt": "2026-04-23T00:10:37Z",
   "workspaceId": "ws-default",
   "overallHealth": "ok",
-  "monitorRunId": "24807892508",
+  "monitorRunId": "24809285952",
   "triggerEvent": "schedule",
   "autoDispatched": "",
   "components": {
@@ -20,7 +20,7 @@
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "21800min"
+      "deployAge": "21845min"
     },
     "controller": {
       "version": "source-change",
@@ -36,7 +36,7 @@
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "198min"
+      "deployAge": "243min"
     }
   }
 }
