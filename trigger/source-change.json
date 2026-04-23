@@ -3,7 +3,7 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.9.4",
+  "version": "3.9.5",
   "changes": [
     {
       "action": "replace-file",
@@ -41,8 +41,8 @@
       "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "fix(controller): fallback trusted agent lookup by cluster",
+  "commit_message": "fix(controller): sync package lock for trusted agent fallback",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 112
+  "run": 113
 }
