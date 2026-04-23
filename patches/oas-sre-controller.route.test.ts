@@ -290,6 +290,46 @@ describe("POST /oas/sre-controller", () => {
     expect(callBody.function).toBe("get_pods");
   });
 
+  test("falls back to cluster registration when function target namespace differs from agent namespace", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const payload = buildFunctionPayload({
+      cluster: "cluster-a",
+      namespace: "some-target-ns",
+    });
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const app = await makeApp();
+      const res = await request(app)
+        .post("/oas/sre-controller")
+        .set("Authorization", bearer([EXECUTE_SCOPE]))
+        .send(payload);
+
+      expect(res.status).toBe(202);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.cluster).toBe("cluster-a");
+      expect(res.body.namespace).toBe("some-target-ns");
+
+      const callBody = JSON.parse(
+        String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
+      ) as Record<string, unknown>;
+      expect(callBody.cluster).toBe("cluster-a");
+      expect(callBody.namespace).toBe("some-target-ns");
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[oas-sre-controller] agent lookup fallback execId=%s cluster=%s requestedNamespace=%s registeredNamespace=%s strategy=%s",
+        payload.execId,
+        "cluster-a",
+        "some-target-ns",
+        "teste",
+        "cluster",
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   test("accepts function=get_all_resources", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
 
@@ -446,7 +486,7 @@ describe("POST /oas/sre-controller", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.details).toContain(
-      "Field 'envs' is required for function 'copy_resources_origem'.",
+      "Field envs is required for function copy_resources_origem.",
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -469,7 +509,7 @@ describe("POST /oas/sre-controller", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.details).toContain(
-      "Field 'envs.NAMESPACE_ENVIRONMENT' is required for function 'copy_resources_origem'.",
+      "Field envs.NAMESPACE_ENVIRONMENT is required for function copy_resources_origem.",
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -493,7 +533,7 @@ describe("POST /oas/sre-controller", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.details).toContain(
-      "Field 'envs.ACTION' has invalid value 'rename'. Allowed values: copy, apply, remove.",
+      "Field envs.ACTION has invalid value rename. Allowed values: copy, apply, remove.",
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });

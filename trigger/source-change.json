@@ -3,12 +3,17 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.9.3",
+  "version": "3.9.4",
   "changes": [
     {
       "action": "replace-file",
       "target_path": "package.json",
       "content_ref": "patches/controller-package.json"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "package-lock.json",
+      "content_ref": "patches/controller-package-lock.json"
     },
     {
       "action": "replace-file",
@@ -27,12 +32,17 @@
     },
     {
       "action": "replace-file",
+      "target_path": "src/__tests__/unit/trusted-agent.test.ts",
+      "content_ref": "patches/controller-trusted-agent.test.ts"
+    },
+    {
+      "action": "replace-file",
       "target_path": "src/swagger/swagger.json",
       "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "fix(controller): support new oas sre functions",
+  "commit_message": "fix(controller): fallback trusted agent lookup by cluster",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 111
+  "run": 112
 }
