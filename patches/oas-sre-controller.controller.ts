@@ -8,8 +8,9 @@ import {
 import type { OasOriginAuthDecision } from "../middleware/oas-origin-auth";
 import { timestampSP } from "../util/time";
 import {
-  resolveTrustedRegisteredAgentExecuteUrl,
-  resolveTrustedRegisteredAgentExecuteUrlByCluster,
+  resolveTrustedRegisteredAgentByCluster,
+  resolveTrustedRegisteredAgentExecuteTarget,
+  type TrustedRegisteredAgentResolution,
 } from "../util/trusted-agent";
 import { readSyncTimeoutMs } from "../util/sync-timeout";
 
@@ -26,6 +27,8 @@ type DispatchPlan = {
 
 type ResolvedDispatchPlan = DispatchPlan & {
   agentUrl: string;
+  lookupStrategy: TrustedRegisteredAgentResolution["lookupStrategy"];
+  registeredNamespace: string;
 };
 
 type ValidationResult =
@@ -605,9 +608,15 @@ export async function postOasSreController(
     if (validation.requestType === "legacy") {
       const resolvedPlans: Array<ResolvedDispatchPlan | null> =
         validation.clustersNames.map((cluster) => {
-          const agentUrl =
-            resolveTrustedRegisteredAgentExecuteUrlByCluster(cluster);
-          return agentUrl ? { cluster, agentUrl } : null;
+          const resolvedAgent = resolveTrustedRegisteredAgentByCluster(cluster);
+          return resolvedAgent
+            ? {
+                cluster,
+                agentUrl: resolvedAgent.agentUrl,
+                lookupStrategy: resolvedAgent.lookupStrategy,
+                registeredNamespace: resolvedAgent.namespace,
+              }
+            : null;
         });
 
       const missingTargets = validation.clustersNames.filter(
@@ -627,11 +636,11 @@ export async function postOasSreController(
         (plan): plan is ResolvedDispatchPlan => plan !== null,
       );
     } else {
-      const agentUrl = resolveTrustedRegisteredAgentExecuteUrl({
+      const resolvedAgent = resolveTrustedRegisteredAgentExecuteTarget({
         cluster: validation.cluster,
         namespace: validation.namespace,
       });
-      if (!agentUrl) {
+      if (!resolvedAgent) {
         res.status(404).json({
           ok: false,
           error: "Agent not registered for given cluster/namespace",
@@ -641,7 +650,25 @@ export async function postOasSreController(
         return;
       }
 
-      plans = [{ cluster: validation.cluster, agentUrl }];
+      if (resolvedAgent.lookupStrategy === "cluster") {
+        console.warn(
+          "[oas-sre-controller] agent lookup fallback execId=%s cluster=%s requestedNamespace=%s registeredNamespace=%s strategy=%s",
+          safeLogValue(execId),
+          safeLogValue(validation.cluster),
+          safeLogValue(validation.namespace),
+          safeLogValue(resolvedAgent.namespace),
+          safeLogValue(resolvedAgent.lookupStrategy),
+        );
+      }
+
+      plans = [
+        {
+          cluster: validation.cluster,
+          agentUrl: resolvedAgent.agentUrl,
+          lookupStrategy: resolvedAgent.lookupStrategy,
+          registeredNamespace: resolvedAgent.namespace,
+        },
+      ];
     }
 
     if (plans.length === 0) {
@@ -681,9 +708,11 @@ export async function postOasSreController(
               };
 
         console.info(
-          "[oas-sre-controller] dispatch execId=%s cluster=%s url=%s",
+          "[oas-sre-controller] dispatch execId=%s cluster=%s lookup=%s registeredNamespace=%s url=%s",
           safeLogValue(execId),
           safeLogValue(plan.cluster),
+          safeLogValue(plan.lookupStrategy),
+          safeLogValue(plan.registeredNamespace),
           safeLogValue(plan.agentUrl),
         );
 
