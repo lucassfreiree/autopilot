@@ -1,0 +1,33 @@
+{
+  "operation": "full-e2e-release",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-07T20:05:00Z",
+  "agent": "claude-code",
+  "mechanism": "backup-system-direct-push",
+  "components": {
+    "agent": {
+      "version": "2.3.5 → 2.3.6",
+      "sha": "2a14d57",
+      "files_changed": ["package.json", "package-lock.json", "src/swagger/swagger.json"],
+      "ci_checks": 8,
+      "ci_passed": 8,
+      "ci_failed": 0,
+      "cap_promoted": true,
+      "cap_repo": "bbvinet/psc_releases_cap_sre-aut-agent",
+      "cap_image": "docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-agent:2.3.6"
+    },
+    "controller": {
+      "version": "3.8.2 → 3.8.3",
+      "sha": "c5ace1e",
+      "files_changed": ["package.json", "package-lock.json", "src/swagger/swagger.json"],
+      "ci_checks": 7,
+      "ci_passed": 7,
+      "ci_failed": 0,
+      "cap_promoted": true,
+      "cap_repo": "bbvinet/psc_releases_cap_sre-aut-controller",
+      "cap_image": "docker.binarios.intranet.bb.com.br/bb/psc/psc-sre-automacao-controller:3.8.3"
+    }
+  },
+  "status": "success",
+  "note": "First full E2E release executed entirely via autopilot backup system — zero GitHub Actions dependency. Clone → bump → push → CI monitor → CAP promote → state update."
+}
