@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "backupSystemRepo": "lucassfreiree/spark-dashboard",
+  "backupSystemPath": "autopilot-backup/",
+  "backupSystemBranch": "main",
+  "lastValidated": "2026-04-07",
+  "lastValidatedRelease": {
+    "agent": { "version": "2.3.6", "sha": "2a14d57", "ci": "8/8 passed", "promoted": true },
+    "controller": { "version": "3.8.3", "sha": "c5ace1e", "ci": "7/7 passed", "promoted": true }
+  },
+  "capabilities": [
+    "release-agent",
+    "release-controller",
+    "version-bump",
+    "cap-promotion",
+    "ci-monitoring",
+    "state-management",
+    "session-locks",
+    "audit-trail",
+    "schema-validation",
+    "trigger-system",
+    "health-check",
+    "rule0-enforcement"
+  ],
+  "entryPoint": "autopilot-backup/orchestrator.sh",
+  "documentation": "docs/backup-system-reference.md",
+  "requiredAuth": "BBVINET_TOKEN (PAT)",
+  "note": "Use when GitHub Actions is unavailable. Reads/writes same autopilot-state branch."
+}
