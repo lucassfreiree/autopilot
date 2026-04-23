@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr549-20260422-183538",
+  "event": "post-merge-monitor",
+  "prNumber": 549,
+  "branch": "codex/deploy-controller-oas-v3.6.8",
+  "mergeSha": "bddfa8c047c07a97fe7a576e5e281e20c2fe5a1e",
+  "timestamp": "2026-04-22T18:35:38Z",
+  "runId": "24795836128",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
