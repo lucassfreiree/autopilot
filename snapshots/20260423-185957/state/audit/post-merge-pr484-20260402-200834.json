@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr484-20260402-200834",
+  "event": "post-merge-monitor",
+  "prNumber": 484,
+  "branch": "claude/universal-escalation",
+  "mergeSha": "5dc138f83055736925f372ffda13ce6c66243893",
+  "timestamp": "2026-04-02T20:08:34Z",
+  "runId": "23919695518",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
