@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr486-20260402-201904",
+  "event": "post-merge-monitor",
+  "prNumber": 486,
+  "branch": "claude/fix-wrapper-integers",
+  "mergeSha": "e89f5a854f51b14928d7e847bed1a83cd19c3939",
+  "timestamp": "2026-04-02T20:19:04Z",
+  "runId": "23920117709",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
