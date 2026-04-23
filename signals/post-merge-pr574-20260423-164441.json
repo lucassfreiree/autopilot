@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 574,
+  "branch": "codex/controller-routing-fallback-v3.9.4",
+  "timestamp": "2026-04-23T16:44:41Z",
+  "runId": "24847313626",
+  "healthStatus": "degraded"
+}
