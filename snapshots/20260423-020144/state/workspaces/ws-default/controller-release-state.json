@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "lastReleasedSha": "735a427ecf5a0ea7f46a3177f96e0cbd37f8525c",
+  "lastTag": "source-change",
+  "updatedAt": "2026-04-22T20:07:26Z",
+  "runId": "24799835137",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24799835137",
+  "ciResult": "failure",
+  "status": "ci-failed-preexisting",
+  "changeType": "source-code",
+  "commitMessage": "fix(controller): support new oas sre functions",
+  "promoted": false,
+  "preExistingFailure": true,
+  "gateDecision": "pass-preexisting"
+}
