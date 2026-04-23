@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T14:37:22Z",
+  "runId": "23905802386",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23905802386",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): remove types restriction + ignoreDeprecations 6.0 (v3.8.0)",
+  "commitSha": "",
+  "ciResult": "",
+  "promoted": false,
+  "stages": {
+    "apply": "failure",
+    "ci": "skipped",
+    "promote": "success",
+    "state": "skipped"
+  }
+}
