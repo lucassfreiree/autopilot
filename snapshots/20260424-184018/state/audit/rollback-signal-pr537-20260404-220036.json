@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 537,
+  "branch": "claude/oauth-vercel-proxy",
+  "mergeSha": "3a687e19e254f79d8ca844e9a7dedef9ec67d75b",
+  "timestamp": "2026-04-04T22:00:36Z",
+  "runId": "23988471675",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
