@@ -101,8 +101,10 @@ jobs:
             fi
 
             # ── Check 4: Concurrency group for scheduled workflows ──
-            HAS_SCHEDULE=$(grep -c 'schedule:' "$WF_FILE" 2>/dev/null || echo 0)
-            HAS_CONCURRENCY=$(grep -c 'concurrency:' "$WF_FILE" 2>/dev/null || echo 0)
+            HAS_SCHEDULE=$(grep -c 'schedule:' "$WF_FILE" 2>/dev/null || true)
+            HAS_SCHEDULE=${HAS_SCHEDULE:-0}
+            HAS_CONCURRENCY=$(grep -c 'concurrency:' "$WF_FILE" 2>/dev/null || true)
+            HAS_CONCURRENCY=${HAS_CONCURRENCY:-0}
             if [ "$HAS_SCHEDULE" -gt 0 ] && [ "$HAS_CONCURRENCY" -eq 0 ]; then
               FILE_ERRORS="${FILE_ERRORS}\n  - Scheduled workflow without concurrency group (risk of pile-up)"
               WARNINGS=$((WARNINGS + 1))
@@ -114,7 +116,8 @@ jobs:
             # ── Check 6: Missing error handling in API calls ──
             if grep -qE 'gh api.*[^|]$' "$WF_FILE" 2>/dev/null; then
               # gh api calls without pipe or fallback on same line
-              API_CALLS_NO_FALLBACK=$(grep -c 'gh api.*[^|\\]$' "$WF_FILE" 2>/dev/null || echo 0)
+              API_CALLS_NO_FALLBACK=$(grep -c 'gh api.*[^|\\]$' "$WF_FILE" 2>/dev/null || true)
+              API_CALLS_NO_FALLBACK=${API_CALLS_NO_FALLBACK:-0}
               if [ "$API_CALLS_NO_FALLBACK" -gt 3 ]; then
                 FILE_ERRORS="${FILE_ERRORS}\n  - Multiple gh api calls without error fallback"
                 WARNINGS=$((WARNINGS + 1))
@@ -130,11 +133,18 @@ jobs:
 
             # ── Check 8: cancel-in-progress for concurrency groups ──
             if [ "$HAS_CONCURRENCY" -gt 0 ]; then
-              HAS_CANCEL=$(grep -c 'cancel-in-progress' "$WF_FILE" 2>/dev/null || echo 0)
+              HAS_CANCEL=$(grep -c 'cancel-in-progress' "$WF_FILE" 2>/dev/null || true)
+              HAS_CANCEL=${HAS_CANCEL:-0}
               if [ "$HAS_CANCEL" -eq 0 ]; then
                 FILE_ERRORS="${FILE_ERRORS}\n  - Concurrency group without cancel-in-progress"
                 WARNINGS=$((WARNINGS + 1))
               fi
+            fi
+
+            # ── Check 9: Known unresolved action tags ──
+            if [[ "$WF_FILE" != *"builds-validation-gate"* ]] && grep -qE 'ossf/scorecard-action@v2([[:space:]]|$)' "$WF_FILE" 2>/dev/null; then
+              FILE_ERRORS="${FILE_ERRORS}\n  - ossf/scorecard-action@v2 does not resolve; pin to an existing release tag such as v2.4.3"
+              ERRORS=$((ERRORS + 1))
             fi
 
             if [ -n "$FILE_ERRORS" ]; then
