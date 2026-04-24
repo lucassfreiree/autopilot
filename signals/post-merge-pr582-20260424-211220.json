@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 582,
+  "branch": "codex/fix-apply-prepush-learning",
+  "timestamp": "2026-04-24T21:12:20Z",
+  "runId": "24912106416",
+  "healthStatus": "degraded"
+}
