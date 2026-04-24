@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-24T22:24:53Z",
+  "lastUpdated": "2026-04-24T22:28:58Z",
   "sessionCount": 13,
   "currentState": {
     "controllerVersion": "3.9.6",
@@ -170,6 +170,10 @@
     {
       "timestamp": "2026-04-24T22:24:53Z",
       "lesson": "Do not reference OpenSSF Scorecard with the non-existent floating tag ossf/scorecard-action@v2. Pin to a valid release tag, currently v2.4.3, so push-time security scanning can resolve the action."
+    },
+    {
+      "timestamp": "2026-04-24T22:28:58Z",
+      "lesson": "In bash workflow counters, do not use grep -c ... || echo 0. grep -c already prints 0 before returning 1, which creates a multi-line value and integer comparison errors. Use || true and default expansion."
     }
   ],
   "errorPatterns": {
@@ -253,6 +257,16 @@
       ],
       "rootCause": "The workflow referenced a non-existent major tag instead of a concrete published scorecard-action release tag.",
       "fix": "Use ossf/scorecard-action@v2.4.3 or a newer verified release tag, and keep this failure mapped in deploy-auto-learn."
+    },
+    "bash_grep_count_multiline_zero": {
+      "observedAt": "2026-04-24T22:27:00Z",
+      "symptoms": [
+        "Workflow log shows integer expression expected",
+        "Compared value appears as 0 followed by another 0",
+        "Counters are assigned with grep -c ... || echo 0"
+      ],
+      "rootCause": "grep -c prints 0 even when no match is found, then exits with status 1, so the fallback echo 0 appends a second zero.",
+      "fix": "Use count=$(grep -c pattern file 2>/dev/null || true) and then count=${count:-0} before numeric comparisons."
     }
   }
 }
