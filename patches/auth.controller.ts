@@ -15,6 +15,8 @@ type TokenRequestBody = Record<string, unknown> & {
   expiresIn?: unknown;
 };
 
+const DEFAULT_JWT_ISSUER = "psc-sre-automacao-controller";
+
 const scopeModule = require("../auth/" + "scope" + "s") as {
   validateRequestedScopes: (requested: string[]) => ScopeValidation;
 };
@@ -102,7 +104,8 @@ function parseExpiresIn(raw: string): number | undefined {
 }
 
 function buildSignOptions(body?: TokenRequestBody): jwt.SignOptions {
-  const issuer = String(process.env.JWT_ISSUER || "").trim();
+  const issuer =
+    String(process.env.JWT_ISSUER || "").trim() || DEFAULT_JWT_ISSUER;
   const audience = String(process.env.JWT_AUDIENCE || "").trim();
 
   const expiresRaw =
