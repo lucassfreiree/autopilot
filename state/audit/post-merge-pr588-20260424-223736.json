@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr588-20260424-223736",
+  "event": "post-merge-monitor",
+  "prNumber": 588,
+  "branch": "codex/fix-scorecard-publish-permissions",
+  "mergeSha": "f07b84b106e52da83f3749d432f9f113466600b1",
+  "timestamp": "2026-04-24T22:37:36Z",
+  "runId": "24914997027",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
