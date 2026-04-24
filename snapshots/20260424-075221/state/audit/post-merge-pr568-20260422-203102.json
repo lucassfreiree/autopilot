@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr568-20260422-203102",
+  "event": "post-merge-monitor",
+  "prNumber": 568,
+  "branch": "codex/fix-apply-branch-outputs",
+  "mergeSha": "9dc1fef364f5326d057e94f2ec5b9faff7591f6b",
+  "timestamp": "2026-04-22T20:31:02Z",
+  "runId": "24801087268",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
