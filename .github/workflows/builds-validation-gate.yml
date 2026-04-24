@@ -146,6 +146,10 @@ jobs:
               FILE_ERRORS="${FILE_ERRORS}\n  - ossf/scorecard-action@v2 does not resolve; pin to an existing release tag such as v2.4.3"
               ERRORS=$((ERRORS + 1))
             fi
+            if [[ "$WF_FILE" != *"builds-validation-gate"* ]] && grep -q 'ossf/scorecard-action' "$WF_FILE" 2>/dev/null && grep -q 'publish_results: true' "$WF_FILE" 2>/dev/null && grep -q 'security-events: write' "$WF_FILE" 2>/dev/null; then
+              FILE_ERRORS="${FILE_ERRORS}\n  - OpenSSF Scorecard publish_results=true is incompatible with security-events: write; upload SARIF to GitHub with publish_results=false"
+              ERRORS=$((ERRORS + 1))
+            fi
 
             if [ -n "$FILE_ERRORS" ]; then
               REPORT="${REPORT}\n**$WF_NAME**:$FILE_ERRORS\n"
