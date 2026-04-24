@@ -196,6 +196,18 @@ jobs:
             esac
           done
 
+          # ══ RULE 6E: Autonomous completion path must stay enabled ══
+          if [ "$CHANGES" != "[]" ] && [ "$CHANGES" != "null" ]; then
+            PROMOTE=$(echo "$TRIGGER" | jq -r '.promote // true')
+            SKIP_CI_WAIT=$(echo "$TRIGGER" | jq -r '.skip_ci_wait // false')
+            if [ "$SKIP_CI_WAIT" = "true" ]; then
+              viol "autonomous-completion-required" "skip_ci_wait=true bypasses corporate source monitoring; source/deploy changes must monitor the exact SHA to green" "error"
+            fi
+            if [ "$PROMOTE" != "true" ]; then
+              viol "autonomous-completion-required" "promote must stay true for source/deploy changes so CAP/deploy alignment is reached before completion" "error"
+            fi
+          fi
+
           # ══ RULE 7: search-replace single-line ══
           if [ "$CHANGES" != "[]" ] && [ "$CHANGES" != "null" ]; then
             echo "$CHANGES" | jq -c '.[]' 2>/dev/null | while read -r ch; do

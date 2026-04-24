@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-22T22:30:00Z",
-  "sessionCount": 11,
+  "lastUpdated": "2026-04-24T22:13:24Z",
+  "sessionCount": 12,
   "currentState": {
-    "controllerVersion": "3.9.3",
+    "controllerVersion": "3.9.6",
     "agentVersion": "2.2.9",
-    "lastTriggerRun": 111,
-    "lastSuccessfulRun": 66,
+    "lastTriggerRun": 117,
+    "lastSuccessfulRun": 117,
     "workspace": "ws-default",
-    "pipelineStatus": "direct-corporate-controller-source-run-24804944785-success"
+    "pipelineStatus": "controller-3.9.6-source-ci-cap-monitor-success",
+    "autonomousCompletionRequired": true
   },
   "sessionsLog": [
     {
@@ -50,6 +51,11 @@
       "timestamp": "2026-04-22T22:30:00Z",
       "topic": "autopilot-monitor-hardening",
       "action": "Applied workflow and dashboard improvements so ci-monitor-loop now falls back from exact workflow name to same-SHA workflow runs and then to commit check-runs, records active signals and monitor strategy, checks CAP alignment before dispatching promote-cap, and marks release state promoted when CAP was already aligned after source success."
+    },
+    {
+      "timestamp": "2026-04-24T22:13:24Z",
+      "topic": "codex-autonomous-completion-policy",
+      "action": "Registered the permanent Codex rule that a technical change is not complete until Codex has understood, implemented, locally validated, committed, pushed, opened/merged PR, triggered the corporate source pipeline, monitored the exact source SHA to green, confirmed image publication, promoted or verified CAP/deploy alignment, saved release/audit state, run post-deploy monitoring, and documented learnings without stopping for user intervention except for security, credential, permission, or destructive-risk blockers."
     }
   ],
   "decisions": [
@@ -92,6 +98,11 @@
       "timestamp": "2026-04-22T22:30:00Z",
       "decision": "CAP already aligned to the target version must be treated as a valid post-source-success state, not as a failed promotion.",
       "reason": "The deploy repo may already point to the expected tag before the final source-green moment; after the source pipeline finishes green with publish confirmed, the state should become consistent without forcing a redundant CAP commit."
+    },
+    {
+      "timestamp": "2026-04-24T22:13:24Z",
+      "decision": "Codex must operate corporate changes as an end-to-end autonomous release loop and may not stop at implementation, local tests, PR merge, source push, or corporate CI alone.",
+      "reason": "Stopping before deploy/CAP alignment, state save, audit, monitor, and learning write-back creates partial releases, drift, and repeated manual recovery."
     }
   ],
   "lessonsLearned": [
@@ -146,6 +157,10 @@
     {
       "timestamp": "2026-04-22T22:30:00Z",
       "lesson": "When the deploy repo is already on the expected image tag, mark CAP as aligned and update release-state consistency after source success instead of demanding another commit to values.yaml."
+    },
+    {
+      "timestamp": "2026-04-24T22:13:24Z",
+      "lesson": "For source/deploy work, the definition of done is post-deploy evidence, not code change delivery: exact corporate SHA green, image published, CAP/deploy aligned, release-state and audit updated, monitor success, and learnings recorded."
     }
   ],
   "errorPatterns": {
@@ -209,6 +224,16 @@
       ],
       "rootCause": "The corporate .npmrc points package tarball downloads to the intranet Artifactory host, which is unreachable from the current network context.",
       "fix": "Do not treat this as a source-code failure by default. Record the network dependency, use local validation only when registry resolution is available, and rely on the corporate source pipeline as the authoritative package-install and test executor."
+    },
+    "codex_stop_before_post_deploy_done": {
+      "observedAt": "2026-04-24T22:13:24Z",
+      "symptoms": [
+        "Codex reports completion after local code, PR, merge, or source CI but before deploy/CAP and monitor evidence",
+        "User must manually ask whether the source repo passed or whether the deploy repo was changed",
+        "Release state, audit, or learnings are not updated in the same autonomous cycle"
+      ],
+      "rootCause": "The agent treated intermediate milestones as final completion instead of enforcing an end-to-end autonomous release definition of done.",
+      "fix": "Continue automatically until source SHA, image publication, CAP/deploy alignment, release-state, audit, monitor, and learning write-back are complete. Stop only for real security, credential, permission, destructive-risk, or missing-critical-context blockers."
     }
   }
 }

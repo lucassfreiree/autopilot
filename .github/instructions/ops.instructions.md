@@ -95,6 +95,10 @@ For any corporate deployment, follow the 12-phase guide in `ops/docs/deploy-proc
 | 11 | `11-diagnostics-and-troubleshooting.md` |
 | 12 | `12-quick-reference.md` |
 
+## Definition of Done for Corporate Changes
+
+Do not treat deploy work as done until Codex has implemented, validated, committed, pushed, merged, applied the source change, monitored the exact corporate SHA to green, confirmed image publication, promoted or verified CAP/deploy alignment, saved state/audit/monitor outputs, and persisted learnings. Known failures should be fixed and re-run automatically; stop only for real security, credential, permission, lock, destructive-risk, or missing-critical-context blockers.
+
 ## Adding New Scripts
 
 1. Place in the appropriate domain directory under `ops/scripts/`

@@ -37,6 +37,11 @@ Files in `.github/workflows/` are GitHub Actions workflows that power the Autopi
 - Log errors with `echo "::error ::"` for fatal issues
 - NEVER use `|| true` without logging first: `command || { echo "::warning::..."; true; }`
 
+## Autonomous Completion Rule
+- Source/deploy workflows must not define success before the end-to-end release evidence exists.
+- Required evidence: corporate source SHA green, expected image published, CAP/deploy repo promoted or aligned, release-state saved, audit trail saved, monitor state saved, and learnings persisted.
+- If a known failure is detected, the workflow or follow-up automation should diagnose, fix, re-trigger, and re-monitor. Escalate only for security, credential, permission, active lock, destructive-risk, or missing-critical-context blockers.
+
 ## Session Guard Pattern
 Any workflow that writes to `autopilot-state` or modifies corporate repos MUST call `session-guard.yml` first:
 ```yaml

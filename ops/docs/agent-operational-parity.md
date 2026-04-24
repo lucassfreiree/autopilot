@@ -75,6 +75,23 @@ Quando houver alteração de código/configuração, operar sempre em ciclo curt
 6. Repetir o ciclo (novo commit → novos checks) até todos os gates críticos ficarem verdes.
 7. Considerar a pipeline corporativa como validação final de release.
 
+## 7) Política obrigatória de conclusão autônoma
+
+Codex não pode parar em implementação local, commit, PR, merge, source push ou CI parcial. Para mudanças técnicas em source/deploy, o fluxo só está concluído quando houver evidência de ponta a ponta:
+
+1. Base corporativa atual entendida antes do patch.
+2. Alteração implementada com escopo mínimo e compatível.
+3. Validação local/autopilot executada.
+4. Commit, push, PR e squash merge concluídos.
+5. `apply-source-change.yml` executado até obter o SHA corporativo exato.
+6. SHA corporativo monitorado até a esteira/check-runs/workloads ficarem verdes.
+7. Publicação da imagem da versão esperada confirmada.
+8. CAP/deploy repo promovido ou comprovadamente alinhado com a imagem publicada.
+9. `release-state`, audit trail e monitor state atualizados.
+10. Erros, correções e aprendizados registrados em memória/docs/auto-learn.
+
+Falhas conhecidas devem ser diagnosticadas, corrigidas e reexecutadas automaticamente. Parar e pedir decisão humana só é aceitável quando houver bloqueio real de segurança, credencial, permissão, risco destrutivo, lock de outro agente ou contexto crítico que não possa ser inferido de artefatos do repo.
+
 ### Template de status para fechamento
 
 - Resumo do problema
@@ -85,7 +102,7 @@ Quando houver alteração de código/configuração, operar sempre em ciclo curt
 - Riscos remanescentes
 - Plano de rollback
 
-## 7) Referências canônicas
+## 8) Referências canônicas
 
 - `AGENTS.md`
 - `CLAUDE.md`

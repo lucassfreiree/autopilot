@@ -559,8 +559,13 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 **NUNCA deployar sem validar primeiro.** O pipeline de compliance roda automaticamente em PRs e pos-deploy.
 
 ```
-PR Created → Compliance Gate (21 checks) + Interface Check → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn (with write-back)
+PR Created → Compliance Gate (22 checks) + Interface Check → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn (with write-back)
 ```
+
+### Codex Autonomous Completion Policy
+Codex must not stop at implementation, local validation, commit, push, PR, merge, source push, or a partial green CI signal. For any source/deploy change, completion requires evidence that the exact corporate source SHA is green, the expected image is published, the CAP/deploy repo is promoted or already aligned, release-state and audit trail are saved, the post-deploy monitor is green, and learnings are written back to memory/docs/auto-learn.
+
+Known CI/deploy failures must be diagnosed, fixed, re-triggered, and re-monitored automatically. Human interruption is reserved for active locks, missing credentials/permissions, security conflicts, destructive-risk ambiguity, or critical context that cannot be derived from repo artifacts.
 
 #### Stage 1: Compliance Gate (PRE-DEPLOY — compliance-gate.yml)
 | # | Rule | What | Severity |
@@ -574,6 +579,7 @@ PR Created → Compliance Gate (21 checks) + Interface Check → apply-source-ch
 | 6B | eslint-corporate-blockers | Blocks require() and literal concatenation before corporate lint | error |
 | 6C | github-api-label-array | Blocks gh api issue labels sent as string JSON | error |
 | 6D | auth-scope-response-contract | Preserves API key scope error wording while JWT claims stay singular | error |
+| 6E | autonomous-completion-required | Blocks skipping source CI monitoring or CAP/deploy promotion for source/deploy changes | error |
 | 7 | search-replace-newlines | sed can't handle | error |
 | 8 | run-not-incremented | Workflow won't fire | error |
 | 9 | blocked-workspace | Third-party isolation | error |
@@ -605,7 +611,7 @@ Validates BOTH controller and agent sides BEFORE commit/deploy. Errors and vulne
 | Auto-Learn Write-back | `deploy-auto-learn.yml` Step 4 | Persists learned patterns to session memory + contract |
 | Resilience Patterns | `contracts/resilience-patterns.json` | 13 known failure patterns with automatic workarounds and fallback chains |
 
-**Flow**: `git commit` → PreToolUse hook → `pre-commit-validate.sh` → 12 checks → approve/block → PR → compliance-gate (21 checks + interface-check) → deploy → auto-learn (write-back)
+**Flow**: `git commit` → PreToolUse hook → `pre-commit-validate.sh` → 12 checks → approve/block → PR → compliance-gate (22 checks + interface-check) → deploy → auto-learn (write-back)
 
 ### Resilience & Self-Healing System
 Automatic failure recovery without human intervention. Maps known failures to workarounds, discovers new patterns autonomously.
