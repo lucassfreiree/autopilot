@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T16:31:01Z",
+  "runId": "23910175513",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23910175513",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): align unit test statusEndpoint with /api/ prefix (v3.8.0)",
+  "commitSha": "7046c28b0eb470910ca371f3f840dd885c14b2ac",
+  "ciResult": "success",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
