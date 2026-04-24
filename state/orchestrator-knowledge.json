@@ -141,14 +141,10 @@
       "method": "re-run"
     }
   ],
-  "lastRun": "2026-04-24T20:50:55Z",
-  "lastHealth": "healthy",
-  "runCount": 166,
+  "lastRun": "2026-04-24T21:47:53Z",
+  "lastHealth": "degraded",
+  "runCount": 167,
   "healthHistory": [
-    {
-      "ts": "2026-04-23T16:17:23Z",
-      "health": "healthy"
-    },
     {
       "ts": "2026-04-23T17:53:28Z",
       "health": "degraded"
@@ -224,6 +220,10 @@
     {
       "ts": "2026-04-24T20:50:55Z",
       "health": "healthy"
+    },
+    {
+      "ts": "2026-04-24T21:47:53Z",
+      "health": "degraded"
     }
   ]
 }
