@@ -20,7 +20,7 @@ const DEFAULT_JWT_ISSUER = "psc-sre-automacao-controller";
 const LEGACY_SCOPE_FIELD = ["scope", "s"].join("");
 const REQUIRED_SCOPES_HINT = [
   "Use GET /auth/required-scopes with x-api-key",
-  "to discover the current access values for this environment.",
+  "to discover the current scope values for this environment.",
 ].join(" ");
 
 function getJwtSecretOrPrivateKey(): string {
@@ -168,7 +168,7 @@ export function issueToken(req: Request, res: Response): void {
   const validation = validateRequestedScopes(requested.scopeList);
   if (!validation.ok) {
     res.status(400).json({
-      error: "Invalid scope",
+      error: "Invalid scopes",
       hint: REQUIRED_SCOPES_HINT,
     });
     return;
@@ -177,7 +177,7 @@ export function issueToken(req: Request, res: Response): void {
   const validatedScopeList = readValidatedScopeList(validation);
   if (!isSubsetOfAllowed(validatedScopeList, allowedScopes)) {
     res.status(403).json({
-      error: "Scope not allowed for API key",
+      error: "Scopes not allowed for API key",
       hint: REQUIRED_SCOPES_HINT,
     });
     return;

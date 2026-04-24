@@ -46,8 +46,8 @@
       "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "fix(controller): apply lint-clean api key token flow",
+  "commit_message": "fix(controller): preserve api key scope error contract",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 116
+  "run": 117
 }

@@ -305,10 +305,12 @@ jobs:
             echo "::warning ::Auto-fix could not apply any changes — escalating to Claude Code"
 
             # Create notification issue for tracking
-            GH_TOKEN="$RELEASE_TOKEN" gh issue create \
-              --repo "$AUTOPILOT_REPO" \
-              --title "[AutoPilot] CI auto-fix blocked: $COMPONENT — no auto-fixable errors found" \
-              --body "fix-corporate-ci ran for component \`$COMPONENT\` (workspace \`$WS_ID\`) but could not apply any automatic fixes. The ESLint error may require a code-level patch update in autopilot. Check the CI logs on autopilot-state branch (ci-logs-${COMPONENT}-*.txt) for the specific error." \
+            GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/issues" --method POST \
+              -f "title=[AutoPilot] CI auto-fix blocked: $COMPONENT — no auto-fixable errors found" \
+              -f "body=fix-corporate-ci ran for component \`$COMPONENT\` (workspace \`$WS_ID\`) but could not apply any automatic fixes. The CI failure requires a code-level patch update in autopilot. Check the CI logs on autopilot-state branch (ci-logs-${COMPONENT}-*.txt) for the specific error." \
+              -f "labels[]=automated" \
+              -f "labels[]=ci-failure" \
+              -f "labels[]=auto-generated" \
               2>/dev/null || echo "::warning ::Could not create notification issue"
 
             # ── Auto-escalation: trigger Claude Code via @claude issue ──
@@ -357,12 +359,13 @@ jobs:
             if [ "$EXISTING_ESC" -gt 0 ]; then
               echo "::notice ::Escalation issue already exists for $COMPONENT — skipping duplicate"
             else
-              ESCALATION_URL=$(GH_TOKEN="$RELEASE_TOKEN" gh issue create \
-                --repo "$AUTOPILOT_REPO" \
-                --title "[AutoPilot] @claude CI fix needed: $COMPONENT — auto-fix insufficient" \
-                --label "automated,needs-claude,ci-failure" \
-                --body "$ESCALATION_BODY" \
-                2>/dev/null) && \
+              ESCALATION_RESPONSE=$(GH_TOKEN="$RELEASE_TOKEN" gh api "repos/$AUTOPILOT_REPO/issues" --method POST \
+                -f "title=[AutoPilot] @claude CI fix needed: $COMPONENT — auto-fix insufficient" \
+                -f "body=$ESCALATION_BODY" \
+                -f "labels[]=automated" \
+                -f "labels[]=needs-claude" \
+                -f "labels[]=ci-failure" 2>/dev/null) && \
+                ESCALATION_URL=$(echo "$ESCALATION_RESPONSE" | jq -r '.html_url // empty') && \
                 echo "::notice ::Claude Code escalation issue created: $ESCALATION_URL" || \
                 echo "::warning ::Could not create Claude escalation issue"
             fi

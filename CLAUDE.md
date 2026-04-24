@@ -559,7 +559,7 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 **NUNCA deployar sem validar primeiro.** O pipeline de compliance roda automaticamente em PRs e pos-deploy.
 
 ```
-PR Created → Compliance Gate (20 checks) + Interface Check → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn (with write-back)
+PR Created → Compliance Gate (21 checks) + Interface Check → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn (with write-back)
 ```
 
 #### Stage 1: Compliance Gate (PRE-DEPLOY — compliance-gate.yml)
@@ -573,6 +573,7 @@ PR Created → Compliance Gate (20 checks) + Interface Check → apply-source-ch
 | 6 | no-nested-ternary | ESLint rejects | error |
 | 6B | eslint-corporate-blockers | Blocks require() and literal concatenation before corporate lint | error |
 | 6C | github-api-label-array | Blocks gh api issue labels sent as string JSON | error |
+| 6D | auth-scope-response-contract | Preserves API key scope error wording while JWT claims stay singular | error |
 | 7 | search-replace-newlines | sed can't handle | error |
 | 8 | run-not-incremented | Workflow won't fire | error |
 | 9 | blocked-workspace | Third-party isolation | error |
@@ -604,7 +605,7 @@ Validates BOTH controller and agent sides BEFORE commit/deploy. Errors and vulne
 | Auto-Learn Write-back | `deploy-auto-learn.yml` Step 4 | Persists learned patterns to session memory + contract |
 | Resilience Patterns | `contracts/resilience-patterns.json` | 13 known failure patterns with automatic workarounds and fallback chains |
 
-**Flow**: `git commit` → PreToolUse hook → `pre-commit-validate.sh` → 12 checks → approve/block → PR → compliance-gate (18 rules + interface-check) → deploy → auto-learn (write-back)
+**Flow**: `git commit` → PreToolUse hook → `pre-commit-validate.sh` → 12 checks → approve/block → PR → compliance-gate (21 checks + interface-check) → deploy → auto-learn (write-back)
 
 ### Resilience & Self-Healing System
 Automatic failure recovery without human intervention. Maps known failures to workarounds, discovers new patterns autonomously.
