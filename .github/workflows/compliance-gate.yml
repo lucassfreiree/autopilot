@@ -177,6 +177,14 @@ jobs:
             fi
           done
 
+          # ══ RULE 6C: GitHub issue labels must be sent as arrays ══
+          WORKFLOW_PATCHES=$(git diff --name-only origin/main...HEAD -- '.github/workflows/*.yml' '.github/workflows/*.yaml' 2>/dev/null || true)
+          for f in $WORKFLOW_PATCHES; do
+            if grep -nP "(-f|--field)\s+['\"]labels=\[" "$f" > /dev/null 2>&1; then
+              viol "github-api-label-array" "$f sends issue labels as a JSON string; use repeated labels[]= fields or --input JSON" "error"
+            fi
+          done
+
           # ══ RULE 7: search-replace single-line ══
           if [ "$CHANGES" != "[]" ] && [ "$CHANGES" != "null" ]; then
             echo "$CHANGES" | jq -c '.[]' 2>/dev/null | while read -r ch; do
@@ -788,4 +796,6 @@ jobs:
           4. Verify compliance gate passes
 
           **Run**: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" \
-            -f "labels=[\"needs-claude\",\"compliance-blocked\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create escalation"
+            -f "labels[]=needs-claude" \
+            -f "labels[]=compliance-blocked" \
+            -f "labels[]=auto-generated" 2>/dev/null || echo "::warning ::Failed to create escalation"

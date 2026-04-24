@@ -559,7 +559,7 @@ Note: Some directories (`locks/`, `approvals/`, `metrics/`, `release-freeze.json
 **NUNCA deployar sem validar primeiro.** O pipeline de compliance roda automaticamente em PRs e pos-deploy.
 
 ```
-PR Created → Compliance Gate (19 checks) + Interface Check → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn (with write-back)
+PR Created → Compliance Gate (20 checks) + Interface Check → apply-source-change (7 stages) → Post-Deploy Validation → Auto-Learn (with write-back)
 ```
 
 #### Stage 1: Compliance Gate (PRE-DEPLOY — compliance-gate.yml)
@@ -572,6 +572,7 @@ PR Created → Compliance Gate (19 checks) + Interface Check → apply-source-ch
 | 5 | no-validate-in-fetch | Breaks mock tests | error |
 | 6 | no-nested-ternary | ESLint rejects | error |
 | 6B | eslint-corporate-blockers | Blocks require() and literal concatenation before corporate lint | error |
+| 6C | github-api-label-array | Blocks gh api issue labels sent as string JSON | error |
 | 7 | search-replace-newlines | sed can't handle | error |
 | 8 | run-not-incremented | Workflow won't fire | error |
 | 9 | blocked-workspace | Third-party isolation | error |
