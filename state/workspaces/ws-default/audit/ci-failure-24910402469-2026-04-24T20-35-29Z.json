@@ -1,0 +1,11 @@
+{
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "runId": "24910402469",
+  "sourceRepo": "bbvinet/psc-sre-automacao-controller",
+  "timestamp": "2026-04-24T20:35:28Z",
+  "category": "test-failure",
+  "suggestion": "Test failure. Review test output and recent code changes.",
+  "logExcerptLines": 200,
+  "aiAnalysis": "No response"
+}
