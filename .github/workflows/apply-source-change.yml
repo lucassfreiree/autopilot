@@ -476,7 +476,6 @@ jobs:
 
       - name: "Pre-push validation (npm ci + tsc + eslint + jest)"
         id: validate
-        continue-on-error: true
         working-directory: /tmp/source
         timeout-minutes: 15
         run: |
@@ -492,15 +491,14 @@ jobs:
             if npm install --ignore-scripts --registry https://registry.npmjs.org 2>&1; then
               echo "npm install (public fallback): OK"
             else
-              echo "::warning ::Cannot install dependencies — skipping validation"
-              echo "=== Validation skipped (no node_modules) ==="
-              exit 0
+              echo "::error ::Cannot install dependencies — blocking push because validation cannot run"
+              exit 1
             fi
           fi
 
           # 2. TypeScript compilation check
           echo "--- tsc --noEmit ---"
-          if npx tsc --noEmit 2>&1; then
+          if npx --no-install tsc --noEmit 2>&1; then
             echo "tsc: OK"
           else
             echo "::error ::TypeScript compilation failed"
@@ -509,11 +507,11 @@ jobs:
 
           # 3. ESLint (non-blocking)
           echo "--- eslint ---"
-          npx eslint . --quiet 2>&1 | tail -30 || echo "::warning ::ESLint warnings (non-blocking)"
+          npx --no-install eslint . --quiet 2>&1 | tail -30 || echo "::warning ::ESLint warnings (non-blocking)"
 
           # 4. Jest tests
           echo "--- jest --ci ---"
-          if npx jest --ci --forceExit --passWithNoTests 2>&1; then
+          if npx --no-install jest --ci --forceExit --passWithNoTests 2>&1; then
             echo "jest: OK"
           else
             echo "::error ::Jest tests failed"

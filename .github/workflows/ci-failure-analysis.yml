@@ -239,7 +239,9 @@ jobs:
           3. Deploy and monitor until CI passes
 
           Reference: \`contracts/claude-session-memory.json\`, \`.claude/skills/ci-fix.md\`" \
-            -f "labels=[\"needs-claude\",\"ci-analysis\",\"auto-generated\"]" 2>/dev/null || echo "::warning ::Failed to create issue"
+            -f "labels[]=needs-claude" \
+            -f "labels[]=ci-analysis" \
+            -f "labels[]=auto-generated" 2>/dev/null || echo "::warning ::Failed to create issue"
 
       - name: Upload artifacts
         if: always()

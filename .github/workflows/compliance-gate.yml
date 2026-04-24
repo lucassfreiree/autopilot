@@ -167,6 +167,16 @@ jobs:
             fi
           done
 
+          # ══ RULE 6B: ESLint corporate blockers caught before source apply ══
+          for f in $PATCH_TS; do
+            if grep -nP '\brequire\s*\(' "$f" > /dev/null 2>&1; then
+              viol "eslint-no-require-imports" "$f uses require(); corporate lint requires static import syntax" "error"
+            fi
+            if grep -nP "['\"][^'\"]*['\"]\s*\+\s*['\"][^'\"]*['\"]" "$f" > /dev/null 2>&1; then
+              viol "eslint-no-useless-concat" "$f concatenates string literals; corporate lint rejects no-useless-concat" "error"
+            fi
+          done
+
           # ══ RULE 7: search-replace single-line ══
           if [ "$CHANGES" != "[]" ] && [ "$CHANGES" != "null" ]; then
             echo "$CHANGES" | jq -c '.[]' 2>/dev/null | while read -r ch; do
@@ -281,8 +291,8 @@ jobs:
             for f in $PATCH_TS; do
               if grep -q "jwt\.sign\|jwt\.verify\|jsonwebtoken" "$f" 2>/dev/null; then
                 # Check scope singular
-                if grep -qP "scopes" "$f" 2>/dev/null; then
-                  viol "interface-jwt-claims" "$f: uses 'scopes' — interface contract requires 'scope' (singular)" "error"
+                if grep -nP "payload\.scopes\b|['\"]scopes['\"]|scope[s]?\s*:" "$f" 2>/dev/null | grep -q "scopes"; then
+                  viol "interface-jwt-claims" "$f: uses plural JWT claim 'scopes' — interface contract requires 'scope' (singular)" "error"
                 fi
                 # Check expiresIn numeric
                 if grep -qP "expiresIn:\s*['\"]" "$f" 2>/dev/null; then
