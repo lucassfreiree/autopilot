@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr573-20260422-212254",
+  "event": "post-merge-monitor",
+  "prNumber": 573,
+  "branch": "codex/persist-source-ci-release-protocol",
+  "mergeSha": "54e65c2e5ef4b0691955d0e54d4f5a1a832c6850",
+  "timestamp": "2026-04-22T21:22:54Z",
+  "runId": "24803368567",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
