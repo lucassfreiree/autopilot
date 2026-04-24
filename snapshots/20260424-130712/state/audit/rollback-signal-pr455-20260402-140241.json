@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 455,
+  "branch": "codex/diag-controller-3-8-0-ci",
+  "mergeSha": "7c70c2d1125a72d73024848bbc5237f51b20bc73",
+  "timestamp": "2026-04-02T14:02:41Z",
+  "runId": "23904299538",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
