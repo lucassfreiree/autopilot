@@ -46,8 +46,8 @@
       "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "fix(controller): satisfy corporate lint for api key token flow",
+  "commit_message": "fix(controller): apply lint-clean api key token flow",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 115
+  "run": 116
 }
