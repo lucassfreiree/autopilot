@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 586,
+  "branch": "codex/autonomous-completion-policy",
+  "timestamp": "2026-04-24T22:23:30Z",
+  "runId": "24914543821",
+  "healthStatus": "degraded"
+}
