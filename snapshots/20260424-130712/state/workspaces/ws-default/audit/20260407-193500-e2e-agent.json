@@ -1,0 +1,10 @@
+{
+  "action": "release-agent",
+  "workspaceId": "ws-default",
+  "component": "agent",
+  "timestamp": "2026-04-07T19:35:00Z",
+  "detail": "E2E test: bumped agent 2.3.4 -> 2.3.5, tag 2.3.5-9a48212. Validated backup system flow without GitHub Actions.",
+  "status": "success",
+  "agent": "claude-code",
+  "sessionType": "backup-system-e2e-test"
+}
