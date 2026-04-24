@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-03-30T14:33:49Z",
+  "runId": "23750129677",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23750129677",
+  "component": "agent",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(agent): fix timer leak and test mock in cronjob-callback (#930188)",
+  "commitSha": "ad0bfca36e92faa59b4f8545f11b55be01edbce0",
+  "ciResult": "failure",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
