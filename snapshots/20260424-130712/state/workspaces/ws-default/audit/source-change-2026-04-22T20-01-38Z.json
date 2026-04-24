@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-22T20:01:38Z",
+  "runId": "24799751859",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24799751859",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): support new oas sre functions",
+  "commitSha": "",
+  "ciResult": "",
+  "promoted": false,
+  "stages": {
+    "apply": "failure",
+    "ci": "skipped",
+    "promote": "success",
+    "state": "skipped"
+  }
+}
