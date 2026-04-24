@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 436,
+  "branch": "codex/security-intake-web-upstream",
+  "mergeSha": "149812e11f6f9a172531b5d6d668467a473ce48b",
+  "timestamp": "2026-04-01T16:32:31Z",
+  "runId": "23859464190",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
