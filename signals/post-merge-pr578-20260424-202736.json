@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 578,
+  "branch": "codex/fix-controller-auth-apikey-agent",
+  "timestamp": "2026-04-24T20:27:36Z",
+  "runId": "24910319906",
+  "healthStatus": "degraded"
+}
