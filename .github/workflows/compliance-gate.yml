@@ -185,6 +185,17 @@ jobs:
             fi
           done
 
+          # ══ RULE 6D: Auth scope API response contract must stay backward compatible ══
+          for f in $PATCH_TS; do
+            case "$f" in
+              *auth.controller.ts)
+                if grep -nP 'error:\s*"Invalid scope"\s*[,}]|error:\s*"Scope not allowed for API key"\s*[,}]|current access values' "$f" > /dev/null 2>&1; then
+                  viol "auth-scope-response-contract" "$f changed legacy API key scope error wording; preserve plural error messages and scope-values hint while keeping JWT claims singular" "error"
+                fi
+                ;;
+            esac
+          done
+
           # ══ RULE 7: search-replace single-line ══
           if [ "$CHANGES" != "[]" ] && [ "$CHANGES" != "null" ]; then
             echo "$CHANGES" | jq -c '.[]' 2>/dev/null | while read -r ch; do
