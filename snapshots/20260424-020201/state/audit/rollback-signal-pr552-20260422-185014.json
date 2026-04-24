@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 552,
+  "branch": "codex/deploy-controller-v3.9.3",
+  "mergeSha": "9773a9e3bbf85364572bf2d05a05a21c35f539aa",
+  "timestamp": "2026-04-22T18:50:14Z",
+  "runId": "24796510537",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
