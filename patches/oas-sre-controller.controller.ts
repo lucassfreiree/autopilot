@@ -11,6 +11,7 @@ import { timestampSP } from "../util/time";
 import {
   resolveTrustedRegisteredAgentByCluster,
   resolveTrustedRegisteredAgentExecuteTarget,
+  validateTrustedUrl,
   type TrustedRegisteredAgentResolution,
 } from "../util/trusted-agent";
 import { readSyncTimeoutMs } from "../util/sync-timeout";
@@ -716,6 +717,20 @@ export async function postOasSreController(
 
     dispatches = await Promise.all(
       plans.map(async (plan) => {
+        if (!validateTrustedUrl(plan.agentUrl)) {
+          console.error(
+            "[oas-sre-controller] invalid-agent-url execId=%s cluster=%s",
+            safeLogValue(execId),
+            safeLogValue(plan.cluster),
+          );
+
+          return {
+            cluster: plan.cluster,
+            status: 400,
+            ok: false,
+          };
+        }
+
         const headers: Record<string, string> = {
           "content-type": "application/json",
           "x-request-id": requestId,

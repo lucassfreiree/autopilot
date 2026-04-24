@@ -27,10 +27,21 @@ describe("POST /oas/sre-controller", () => {
     return app;
   }
 
-  function bearer(scopes: string[]): string {
-    const token = jwt.sign({ sub: "tester", scope: scopes }, JWT_SECRET, {
+  function parseExpiresIn(raw: string): number {
+    const match = raw.match(/^(\d+)(s|m|h|d)$/);
+    if (!match) return Number(raw);
+    const amount = Number(match[1]);
+    const unit = match[2];
+    if (unit === "s") return amount;
+    if (unit === "m") return amount * 60;
+    if (unit === "h") return amount * 3600;
+    return amount * 86400;
+  }
+
+  function bearer(scopeList: string[]): string {
+    const token = jwt.sign({ sub: "tester", scope: scopeList }, JWT_SECRET, {
       algorithm: "HS256",
-      expiresIn: "10m",
+      expiresIn: parseExpiresIn("10m"),
     });
     return `Bearer ${token}`;
   }

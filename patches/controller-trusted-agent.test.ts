@@ -51,6 +51,27 @@ describe("trusted agent resolution", () => {
 
   test("resolves agent URL for registered cluster regardless of namespace", async () => {
     const { AgentsRepo } = await import("../../repository/agentsRepo");
+    const {
+      resolveTrustedRegisteredAgentExecuteUrlByCluster,
+      validateTrustedUrl,
+    } = await import("../../util/trusted-agent");
+
+    AgentsRepo.upsertAgent({
+      Namespace: "psc-agent",
+      Cluster: "cluster-a",
+      environment: "hml",
+    });
+
+    const url = resolveTrustedRegisteredAgentExecuteUrlByCluster("cluster-a");
+    expect(url).toBe("https://agent.cluster-a.svc.local/agent/execute");
+    expect(validateTrustedUrl(String(url))).toBe(true);
+  });
+
+  test("rejects blocked metadata agent URL", async () => {
+    process.env.AGENT_EXECUTE_URL = "http://169.254.169.254/agent/execute";
+    process.env.AGENT_BASE_URL_TEMPLATE = "";
+
+    const { AgentsRepo } = await import("../../repository/agentsRepo");
     const { resolveTrustedRegisteredAgentExecuteUrlByCluster } = await import(
       "../../util/trusted-agent"
     );
@@ -63,7 +84,7 @@ describe("trusted agent resolution", () => {
 
     expect(
       resolveTrustedRegisteredAgentExecuteUrlByCluster("cluster-a"),
-    ).toBe("https://agent.cluster-a.svc.local/agent/execute");
+    ).toBeNull();
   });
 
   test("returns null for unregistered cluster even if another cluster is registered", async () => {
