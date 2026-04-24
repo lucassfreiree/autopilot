@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-04-24T21:49:57Z",
+  "updatedAt": "2026-04-24T22:40:26Z",
   "workspaceId": "ws-default",
-  "overallHealth": "degraded",
-  "monitorRunId": "24913455070",
+  "overallHealth": "ok",
+  "monitorRunId": "24915087593",
   "triggerEvent": "schedule",
   "autoDispatched": "",
   "components": {
@@ -20,23 +20,23 @@
       "stage": "idle",
       "health": "ok",
       "actionTaken": "none",
-      "deployAge": "24584min"
+      "deployAge": "24635min"
     },
     "controller": {
       "version": "3.9.6",
-      "deployedAt": "2026-04-24T21:16:36Z",
-      "deployRunId": "24912106992",
-      "ciGateResult": "failure",
-      "gateDecision": "block-preexisting",
-      "ciMonitorResult": "failure",
-      "ciMonitorAt": "2026-04-24T21:17:06Z",
+      "deployedAt": "2026-04-24T21:56:10Z",
+      "deployRunId": "24913140317",
+      "ciGateResult": "success",
+      "gateDecision": "pass",
+      "ciMonitorResult": "success",
+      "ciMonitorAt": "2026-04-24T21:56:10Z",
       "ciWorkflowName": "Esteira de Build NPM",
-      "artifactVerified": false,
-      "artifactEvidence": "",
-      "stage": "ci-failed",
-      "health": "error",
+      "artifactVerified": true,
+      "artifactEvidence": "workflow=⚙ Esteira de Build NPM job=CI / workflow-npm run=24913200671",
+      "stage": "complete",
+      "health": "ok",
       "actionTaken": "none",
-      "deployAge": "33min"
+      "deployAge": "44min"
     }
   }
 }
