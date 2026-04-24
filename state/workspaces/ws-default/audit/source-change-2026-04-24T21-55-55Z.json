@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-24T21:55:55Z",
+  "runId": "24913140317",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24913140317",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): preserve api key scope error contract",
+  "commitSha": "0807aee3fbda7bb9d359bcf5a3c6172be0ebfd8e",
+  "ciResult": "success",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
