@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-23T16:48:52Z",
+  "runId": "24847313837",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24847313837",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): fallback trusted agent lookup by cluster",
+  "commitSha": "f589628910de0e578a2010fdeb9a3a743a3361b2",
+  "ciResult": "failure",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "failure",
+    "promote": "skipped",
+    "state": "success"
+  }
+}
