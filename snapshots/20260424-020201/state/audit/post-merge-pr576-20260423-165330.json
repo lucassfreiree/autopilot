@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr576-20260423-165330",
+  "event": "post-merge-monitor",
+  "prNumber": 576,
+  "branch": "codex/controller-package-sync-v3.9.5",
+  "mergeSha": "df13d7010af1a705b4b5011c4285904607672357",
+  "timestamp": "2026-04-23T16:53:30Z",
+  "runId": "24847691926",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
