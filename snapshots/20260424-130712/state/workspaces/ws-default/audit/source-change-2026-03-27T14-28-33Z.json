@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-03-27T14:28:33Z",
+  "runId": "23650188716",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23650188716",
+  "component": "agent",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "test(agent): autopilot e2e flow validation v2.3.0",
+  "commitSha": "2fe97cc9fbf0773e61a892bee332c45eb2b1678a",
+  "ciResult": "timeout",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "failure",
+    "promote": "skipped",
+    "state": "success"
+  }
+}
