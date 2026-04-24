@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
 import {
   initExecution,
   type ExecutionSnapshot,
@@ -10,6 +11,7 @@ import { timestampSP } from "../util/time";
 import {
   resolveTrustedRegisteredAgentByCluster,
   resolveTrustedRegisteredAgentExecuteTarget,
+  validateTrustedUrl,
   type TrustedRegisteredAgentResolution,
 } from "../util/trusted-agent";
 import { readSyncTimeoutMs } from "../util/sync-timeout";
@@ -469,17 +471,51 @@ function validateSreControllerPayload(body: unknown): ValidationResult {
   };
 }
 
-function getIncomingAuthorization(req: Request): string | undefined {
-  const auth = safeString(req.headers.authorization);
-  return auth || undefined;
+function parseExpiresIn(raw: string): number {
+  if (!raw) return 0;
+  const num = Number(raw);
+  if (Number.isFinite(num) && num > 0) return Math.floor(num);
+  const match = raw.match(/^(\d+)\s*(s|m|h|d)$/i);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit === "s") return value;
+  if (unit === "m") return value * 60;
+  if (unit === "h") return value * 3600;
+  if (unit === "d") return value * 86400;
+  return 0;
 }
 
-function getAgentAuthorization(req: Request): string | undefined {
-  const incoming = getIncomingAuthorization(req);
-  if (incoming) return incoming;
+function generateOutboundAgentJwt(execId: string): string | undefined {
+  const secret = safeString(process.env.JWT_SECRET);
+  if (!secret) {
+    const fromEnv = safeString(process.env.AGENT_EXECUTE_AUTHORIZATION);
+    return fromEnv || undefined;
+  }
 
-  const fromEnv = safeString(process.env.AGENT_EXECUTE_AUTHORIZATION);
-  return fromEnv || undefined;
+  const issuer =
+    safeString(process.env.JWT_ISSUER) || "psc-sre-automacao-controller";
+  const audience =
+    safeString(process.env.JWT_AUDIENCE) || "psc-sre-automacao-agent";
+  const subject =
+    safeString(process.env.JWT_DEFAULT_SUBJECT) || "oas-sre-controller";
+  const expiresIn =
+    parseExpiresIn(safeString(process.env.JWT_EXPIRES_IN)) || 300;
+  const algorithm = (safeString(process.env.JWT_SIGN_ALG) ||
+    "HS256") as jwt.Algorithm;
+  const scopeExecute = safeString(process.env.SCOPE_EXECUTE_AUTOMATION);
+
+  const token = jwt.sign(
+    {
+      sub: subject,
+      scope: scopeExecute ? [scopeExecute] : [],
+      execId,
+    },
+    secret,
+    { algorithm, expiresIn, issuer, audience },
+  );
+
+  return `Bearer ${token}`;
 }
 
 async function callAgent(
@@ -585,7 +621,7 @@ export async function postOasSreController(
 
   const requestId = safeString(req.header("x-request-id")) || execId;
   const authDecision = readAuthDecision(res);
-  const outboundAuthorization = getAgentAuthorization(req);
+  const outboundAuthorization = generateOutboundAgentJwt(execId);
   const safeRequestName = safeLogValue(
     validation.requestType === "legacy"
       ? validation.image
@@ -681,6 +717,20 @@ export async function postOasSreController(
 
     dispatches = await Promise.all(
       plans.map(async (plan) => {
+        if (!validateTrustedUrl(plan.agentUrl)) {
+          console.error(
+            "[oas-sre-controller] invalid-agent-url execId=%s cluster=%s",
+            safeLogValue(execId),
+            safeLogValue(plan.cluster),
+          );
+
+          return {
+            cluster: plan.cluster,
+            status: 400,
+            ok: false,
+          };
+        }
+
         const headers: Record<string, string> = {
           "content-type": "application/json",
           "x-request-id": requestId,

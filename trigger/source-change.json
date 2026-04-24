@@ -3,7 +3,7 @@
   "workspace_id": "ws-default",
   "component": "controller",
   "change_type": "multi-file",
-  "version": "3.9.5",
+  "version": "3.9.6",
   "changes": [
     {
       "action": "replace-file",
@@ -19,6 +19,11 @@
       "action": "replace-file",
       "target_path": "src/util/trusted-agent.ts",
       "content_ref": "patches/controller-trusted-agent.ts"
+    },
+    {
+      "action": "replace-file",
+      "target_path": "src/controllers/auth.controller.ts",
+      "content_ref": "patches/auth.controller.ts"
     },
     {
       "action": "replace-file",
@@ -41,8 +46,8 @@
       "content_ref": "patches/controller-swagger.json"
     }
   ],
-  "commit_message": "fix(controller): sync package lock for trusted agent fallback",
+  "commit_message": "fix(controller): restore scoped api key flow and agent JWT auth",
   "skip_ci_wait": false,
   "promote": true,
-  "run": 113
+  "run": 114
 }
