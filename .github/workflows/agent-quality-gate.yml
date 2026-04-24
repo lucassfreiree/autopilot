@@ -12,11 +12,15 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/**'
+      - '.github/skills/**'
+      - '.github/instructions/**'
       - 'schemas/**'
       - 'contracts/**'
       - 'panel/**'
       - 'version.json'
       - 'CHANGELOG.md'
+      - 'CLAUDE.md'
+      - 'README.md'
       - '.claude/agents/**'
       - '.claude/skills/**'
       - 'ops/**'
@@ -47,6 +51,8 @@ jobs:
       agents: ${{ steps.filter.outputs.agents }}
       triggers: ${{ steps.filter.outputs.triggers }}
       security: ${{ steps.filter.outputs.security }}
+      ops: ${{ steps.filter.outputs.ops }}
+      agent_context: ${{ steps.filter.outputs.agent_context }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -67,11 +73,18 @@ jobs:
             agents:
               - '.claude/agents/**'
               - '.claude/skills/**'
+              - '.github/skills/**'
+              - '.github/instructions/**'
             triggers:
               - 'trigger/**'
             security:
               - 'compliance/**'
               - '.claude/agents/security-agent.md'
+            ops:
+              - 'ops/**'
+            agent_context:
+              - 'CLAUDE.md'
+              - 'README.md'
 
   yaml-validation:
     name: YAML Validation
@@ -278,9 +291,52 @@ jobs:
           [ "$ERRORS" -eq 0 ] && echo "Dashboard ✓"
           [ "$ERRORS" -eq 0 ] || exit 1
 
+  autonomous-completion-policy:
+    name: Autonomous Completion Policy
+    needs: detect-changes
+    if: |
+      needs.detect-changes.outputs.contracts == 'true' ||
+      needs.detect-changes.outputs.workflows == 'true' ||
+      needs.detect-changes.outputs.triggers == 'true' ||
+      needs.detect-changes.outputs.ops == 'true' ||
+      needs.detect-changes.outputs.agents == 'true' ||
+      needs.detect-changes.outputs.agent_context == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify autonomous completion policy is preserved
+        run: |
+          set -euo pipefail
+          ERRORS=0
+
+          require_text() {
+            local file="$1"
+            local text="$2"
+            if [ ! -f "$file" ]; then
+              echo "::error file=$file::Required policy file is missing"
+              ERRORS=$((ERRORS + 1))
+              return
+            fi
+            if ! grep -qF "$text" "$file"; then
+              echo "::error file=$file::Missing autonomous completion marker: $text"
+              ERRORS=$((ERRORS + 1))
+            fi
+          }
+
+          require_text "contracts/codex-agent-contract.json" "completionDefinition"
+          require_text "contracts/codex-session-memory.json" "codex-autonomous-completion-policy"
+          require_text "contracts/codex-deploy-guide.md" "Mandatory Completion Policy"
+          require_text "ops/docs/agent-operational-parity.md" "Política obrigatória de conclusão autônoma"
+          require_text ".github/skills/deploy-flow/SKILL.md" "Mandatory Definition of Done"
+
+          [ "$ERRORS" -eq 0 ] && echo "Autonomous completion policy ✓"
+          [ "$ERRORS" -eq 0 ] || exit 1
+
   report:
     name: Quality Report
-    needs: [detect-changes, yaml-validation, json-validation, version-check, security-scan, trigger-validation, dashboard-check]
+    needs: [detect-changes, yaml-validation, json-validation, version-check, security-scan, trigger-validation, dashboard-check, autonomous-completion-policy]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -296,13 +352,15 @@ jobs:
           echo "| Security | ${{ needs.security-scan.result }} | |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Triggers | ${{ needs.trigger-validation.result }} | ${{ needs.trigger-validation.result == 'skipped' && 'No trigger changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Dashboard | ${{ needs.dashboard-check.result }} | ${{ needs.dashboard-check.result == 'skipped' && 'No dashboard changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Autonomous Completion | ${{ needs.autonomous-completion-policy.result }} | ${{ needs.autonomous-completion-policy.result == 'skipped' && 'No agent policy changes' || '' }} |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Gate decision
         if: |
           needs.yaml-validation.result == 'failure' ||
           needs.json-validation.result == 'failure' ||
           needs.version-check.result == 'failure' ||
-          needs.security-scan.result == 'failure'
+          needs.security-scan.result == 'failure' ||
+          needs.autonomous-completion-policy.result == 'failure'
         run: |
           echo "::error ::Quality gate FAILED — merge blocked"
           exit 1

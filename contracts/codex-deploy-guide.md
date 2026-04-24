@@ -26,7 +26,24 @@ Before deploying, you need:
 6. Monitor apply-source-change until the corporate source SHA is known
 7. Monitor the corporate source SHA, workloads/check-runs, and image publication
 8. Only then is CAP/deploy tag promotion valid
+9. Save release/audit state, confirm post-deploy monitor success, and persist learnings
 ```
+
+## Mandatory Completion Policy
+
+Codex must not stop at local implementation, PR creation, PR merge, source push, or an isolated green CI signal. A source/deploy task is complete only when Codex has autonomously reached and verified all of these points:
+
+1. Current corporate base fetched or otherwise verified.
+2. Patch implemented and locally validated in autopilot.
+3. Autopilot commit, push, PR, and squash merge completed.
+4. `apply-source-change.yml` completed through source apply and CI gate.
+5. Exact corporate source SHA monitored until the source pipeline/check-runs/workloads are green.
+6. Expected image version publication confirmed.
+7. CAP/deploy repo promoted or proven already aligned with that image tag.
+8. Release state, audit trail, and CI monitor state saved.
+9. Errors, corrections, and learnings written back to versioned memory/docs/auto-learn.
+
+If any known failure occurs, Codex diagnoses logs, applies the smallest safe fix, increments the trigger when needed, redeploys, and keeps monitoring. Human intervention is reserved for real blockers: missing credentials/permissions, active session lock by another agent, destructive-risk ambiguity, security policy conflict, or missing critical context that cannot be derived from the repo.
 
 ---
 
@@ -242,6 +259,9 @@ If `workflow_runs` do not show the configured workflow name, do not assume nothi
 Only after all of the following are true is the deploy valid:
 
 1. The correct corporate source SHA finished green.
+2. The expected corporate workload/check-runs finished green.
+3. The target image version was published.
+4. The CAP/deploy repo tag matches that published version.
 
 ---
 
@@ -282,9 +302,6 @@ chmod 700 "$ASKPASS"
 GIT_TERMINAL_PROMPT=0 GIT_ASKPASS="$ASKPASS" GIT_TOKEN="$TOKEN" git push origin main
 rm -f "$ASKPASS"
 ```
-2. The expected corporate workload/check-runs finished green.
-3. The target image version was published.
-4. The CAP/deploy repo tag matches that published version.
 
 ### If Deploy Fails:
 1. Check which step failed: `gh api repos/lucassfreiree/autopilot/actions/runs/<RUN_ID>/jobs`

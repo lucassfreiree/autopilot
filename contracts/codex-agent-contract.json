@@ -13,7 +13,8 @@
     "handoff-consumption",
     "pre-deploy-validation",
     "security-patching",
-    "direct-commits-via-codex-apply"
+    "direct-commits-via-codex-apply",
+    "end-to-end-autonomous-release-execution"
   ],
   "tools": {
     "primary": "codex-web",
@@ -102,7 +103,7 @@
     }
   },
     "deployFlow": {
-    "description": "FLUXO COMPLETO de deploy — o autopilot e a porta padrao para repos corporativos. Excecao: operacao direta so existe quando o usuario autoriza explicitamente na sessao atual.",
+    "description": "FLUXO COMPLETO de deploy — o autopilot e a porta padrao para repos corporativos. Excecao: operacao direta so existe quando o usuario autoriza explicitamente na sessao atual. Codex nao pode encerrar no meio: alteracao tecnica so termina apos source repo verde, imagem publicada, CAP/deploy promovido ou alinhado, estado/auditoria salvo, monitor pos-deploy verde e aprendizados registrados.",
     "steps": [
       "0. OBRIGATORIO: Usar o autopilot como unica porta para repos corporativos; nunca editar ou commitar diretamente neles",
       "1. OBRIGATORIO: Buscar arquivos corporativos ATUAIS via fetch-files (base correta)",
@@ -116,7 +117,10 @@
       "9. Monitorar o commit SHA corporativo correto pelos check-runs/workloads e pela esteira configurada no workspace ate conclusao verde",
       "10. Confirmar evidencia de publicacao da imagem da versao esperada",
       "11. So entao considerar valida a promocao da tag no CAP/deploy repo",
-      "12. Se falhar: ler logs, diagnosticar, corrigir, re-deploy AUTOMATICAMENTE sem promover o CAP antes do source repo ficar verde"
+      "12. Monitorar CAP/deploy repo ate confirmar tag aplicada ou alinhada com a imagem publicada",
+      "13. Salvar release-state, audit trail, monitor state e aprendizados na memoria/docs versionadas",
+      "14. Se falhar: ler logs, diagnosticar, corrigir, re-deploy AUTOMATICAMENTE sem promover o CAP antes do source repo ficar verde",
+      "15. Encerrar somente depois de apresentar evidencias de source SHA, CI run, versao/tag, CAP/deploy commit ou alinhamento, release-state e monitor"
     ],
     "directCorporateOverride": {
       "enabledOnlyWhen": "O usuario autoriza explicitamente operacao direta no repo corporativo na sessao atual",
@@ -200,7 +204,9 @@
   ],
   "autonomousExecutionPolicy": {
     "description": "Fluxo padrao obrigatorio para execucao autonoma do Codex em alteracoes tecnicas",
-    "rule": "Com contexto suficiente, executar sem pedir confirmacao: commit -> push -> PR -> merge (squash)",
+    "rule": "Com contexto suficiente, executar sem pedir confirmacao: entender -> alterar -> validar -> commit -> push -> PR -> merge (squash) -> aplicar no source corporativo -> monitorar CI/source SHA -> confirmar imagem -> promover/alinha CAP/deploy -> salvar estado/auditoria -> monitorar pos-deploy -> registrar aprendizados",
+    "completionDefinition": "Done significa evidencia final de release: PR mergeado, source SHA corporativo publicado e verde, imagem esperada publicada, CAP/deploy repo promovido ou comprovadamente alinhado, release-state atualizado, audit trail gravado, monitor pos-deploy verde e aprendizados persistidos em memoria/docs versionadas.",
+    "stopPolicy": "Nao parar no meio por default. Interromper somente se houver bloqueio real de seguranca, credencial, permissao, contexto critico ausente, risco destrutivo ou conflito que nao possa ser resolvido sem decisao humana. Falhas conhecidas de CI/deploy devem ser diagnosticadas, corrigidas e reexecutadas automaticamente.",
     "autopilotProductRule": "Toda alteracao local relevante no repo autopilot deve ser sincronizada com GitHub automaticamente no mesmo ciclo; nao deixar conhecimento apenas local/sessao.",
     "autopilotCommitTraceabilityRule": "Commits no repo autopilot devem incluir marcador de rastreio '[claude]' para facilitar visualizacao na esteira. Nao aplicar esse marcador em commits de esteiras/repositorios empresariais.",
     "guardrails": [
@@ -209,7 +215,8 @@
       "Nunca mergear PR de deploy se validate-patches falhar",
       "Nunca promover tag CAP/deploy se o source repo nao estiver verde com a imagem publicada",
       "Em modo direto, nunca sair do diretorio isolado corporativo e nunca persistir token em arquivo rastreado",
-      "Sempre monitorar workflows e esteira corporativa apos merge"
+      "Sempre monitorar workflows e esteira corporativa apos merge",
+      "Nunca declarar conclusao antes de CAP/deploy, release-state, audit, monitor e learnings ficarem completos"
     ],
     "sourceOfTruth": [
       "contracts/claude-session-memory.json#deployFlowGuide",
@@ -228,7 +235,11 @@
       "9. So depois disso permitir a promocao do deploy repo/CAP",
       "10. Resolver conflitos/falhas automaticamente quando possivel",
       "11. Realizar squash merge quando policy gates passarem",
-      "12. Monitorar pos-merge (workflows + esteira corporativa quando aplicavel)"
+      "12. Monitorar pos-merge (workflows + esteira corporativa quando aplicavel)",
+      "13. Confirmar CAP/deploy repo promovido ou alinhado com a imagem publicada",
+      "14. Confirmar release-state, audit trail e ci-monitor atualizados",
+      "15. Persistir erros, correcoes e aprendizados em memoria/docs/auto-learn",
+      "16. So entao responder ao usuario com evidencias e estado final"
     ],
     "autopilotCommitWorkflowChain": [
       "[Agent] Auto PR + Auto-Merge (Codex) (push)",

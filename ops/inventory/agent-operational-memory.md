@@ -19,12 +19,16 @@
    - Gerador `workflow-observability-report.py` com saídas Markdown/JSON.
 3. **Automação de PR (resiliência a ambiente sem gh)**
    - `auto-pr-merge.sh` com fallback via API (`CODEX_TOKEN`/`GITHUB_TOKEN`) quando `gh` não existir.
+4. **Conclusão autônoma de release**
+   - Codex só pode encerrar mudanças source/deploy depois de implementar, validar, commitar, publicar branch/PR, mergear, aplicar no source corporativo, monitorar o SHA exato até verde, confirmar imagem publicada, promover ou verificar CAP/deploy, salvar estado/auditoria, monitorar pós-deploy e registrar aprendizados.
+   - Falhas conhecidas devem gerar diagnóstico, correção e nova execução automaticamente, sem depender de nova cobrança do operador.
 
 ## Restrições e armadilhas conhecidas
 
 - Push/merge remoto pode falhar mesmo com URL correta, devido ao bloqueio de egress do ambiente.
 - Token nunca deve ser salvo em arquivo/repo; uso apenas em runtime via secret/env.
 - Em ausência de `gh`, auto-merge completo depende de etapa posterior com GraphQL/CLI disponível.
+- Não tratar PR mergeado, source push, CI verde isolado ou CAP já alinhado como fim do trabalho sem evidência de monitor, estado, auditoria e aprendizado persistidos.
 
 ## Comandos úteis validados
 

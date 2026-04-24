@@ -42,6 +42,19 @@ Read `contracts/copilot-session-memory.json` for full context.
 5. Save State → record on autopilot-state
 6. Audit → trail + release lock
 
+### Mandatory Definition of Done
+Codex must continue autonomously until the full release evidence exists. Do not stop after code changes, local tests, PR merge, source push, or one green CI signal.
+
+Required final state:
+- corporate source SHA known and green
+- expected image version published
+- CAP/deploy repo promoted or already aligned with that image tag
+- release-state, audit trail, and monitor state saved
+- deploy monitor green
+- errors, fixes, and learnings written back to memory/docs/auto-learn
+
+If a known failure happens, diagnose logs, fix, increment the trigger when needed, redeploy, and monitor again. Stop only for security, credential, permission, active lock, destructive-risk, or missing-critical-context blockers.
+
 ### Version Rules
 - 5 files must be bumped
 - After X.Y.9 → X.(Y+1).0 (NEVER X.Y.10)
