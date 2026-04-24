@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T13:59:03Z",
+  "runId": "23903973104",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23903973104",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): restore valid tsconfig deprecation guard (v3.8.0)",
+  "commitSha": "efe4f2b08473c2dd24545e228c799052c0cb274c",
+  "ciResult": "failure",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
