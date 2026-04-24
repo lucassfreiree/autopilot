@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-24T22:28:58Z",
+  "lastUpdated": "2026-04-24T22:34:09Z",
   "sessionCount": 13,
   "currentState": {
     "controllerVersion": "3.9.6",
@@ -174,6 +174,10 @@
     {
       "timestamp": "2026-04-24T22:28:58Z",
       "lesson": "In bash workflow counters, do not use grep -c ... || echo 0. grep -c already prints 0 before returning 1, which creates a multi-line value and integer comparison errors. Use || true and default expansion."
+    },
+    {
+      "timestamp": "2026-04-24T22:34:09Z",
+      "lesson": "OpenSSF Scorecard publish_results=true is incompatible with a workflow that also grants security-events: write for SARIF upload. Keep SARIF upload and set publish_results=false unless the workflow is split into separate read-only publish and SARIF upload jobs."
     }
   ],
   "errorPatterns": {
@@ -267,6 +271,16 @@
       ],
       "rootCause": "grep -c prints 0 even when no match is found, then exits with status 1, so the fallback echo 0 appends a second zero.",
       "fix": "Use count=$(grep -c pattern file 2>/dev/null || true) and then count=${count:-0} before numeric comparisons."
+    },
+    "scorecard_publish_results_permission_conflict": {
+      "observedAt": "2026-04-24T22:33:15Z",
+      "symptoms": [
+        "Security Scorecard resolves and runs but fails while sending results to the OpenSSF webapp",
+        "Log says workflow verification failed because security-events is set to write",
+        "Workflow has publish_results: true and also uploads SARIF to GitHub Security tab"
+      ],
+      "rootCause": "OpenSSF Scorecard publishing requires a restricted read-only permission shape, while SARIF upload needs security-events: write.",
+      "fix": "Keep SARIF upload to GitHub Security tab and set scorecard publish_results=false, or split publication and upload into separately permissioned jobs."
     }
   }
 }
