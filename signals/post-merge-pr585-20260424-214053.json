@@ -1,0 +1,8 @@
+{
+  "type": "post-merge-signal",
+  "prNumber": 585,
+  "branch": "codex/fix-auth-scope-response-contract",
+  "timestamp": "2026-04-24T21:40:53Z",
+  "runId": "24913140270",
+  "healthStatus": "degraded"
+}
