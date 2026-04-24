@@ -30,6 +30,7 @@ Files in `.github/workflows/` are GitHub Actions workflows that power the Autopi
 - NEVER use `permissions: write-all` without explicit justification in a comment
 - Use `GITHUB_TOKEN` minimum permissions: specify only what is needed
 - Secrets referenced must exist in the repository secrets (verify before adding)
+- Action versions must resolve. Do not use `ossf/scorecard-action@v2`; pin OpenSSF Scorecard to a published release tag such as `v2.4.3`.
 
 ## Error Handling
 - Always use `set -euo pipefail` in bash steps

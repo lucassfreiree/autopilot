@@ -137,6 +137,12 @@ jobs:
               fi
             fi
 
+            # ── Check 9: Known unresolved action tags ──
+            if grep -qE 'ossf/scorecard-action@v2([[:space:]]|$)' "$WF_FILE" 2>/dev/null; then
+              FILE_ERRORS="${FILE_ERRORS}\n  - ossf/scorecard-action@v2 does not resolve; pin to an existing release tag such as v2.4.3"
+              ERRORS=$((ERRORS + 1))
+            fi
+
             if [ -n "$FILE_ERRORS" ]; then
               REPORT="${REPORT}\n**$WF_NAME**:$FILE_ERRORS\n"
             fi

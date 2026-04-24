@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "lastUpdated": "2026-04-24T22:13:24Z",
-  "sessionCount": 12,
+  "lastUpdated": "2026-04-24T22:24:53Z",
+  "sessionCount": 13,
   "currentState": {
     "controllerVersion": "3.9.6",
     "agentVersion": "2.2.9",
@@ -56,6 +56,11 @@
       "timestamp": "2026-04-24T22:13:24Z",
       "topic": "codex-autonomous-completion-policy",
       "action": "Registered the permanent Codex rule that a technical change is not complete until Codex has understood, implemented, locally validated, committed, pushed, opened/merged PR, triggered the corporate source pipeline, monitored the exact source SHA to green, confirmed image publication, promoted or verified CAP/deploy alignment, saved release/audit state, run post-deploy monitoring, and documented learnings without stopping for user intervention except for security, credential, permission, or destructive-risk blockers."
+    },
+    {
+      "timestamp": "2026-04-24T22:24:53Z",
+      "topic": "security-scorecard-action-pin",
+      "action": "Mapped the post-merge Security Scorecard failure caused by ossf/scorecard-action@v2 not resolving, and fixed the workflow to pin the existing OpenSSF Scorecard release tag v2.4.3."
     }
   ],
   "decisions": [
@@ -161,6 +166,10 @@
     {
       "timestamp": "2026-04-24T22:13:24Z",
       "lesson": "For source/deploy work, the definition of done is post-deploy evidence, not code change delivery: exact corporate SHA green, image published, CAP/deploy aligned, release-state and audit updated, monitor success, and learnings recorded."
+    },
+    {
+      "timestamp": "2026-04-24T22:24:53Z",
+      "lesson": "Do not reference OpenSSF Scorecard with the non-existent floating tag ossf/scorecard-action@v2. Pin to a valid release tag, currently v2.4.3, so push-time security scanning can resolve the action."
     }
   ],
   "errorPatterns": {
@@ -234,6 +243,16 @@
       ],
       "rootCause": "The agent treated intermediate milestones as final completion instead of enforcing an end-to-end autonomous release definition of done.",
       "fix": "Continue automatically until source SHA, image publication, CAP/deploy alignment, release-state, audit, monitor, and learning write-back are complete. Stop only for real security, credential, permission, destructive-risk, or missing-critical-context blockers."
+    },
+    "scorecard_action_tag_unresolved": {
+      "observedAt": "2026-04-24T22:23:17Z",
+      "symptoms": [
+        "Security Scorecard fails during action resolution",
+        "Log says Unable to resolve action ossf/scorecard-action@v2",
+        "GitHub cannot find version v2 even though v2.x release tags exist"
+      ],
+      "rootCause": "The workflow referenced a non-existent major tag instead of a concrete published scorecard-action release tag.",
+      "fix": "Use ossf/scorecard-action@v2.4.3 or a newer verified release tag, and keep this failure mapped in deploy-auto-learn."
     }
   }
 }
