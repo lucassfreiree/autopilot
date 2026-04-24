@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 574,
+  "branch": "codex/controller-routing-fallback-v3.9.4",
+  "mergeSha": "a86aca07ecdeeaeaf6e8663bcadef87fa1957a6c",
+  "timestamp": "2026-04-23T16:44:42Z",
+  "runId": "24847313626",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
