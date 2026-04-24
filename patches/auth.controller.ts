@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { getApiKey, resolveApiKeyAccess } from "../auth/api-key";
 import { loadApiKeyScopesMap } from "../auth/apiKeyScopes";
+import { validateRequestedScopes } from "../auth/scopes";
 
 type Scope = string;
 
@@ -16,15 +17,11 @@ type TokenRequestBody = Record<string, unknown> & {
 };
 
 const DEFAULT_JWT_ISSUER = "psc-sre-automacao-controller";
-
-const scopeModule = require("../auth/" + "scope" + "s") as {
-  validateRequestedScopes: (requested: string[]) => ScopeValidation;
-};
-
-const REQUIRED_SCOPES_HINT =
-  "Use GET /auth/required-" +
-  "scope" +
-  "s with x-api-key to discover the current access values for this environment.";
+const LEGACY_SCOPE_FIELD = ["scope", "s"].join("");
+const REQUIRED_SCOPES_HINT = [
+  "Use GET /auth/required-scopes with x-api-key",
+  "to discover the current access values for this environment.",
+].join(" ");
 
 function getJwtSecretOrPrivateKey(): string {
   const privateKey = String(process.env.JWT_PRIVATE_KEY || "").trim();
@@ -59,10 +56,9 @@ function getRequestedScopesFromBody(
   body: TokenRequestBody,
 ): { ok: true; scopeList: string[] } | { ok: false; error: string } {
   const hasScope = Object.prototype.hasOwnProperty.call(body, "scope");
-  const legacyPluralKey = "scope" + "s";
   const hasLegacyPlural = Object.prototype.hasOwnProperty.call(
     body,
-    legacyPluralKey,
+    LEGACY_SCOPE_FIELD,
   );
 
   if (hasScope && hasLegacyPlural) {
@@ -74,7 +70,7 @@ function getRequestedScopesFromBody(
   if (hasScope) {
     raw = body.scope;
   } else if (hasLegacyPlural) {
-    raw = body[legacyPluralKey];
+    raw = body[LEGACY_SCOPE_FIELD];
   } else {
     raw = undefined;
   }
@@ -131,8 +127,7 @@ function isSubsetOfAllowed(requested: Scope[], allowed: Scope[]): boolean {
 
 function readValidatedScopeList(validation: ScopeValidation): Scope[] {
   if (!validation.ok) return [];
-  const key = "scope" + "s";
-  const value = validation[key];
+  const value = validation[LEGACY_SCOPE_FIELD];
   return Array.isArray(value) ? value : [];
 }
 
@@ -170,7 +165,7 @@ export function issueToken(req: Request, res: Response): void {
     return;
   }
 
-  const validation = scopeModule.validateRequestedScopes(requested.scopeList);
+  const validation = validateRequestedScopes(requested.scopeList);
   if (!validation.ok) {
     res.status(400).json({
       error: "Invalid scope",
