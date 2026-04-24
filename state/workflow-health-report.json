@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-04-24T05:38:27Z",
-  "lookbackSince": "2026-04-23T23:38:24Z",
+  "timestamp": "2026-04-24T08:08:46Z",
+  "lookbackSince": "2026-04-24T02:08:43Z",
   "summary": {
     "totalWorkflows": 86,
-    "totalRuns": 28,
-    "workflowsWithFailures": 0,
+    "totalRuns": 32,
+    "workflowsWithFailures": 1,
     "critical": 0,
     "degraded": 0,
-    "healthy": 17,
+    "healthy": 18,
     "overallStatus": "healthy"
   },
   "criticalWorkflows": [],
@@ -26,7 +26,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24871040635"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24878543910"
     },
     {
       "name": "[Core] Backup: State Snapshot",
@@ -34,14 +34,14 @@
       "workflow_id": 249579504,
       "status": "healthy",
       "runs": 1,
-      "successes": 1,
+      "successes": 0,
       "failures": 0,
       "cancelled": 0,
-      "in_progress": 0,
+      "in_progress": 1,
       "failRate": 0,
       "consecutiveFailures": 0,
-      "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24868417336"
+      "lastConclusion": "unknown",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24878616415"
     },
     {
       "name": "[Core] Lock GC",
@@ -56,7 +56,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24871170145"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24874847785"
     },
     {
       "name": "[Infra] Cleanup: Stale Branches",
@@ -78,45 +78,30 @@
       "path": ".github/workflows/drift-correction.yml",
       "workflow_id": 249785167,
       "status": "healthy",
-      "runs": 1,
-      "successes": 1,
+      "runs": 2,
+      "successes": 2,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24871462191"
-    },
-    {
-      "name": "[Release] Metrics",
-      "path": ".github/workflows/release-metrics.yml",
-      "workflow_id": 249785171,
-      "status": "healthy",
-      "runs": 1,
-      "successes": 1,
-      "failures": 0,
-      "cancelled": 0,
-      "in_progress": 0,
-      "failRate": 0,
-      "consecutiveFailures": 0,
-      "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24868236264"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24875651052"
     },
     {
       "name": "Ops: Check Active Alerts",
       "path": ".github/workflows/ops-monitor-alerts.yml",
       "workflow_id": 250937886,
       "status": "healthy",
-      "runs": 1,
-      "successes": 1,
+      "runs": 2,
+      "successes": 2,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24868632611"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24878749431"
     },
     {
       "name": "Ops: Workflow Observability Report",
@@ -146,7 +131,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24871304980"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24878543079"
     },
     {
       "name": "[Core] Smart PR Manager",
@@ -161,7 +146,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24872213732"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24875659233"
     },
     {
       "name": "[Core] Emergency Watchdog",
@@ -176,7 +161,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24868167353"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24878537615"
     },
     {
       "name": "[Core] Builds Validation Gate",
@@ -221,22 +206,22 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "unknown",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24874149792"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24879252619"
     },
     {
       "name": "[Core] Workflow Sentinel",
       "path": ".github/workflows/workflow-sentinel.yml",
       "workflow_id": 253550350,
       "status": "healthy",
-      "runs": 1,
-      "successes": 1,
+      "runs": 2,
+      "successes": 2,
       "failures": 0,
       "cancelled": 0,
       "in_progress": 0,
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24869058484"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24874986429"
     },
     {
       "name": "[Core] Intelligent Orchestrator",
@@ -251,7 +236,7 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24874067431"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24879057161"
     },
     {
       "name": "[Core] Deploy Pipeline Monitor",
@@ -266,7 +251,37 @@
       "failRate": 0,
       "consecutiveFailures": 0,
       "lastConclusion": "success",
-      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24871426469"
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24875343206"
+    },
+    {
+      "name": "[Core] Autonomy Improver",
+      "path": ".github/workflows/autonomy-improver.yml",
+      "workflow_id": 255533585,
+      "status": "healthy",
+      "runs": 1,
+      "successes": 1,
+      "failures": 0,
+      "cancelled": 0,
+      "in_progress": 0,
+      "failRate": 0,
+      "consecutiveFailures": 0,
+      "lastConclusion": "success",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24879172144"
+    },
+    {
+      "name": "[Agent] Team Orchestrator",
+      "path": ".github/workflows/agent-team-orchestrator.yml",
+      "workflow_id": 256019035,
+      "status": "healthy",
+      "runs": 1,
+      "successes": 0,
+      "failures": 1,
+      "cancelled": 0,
+      "in_progress": 0,
+      "failRate": 100,
+      "consecutiveFailures": 1,
+      "lastConclusion": "failure",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24879185133"
     }
   ]
 }
