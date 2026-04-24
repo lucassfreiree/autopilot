@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr436-20260401-163229",
+  "event": "post-merge-monitor",
+  "prNumber": 436,
+  "branch": "codex/security-intake-web-upstream",
+  "mergeSha": "149812e11f6f9a172531b5d6d668467a473ce48b",
+  "timestamp": "2026-04-01T16:32:29Z",
+  "runId": "23859464190",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
