@@ -18,9 +18,11 @@ describe("POST /oas/sre-controller", () => {
   let dbPath = "";
 
   async function makeApp() {
+    const { default: authRouter } = await import("../../routes/auth");
     const { default: oasRouter } = await import("../../routes/oasRouter");
     const app = express();
     app.use(express.json());
+    app.use("/auth", authRouter);
     app.use("/oas", oasRouter);
     return app;
   }
@@ -31,6 +33,29 @@ describe("POST /oas/sre-controller", () => {
       expiresIn: "10m",
     });
     return `Bearer ${token}`;
+  }
+
+  function getAgentAuthorizationHeader(callIndex = 0): string {
+    const init = (fetchMock.mock.calls[callIndex] as [string, RequestInit])[1];
+    const headers = init.headers as Record<string, string>;
+    return String(headers.authorization || "");
+  }
+
+  function verifyControllerAgentAuthorization(
+    authorization: string,
+    execId: string,
+  ): jwt.JwtPayload {
+    expect(authorization).toMatch(/^Bearer /);
+    const decoded = jwt.verify(authorization.slice(7), JWT_SECRET, {
+      algorithms: ["HS256"],
+      issuer: "psc-sre-automacao-controller",
+      audience: "psc-sre-automacao-agent",
+    }) as jwt.JwtPayload;
+
+    expect(decoded.sub).toBe("oas-sre-controller");
+    expect(decoded.scope).toEqual([EXECUTE_SCOPE]);
+    expect(decoded.execId).toBe(execId);
+    return decoded;
   }
 
   function jsonResponse(status: number, body: unknown): Response {
@@ -72,8 +97,17 @@ describe("POST /oas/sre-controller", () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "oas-sre-route-"));
     dbPath = path.join(tmpDir, "test.db");
     process.env.JWT_SECRET = JWT_SECRET;
+    delete process.env.JWT_ISSUER;
+    delete process.env.JWT_AUDIENCE;
+    delete process.env.JWT_DEFAULT_SUBJECT;
+    delete process.env.JWT_EXPIRES_IN;
+    delete process.env.JWT_SIGN_ALG;
+    delete process.env.AGENT_EXECUTE_AUTHORIZATION;
     process.env.SCOPE_EXECUTE_AUTOMATION = EXECUTE_SCOPE;
     process.env.SCOPE_READ_STATUS = READ_SCOPE;
+    delete process.env.AUTH_API_KEYS_JSON;
+    delete process.env.AUTH_API_KEY;
+    process.env.AUTH_API_KEYS_SCOPES = `route-key=${EXECUTE_SCOPE} ${READ_SCOPE}`;
     process.env.DB_PATH = dbPath;
 
     process.env.OAS_TRUSTED_NAMESPACE = "sgh-oaas-playbook-jobs";
@@ -168,6 +202,10 @@ describe("POST /oas/sre-controller", () => {
     expect(res.body.ok).toBe(true);
     expect(res.body.authMode).toBe("internal-origin");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    verifyControllerAgentAuthorization(
+      getAgentAuthorizationHeader(),
+      String(res.body.execId),
+    );
   });
 
   test("requires execute scope when JWT is provided for external origin", async () => {
@@ -192,10 +230,11 @@ describe("POST /oas/sre-controller", () => {
       .mockResolvedValueOnce(jsonResponse(200, { message: "cluster-a" }))
       .mockResolvedValueOnce(jsonResponse(200, { message: "cluster-b" }));
 
+    const incomingAuthorization = bearer([EXECUTE_SCOPE]);
     const app = await makeApp();
     const res = await request(app)
       .post("/oas/sre-controller")
-      .set("Authorization", bearer([EXECUTE_SCOPE]))
+      .set("Authorization", incomingAuthorization)
       .send({
         image: "psc-sre-ns-migration-preflight",
         envs: {
@@ -212,6 +251,11 @@ describe("POST /oas/sre-controller", () => {
     expect(res.body.clustersNames).toEqual(["cluster-a", "cluster-b"]);
     expect(res.body.dispatches).toHaveLength(2);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getAgentAuthorizationHeader()).not.toBe(incomingAuthorization);
+    verifyControllerAgentAuthorization(
+      getAgentAuthorizationHeader(),
+      String(res.body.execId),
+    );
 
     const callBody = JSON.parse(
       String((fetchMock.mock.calls[0] as [string, RequestInit])[1].body),
@@ -221,6 +265,38 @@ describe("POST /oas/sre-controller", () => {
     const envs = callBody.envs as Record<string, unknown>;
     expect(envs.CLUSTER_DE_ORIGEM).toBe(true);
     expect(envs.NAMESPACE).toBe("teste");
+  });
+
+  test("accepts JWT issued from scoped API key and signs agent authorization", async () => {
+    process.env.AGENT_EXECUTE_URL = "http://agent.local/agent/execute";
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { message: "ok" }));
+
+    const app = await makeApp();
+    const tokenRes = await request(app)
+      .post("/auth/token")
+      .set("x-api-key", "route-key")
+      .send({ subject: "api-key-client", scope: [EXECUTE_SCOPE] });
+
+    expect(tokenRes.status).toBe(200);
+    expect(tokenRes.body.tokenType).toBe("Bearer");
+    expect(typeof tokenRes.body.token).toBe("string");
+
+    const clientAuthorization = `Bearer ${tokenRes.body.token}`;
+    const payload = buildFunctionPayload();
+    const res = await request(app)
+      .post("/oas/sre-controller")
+      .set("Authorization", clientAuthorization)
+      .send(payload);
+
+    expect(res.status).toBe(202);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.authMode).toBe("jwt");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(getAgentAuthorizationHeader()).not.toBe(clientAuthorization);
+    verifyControllerAgentAuthorization(
+      getAgentAuthorizationHeader(),
+      payload.execId,
+    );
   });
 
   test("dispatches to a single cluster with custom envs via template URL", async () => {
