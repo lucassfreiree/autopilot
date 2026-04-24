@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr574-20260423-164440",
+  "event": "post-merge-monitor",
+  "prNumber": 574,
+  "branch": "codex/controller-routing-fallback-v3.9.4",
+  "mergeSha": "a86aca07ecdeeaeaf6e8663bcadef87fa1957a6c",
+  "timestamp": "2026-04-23T16:44:40Z",
+  "runId": "24847313626",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
