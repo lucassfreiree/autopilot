@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr578-20260424-202735",
+  "event": "post-merge-monitor",
+  "prNumber": 578,
+  "branch": "codex/fix-controller-auth-apikey-agent",
+  "mergeSha": "59df71d666909f0affe3b623447afec14077ac3a",
+  "timestamp": "2026-04-24T20:27:35Z",
+  "runId": "24910319906",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
