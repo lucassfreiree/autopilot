@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr537-20260404-220035",
+  "event": "post-merge-monitor",
+  "prNumber": 537,
+  "branch": "claude/oauth-vercel-proxy",
+  "mergeSha": "3a687e19e254f79d8ca844e9a7dedef9ec67d75b",
+  "timestamp": "2026-04-04T22:00:35Z",
+  "runId": "23988471675",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
