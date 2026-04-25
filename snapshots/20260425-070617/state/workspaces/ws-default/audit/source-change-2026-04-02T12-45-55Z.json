@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T12:45:55Z",
+  "runId": "23901030164",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23901030164",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): remove invalid ignoreDeprecations from tsconfig (v3.7.9)",
+  "commitSha": "",
+  "ciResult": "",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "skipped",
+    "promote": "success",
+    "state": "skipped"
+  }
+}
