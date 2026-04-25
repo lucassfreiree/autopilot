@@ -1,0 +1,42 @@
+{
+  "updatedAt": "2026-04-25T12:03:16Z",
+  "workspaceId": "ws-default",
+  "overallHealth": "ok",
+  "monitorRunId": "24930462879",
+  "triggerEvent": "schedule",
+  "autoDispatched": "",
+  "components": {
+    "agent": {
+      "version": "2.3.6",
+      "deployedAt": "2026-04-07T20:05:00Z",
+      "deployRunId": "backup-system-direct-push",
+      "ciGateResult": "success",
+      "gateDecision": "pass",
+      "ciMonitorResult": "success",
+      "ciMonitorAt": "2026-03-30T16:43:07Z",
+      "ciWorkflowName": "",
+      "artifactVerified": false,
+      "artifactEvidence": "",
+      "stage": "idle",
+      "health": "ok",
+      "actionTaken": "none",
+      "deployAge": "25438min"
+    },
+    "controller": {
+      "version": "3.9.6",
+      "deployedAt": "2026-04-24T21:56:10Z",
+      "deployRunId": "24913140317",
+      "ciGateResult": "success",
+      "gateDecision": "pass",
+      "ciMonitorResult": "success",
+      "ciMonitorAt": "2026-04-24T21:56:10Z",
+      "ciWorkflowName": "Esteira de Build NPM",
+      "artifactVerified": true,
+      "artifactEvidence": "workflow=⚙ Esteira de Build NPM job=CI / workflow-npm run=24913200671",
+      "stage": "idle",
+      "health": "ok",
+      "actionTaken": "none",
+      "deployAge": "847min"
+    }
+  }
+}
