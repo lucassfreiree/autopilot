@@ -1,6 +1,6 @@
 {
-  "lastCheck": "2026-04-25T16:38:03Z",
-  "sickMonitors": 1,
+  "lastCheck": "2026-04-25T20:35:37Z",
+  "sickMonitors": 0,
   "disabledMonitors": 0,
-  "status": "action-taken"
+  "status": "all-healthy"
 }
