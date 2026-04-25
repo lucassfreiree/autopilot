@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 559,
+  "branch": "codex/fix-controller-tsconfig",
+  "mergeSha": "d64890aed4b46cb0dd7039199acc9b5a6f76d3bd",
+  "timestamp": "2026-04-22T19:42:49Z",
+  "runId": "24798918363",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
