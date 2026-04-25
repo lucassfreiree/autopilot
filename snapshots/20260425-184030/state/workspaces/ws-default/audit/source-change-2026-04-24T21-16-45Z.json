@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-24T21:16:45Z",
+  "runId": "24912106992",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24912106992",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): apply lint-clean api key token flow",
+  "commitSha": "eec1f9d2471404f302d2489f6a4506dab32eb253",
+  "ciResult": "failure",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "failure",
+    "promote": "skipped",
+    "state": "success"
+  }
+}
