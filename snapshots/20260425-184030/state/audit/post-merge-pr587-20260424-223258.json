@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr587-20260424-223258",
+  "event": "post-merge-monitor",
+  "prNumber": 587,
+  "branch": "codex/fix-scorecard-action-pin",
+  "mergeSha": "4c815670e00434fbfd58ba716b646c6560310009",
+  "timestamp": "2026-04-24T22:32:58Z",
+  "runId": "24914846424",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
