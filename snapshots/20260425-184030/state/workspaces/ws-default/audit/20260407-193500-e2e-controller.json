@@ -1,0 +1,10 @@
+{
+  "action": "release-controller",
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "timestamp": "2026-04-07T19:35:00Z",
+  "detail": "E2E test: bumped controller 3.8.2 -> 3.8.3, tag 3.8.3-b95c347. Validated backup system flow without GitHub Actions.",
+  "status": "success",
+  "agent": "claude-code",
+  "sessionType": "backup-system-e2e-test"
+}
