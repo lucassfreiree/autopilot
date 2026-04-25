@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-23T17:07:45Z",
+  "runId": "24847691911",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24847691911",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): sync package lock for trusted agent fallback",
+  "commitSha": "ea4e786eb2fc03025210fdf6b97faae3907e08c5",
+  "ciResult": "success",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
