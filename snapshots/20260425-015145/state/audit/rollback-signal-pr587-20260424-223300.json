@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 587,
+  "branch": "codex/fix-scorecard-action-pin",
+  "mergeSha": "4c815670e00434fbfd58ba716b646c6560310009",
+  "timestamp": "2026-04-24T22:33:00Z",
+  "runId": "24914846424",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
