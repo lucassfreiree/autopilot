@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "workspaceId": "ws-default",
+  "component": "controller",
+  "lastReleasedSha": "0807aee3fbda7bb9d359bcf5a3c6172be0ebfd8e",
+  "lastTag": "3.9.6",
+  "sourceRepo": "bbvinet/psc-sre-automacao-controller",
+  "sourceBranch": "main",
+  "sourceHeadSha": "0807aee3fbda7bb9d359bcf5a3c6172be0ebfd8e",
+  "sourceHeadCheckedAt": "2026-04-24T21:56:09Z",
+  "sourceHeadMatchesReleased": true,
+  "updatedAt": "2026-04-24T21:56:10Z",
+  "runId": "24913140317",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24913140317",
+  "ciResult": "success",
+  "status": "promoted",
+  "changeType": "source-code",
+  "commitMessage": "fix(controller): preserve api key scope error contract",
+  "promoted": true,
+  "preExistingFailure": false,
+  "gateDecision": "pass",
+  "promotions": [
+    {
+      "target": "cap",
+      "repo": "bbvinet/psc_releases_cap_sre-aut-controller",
+      "branch": "main",
+      "path": "releases/openshift/hml/deploy/values.yaml",
+      "tag": "3.9.6",
+      "sha": "",
+      "timestamp": "2026-04-24T21:56:10Z",
+      "status": "success"
+    }
+  ]
+}
