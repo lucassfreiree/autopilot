@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr552-20260422-185012",
+  "event": "post-merge-monitor",
+  "prNumber": 552,
+  "branch": "codex/deploy-controller-v3.9.3",
+  "mergeSha": "9773a9e3bbf85364572bf2d05a05a21c35f539aa",
+  "timestamp": "2026-04-22T18:50:12Z",
+  "runId": "24796510537",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
