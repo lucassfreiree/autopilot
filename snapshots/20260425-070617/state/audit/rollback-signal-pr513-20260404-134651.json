@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 513,
+  "branch": "claude/agent-v103-improvements",
+  "mergeSha": "05e30d2e80b3c41563985f7942fd67104952f414",
+  "timestamp": "2026-04-04T13:46:51Z",
+  "runId": "23980151708",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
