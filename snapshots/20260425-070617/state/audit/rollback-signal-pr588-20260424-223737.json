@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 588,
+  "branch": "codex/fix-scorecard-publish-permissions",
+  "mergeSha": "f07b84b106e52da83f3749d432f9f113466600b1",
+  "timestamp": "2026-04-24T22:37:37Z",
+  "runId": "24914997027",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
