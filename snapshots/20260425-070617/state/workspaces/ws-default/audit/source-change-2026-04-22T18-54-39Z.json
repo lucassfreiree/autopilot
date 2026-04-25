@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-22T18:54:39Z",
+  "runId": "24796511163",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24796511163",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): accept OAS functions and copy_resources contract (3.9.3)",
+  "commitSha": "d6beb7abbb8970f7b669a3cedfbebd7841ae6571",
+  "ciResult": "failure",
+  "promoted": true,
+  "stages": {
+    "apply": "success",
+    "ci": "success",
+    "promote": "success",
+    "state": "success"
+  }
+}
