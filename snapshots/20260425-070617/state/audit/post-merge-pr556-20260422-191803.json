@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr556-20260422-191803",
+  "event": "post-merge-monitor",
+  "prNumber": 556,
+  "branch": "codex/fix-controller-ci-node22",
+  "mergeSha": "1a52b2abf96d0e6e8f1cb9a169e3e23b66c2ade6",
+  "timestamp": "2026-04-22T19:18:03Z",
+  "runId": "24797804831",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
