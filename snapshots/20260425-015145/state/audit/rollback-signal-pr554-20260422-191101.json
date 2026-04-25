@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 554,
+  "branch": "codex/fix-controller-ci-node22",
+  "mergeSha": "6799f32bbf6da7a3043155e4b29c0396c9aa39f9",
+  "timestamp": "2026-04-22T19:11:01Z",
+  "runId": "24797482077",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
