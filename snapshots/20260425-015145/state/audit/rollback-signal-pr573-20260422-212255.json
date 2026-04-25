@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 573,
+  "branch": "codex/persist-source-ci-release-protocol",
+  "mergeSha": "54e65c2e5ef4b0691955d0e54d4f5a1a832c6850",
+  "timestamp": "2026-04-22T21:22:55Z",
+  "runId": "24803368567",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
