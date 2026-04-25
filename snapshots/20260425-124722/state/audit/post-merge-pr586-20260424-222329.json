@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr586-20260424-222329",
+  "event": "post-merge-monitor",
+  "prNumber": 586,
+  "branch": "codex/autonomous-completion-policy",
+  "mergeSha": "1e4a2c47a1e5de73a7a96bdfb36c457df356b5e3",
+  "timestamp": "2026-04-24T22:23:29Z",
+  "runId": "24914543821",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
