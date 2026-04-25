@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-04-22T20:57:03Z",
+  "source": "workflow-health-monitor",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24802252352",
+  "repairs": [
+    {
+      "type": "alert-only",
+      "workflow_id": 253150395,
+      "workflow_name": "[Core] Compliance Gate",
+      "reason": "5 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24801630876"
+    },
+    {
+      "type": "alert-only",
+      "workflow_id": 256290471,
+      "workflow_name": "Security Scorecard",
+      "reason": "5 consecutive failures",
+      "action": "Needs manual investigation",
+      "lastUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/24801637497"
+    }
+  ]
+}
