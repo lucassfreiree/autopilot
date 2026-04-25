@@ -1,0 +1,20 @@
+{
+  "operation": "source-code-change",
+  "workspaceId": "ws-default",
+  "timestamp": "2026-04-02T17:01:35Z",
+  "runId": "23912001653",
+  "runUrl": "https://github.com/lucassfreiree/autopilot/actions/runs/23912001653",
+  "component": "controller",
+  "changeType": "multi-file",
+  "targetPath": "",
+  "commitMessage": "fix(controller): generate outbound JWT for agent dispatch instead of forwarding caller token (v3.8.0)",
+  "commitSha": "17f3afb719fa6c521531ad3679d253917d97d44b",
+  "ciResult": "failure",
+  "promoted": false,
+  "stages": {
+    "apply": "success",
+    "ci": "failure",
+    "promote": "skipped",
+    "state": "success"
+  }
+}
