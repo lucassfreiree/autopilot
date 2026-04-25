@@ -1,0 +1,13 @@
+{
+  "id": "post-merge-pr485-20260402-201653",
+  "event": "post-merge-monitor",
+  "prNumber": 485,
+  "branch": "claude/universal-status-reporting",
+  "mergeSha": "f849124c639312e855942d9fc720b0b3043d0b15",
+  "timestamp": "2026-04-02T20:16:53Z",
+  "runId": "23920025936",
+  "healthCheck": {
+    "status": "degraded",
+    "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) "
+  }
+}
