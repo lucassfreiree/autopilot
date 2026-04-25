@@ -1,0 +1,500 @@
+2026-04-02T13:58:12.7177858Z     [7m8[0m     json: jest.fn(),
+2026-04-02T13:58:12.7178212Z     [7m [0m [91m          ~~~~[0m
+2026-04-02T13:58:12.7180444Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m15[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7180464Z 
+2026-04-02T13:58:12.7180940Z     [7m15[0m describe("registerAgent controller", () => {
+2026-04-02T13:58:12.7181282Z     [7m  [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7182434Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m20[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeEach'.
+2026-04-02T13:58:12.7182447Z 
+2026-04-02T13:58:12.7182825Z     [7m20[0m   beforeEach(() => {
+2026-04-02T13:58:12.7183176Z     [7m  [0m [91m  ~~~~~~~~~~[0m
+2026-04-02T13:58:12.7184274Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m24[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+2026-04-02T13:58:12.7184296Z 
+2026-04-02T13:58:12.7184670Z     [7m24[0m     jest.resetModules();
+2026-04-02T13:58:12.7185022Z     [7m  [0m [91m    ~~~~[0m
+2026-04-02T13:58:12.7186038Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m27[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'afterEach'.
+2026-04-02T13:58:12.7186054Z 
+2026-04-02T13:58:12.7186408Z     [7m27[0m   afterEach(() => {
+2026-04-02T13:58:12.7186763Z     [7m  [0m [91m  ~~~~~~~~~[0m
+2026-04-02T13:58:12.7188964Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m36[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7188982Z 
+2026-04-02T13:58:12.7189608Z     [7m36[0m   test("rejects unsafe cluster or namespace values", async () => {
+2026-04-02T13:58:12.7189950Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7190940Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m53[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7190951Z 
+2026-04-02T13:58:12.7191459Z     [7m53[0m     expect(res.status).toHaveBeenCalledWith(400);
+2026-04-02T13:58:12.7191817Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7194087Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m56[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7194099Z 
+2026-04-02T13:58:12.7194647Z     [7m56[0m   test("registers a safe agent payload", async () => {
+2026-04-02T13:58:12.7194988Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7196055Z     [96msrc/__tests__/unit/register.controller.test.ts[0m:[93m73[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7196067Z 
+2026-04-02T13:58:12.7196594Z     [7m73[0m     expect(res.status).toHaveBeenCalledWith(201);
+2026-04-02T13:58:12.7196948Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7196959Z 
+2026-04-02T13:58:12.7197446Z FAIL src/__tests__/unit/agents.store.test.ts
+2026-04-02T13:58:12.7197800Z   ● Test suite failed to run
+2026-04-02T13:58:12.7197811Z 
+2026-04-02T13:58:12.7199976Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m5[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7199995Z 
+2026-04-02T13:58:12.7200423Z     [7m5[0m describe("AgentsStore", () => {
+2026-04-02T13:58:12.7200763Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7201747Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m9[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeEach'.
+2026-04-02T13:58:12.7201758Z 
+2026-04-02T13:58:12.7202177Z     [7m9[0m   beforeEach(() => {
+2026-04-02T13:58:12.7202533Z     [7m [0m [91m  ~~~~~~~~~~[0m
+2026-04-02T13:58:12.7203455Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m12[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+2026-04-02T13:58:12.7203479Z 
+2026-04-02T13:58:12.7203842Z     [7m12[0m     jest.resetModules();
+2026-04-02T13:58:12.7204187Z     [7m  [0m [91m    ~~~~[0m
+2026-04-02T13:58:12.7205155Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m15[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'afterEach'.
+2026-04-02T13:58:12.7205265Z 
+2026-04-02T13:58:12.7205628Z     [7m15[0m   afterEach(() => {
+2026-04-02T13:58:12.7205971Z     [7m  [0m [91m  ~~~~~~~~~[0m
+2026-04-02T13:58:12.7208130Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m24[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7208142Z 
+2026-04-02T13:58:12.7208607Z     [7m24[0m   test("list starts empty", async () => {
+2026-04-02T13:58:12.7208953Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7209890Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m26[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7209913Z 
+2026-04-02T13:58:12.7210369Z     [7m26[0m     expect(AgentsStore.list()).toEqual([]);
+2026-04-02T13:58:12.7210720Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7212932Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m29[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7212945Z 
+2026-04-02T13:58:12.7213535Z     [7m29[0m   test("add persists and exists returns true", async () => {
+2026-04-02T13:58:12.7213873Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7214823Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m38[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7214834Z 
+2026-04-02T13:58:12.7215262Z     [7m38[0m     expect(rec.cluster).toBe("c1");
+2026-04-02T13:58:12.7215615Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7216549Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m39[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7216566Z 
+2026-04-02T13:58:12.7217002Z     [7m39[0m     expect(rec.namespace).toBe("ns1");
+2026-04-02T13:58:12.7217349Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7218289Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m40[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7218300Z 
+2026-04-02T13:58:12.7218737Z     [7m40[0m     expect(rec.environment).toBe("hml");
+2026-04-02T13:58:12.7219219Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7220176Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m41[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7220187Z 
+2026-04-02T13:58:12.7220709Z     [7m41[0m     expect(typeof rec.registeredAt).toBe("string");
+2026-04-02T13:58:12.7221050Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7221995Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m43[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7222013Z 
+2026-04-02T13:58:12.7222387Z     [7m43[0m     expect(
+2026-04-02T13:58:12.7222739Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7223669Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m52[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7223694Z 
+2026-04-02T13:58:12.7224097Z     [7m52[0m     expect(all).toHaveLength(1);
+2026-04-02T13:58:12.7224445Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7225387Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m53[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7225398Z 
+2026-04-02T13:58:12.7225826Z     [7m53[0m     expect(all[0].cluster).toBe("c1");
+2026-04-02T13:58:12.7226243Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7228402Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m56[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7228522Z 
+2026-04-02T13:58:12.7235469Z     [7m56[0m   test("exists returns false for non-matching key", async () => {
+2026-04-02T13:58:12.7235961Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7236780Z     [96msrc/__tests__/unit/agents.store.test.ts[0m:[93m65[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7236795Z 
+2026-04-02T13:58:12.7237053Z     [7m65[0m     expect(
+2026-04-02T13:58:12.7237331Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7237340Z 
+2026-04-02T13:58:12.7237707Z FAIL src/__tests__/unit/sync-poll-interval.util.test.ts
+2026-04-02T13:58:12.7237966Z   ● Test suite failed to run
+2026-04-02T13:58:12.7237975Z 
+2026-04-02T13:58:12.7239686Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m8[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7239705Z 
+2026-04-02T13:58:12.7240065Z     [7m8[0m describe("sync-poll-interval util", () => {
+2026-04-02T13:58:12.7240337Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7241998Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m9[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7242008Z 
+2026-04-02T13:58:12.7242594Z     [7m9[0m   test("returns default for invalid values", () => {
+2026-04-02T13:58:12.7242841Z     [7m [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7243640Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m10[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7243650Z 
+2026-04-02T13:58:12.7243895Z     [7m10[0m     expect(
+2026-04-02T13:58:12.7244168Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7244946Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m15[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7244955Z 
+2026-04-02T13:58:12.7245421Z     [7m15[0m     expect(
+2026-04-02T13:58:12.7245707Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7247462Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m22[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7247475Z 
+2026-04-02T13:58:12.7247950Z     [7m22[0m   test("clamps values inside the supported interval window", () => {
+2026-04-02T13:58:12.7248231Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7249009Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m23[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7249017Z 
+2026-04-02T13:58:12.7249260Z     [7m23[0m     expect(
+2026-04-02T13:58:12.7249517Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7250298Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m28[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7250307Z 
+2026-04-02T13:58:12.7250552Z     [7m28[0m     expect(
+2026-04-02T13:58:12.7250830Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7252562Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m35[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7252677Z 
+2026-04-02T13:58:12.7253132Z     [7m35[0m   test("normalizes decimal values down to an integer", () => {
+2026-04-02T13:58:12.7253394Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7254179Z     [96msrc/__tests__/unit/sync-poll-interval.util.test.ts[0m:[93m36[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7254188Z 
+2026-04-02T13:58:12.7254433Z     [7m36[0m     expect(
+2026-04-02T13:58:12.7254700Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7254708Z 
+2026-04-02T13:58:12.7255019Z FAIL src/__tests__/unit/trusted-agent.test.ts
+2026-04-02T13:58:12.7255290Z   ● Test suite failed to run
+2026-04-02T13:58:12.7255298Z 
+2026-04-02T13:58:12.7256937Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m5[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7256953Z 
+2026-04-02T13:58:12.7257325Z     [7m5[0m describe("trusted agent resolution", () => {
+2026-04-02T13:58:12.7257592Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7258356Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m10[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeEach'.
+2026-04-02T13:58:12.7258364Z 
+2026-04-02T13:58:12.7258646Z     [7m10[0m   beforeEach(() => {
+2026-04-02T13:58:12.7258926Z     [7m  [0m [91m  ~~~~~~~~~~[0m
+2026-04-02T13:58:12.7259633Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m21[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+2026-04-02T13:58:12.7259641Z 
+2026-04-02T13:58:12.7259931Z     [7m21[0m     jest.resetModules();
+2026-04-02T13:58:12.7260213Z     [7m  [0m [91m    ~~~~[0m
+2026-04-02T13:58:12.7260952Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m24[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'afterEach'.
+2026-04-02T13:58:12.7260960Z 
+2026-04-02T13:58:12.7261221Z     [7m24[0m   afterEach(() => {
+2026-04-02T13:58:12.7261504Z     [7m  [0m [91m  ~~~~~~~~~[0m
+2026-04-02T13:58:12.7263289Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m33[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7263300Z 
+2026-04-02T13:58:12.7263844Z     [7m33[0m   test("returns null when cluster/namespace is not registered", async () => {
+2026-04-02T13:58:12.7264095Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7264822Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m38[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7264836Z 
+2026-04-02T13:58:12.7265079Z     [7m38[0m     expect(
+2026-04-02T13:58:12.7265356Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7267041Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m46[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7267052Z 
+2026-04-02T13:58:12.7267594Z     [7m46[0m   test("resolves agent URL only for registered cluster/namespace", async () => {
+2026-04-02T13:58:12.7267870Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7268595Z     [96msrc/__tests__/unit/trusted-agent.test.ts[0m:[93m58[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7268690Z 
+2026-04-02T13:58:12.7268940Z     [7m58[0m     expect(
+2026-04-02T13:58:12.7269202Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7269222Z 
+2026-04-02T13:58:12.7269547Z FAIL src/__tests__/unit/automation-log.service.test.ts
+2026-04-02T13:58:12.7269818Z   ● Test suite failed to run
+2026-04-02T13:58:12.7269826Z 
+2026-04-02T13:58:12.7271521Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m5[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7271530Z 
+2026-04-02T13:58:12.7271883Z     [7m5[0m describe("automation-log.service", () => {
+2026-04-02T13:58:12.7272199Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7273004Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m11[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeEach'.
+2026-04-02T13:58:12.7273019Z 
+2026-04-02T13:58:12.7273297Z     [7m11[0m   beforeEach(() => {
+2026-04-02T13:58:12.7273583Z     [7m  [0m [91m  ~~~~~~~~~~[0m
+2026-04-02T13:58:12.7274334Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m12[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+2026-04-02T13:58:12.7274343Z 
+2026-04-02T13:58:12.7274641Z     [7m12[0m     jest.resetModules();
+2026-04-02T13:58:12.7274927Z     [7m  [0m [91m    ~~~~[0m
+2026-04-02T13:58:12.7275722Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m18[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'afterEach'.
+2026-04-02T13:58:12.7275731Z 
+2026-04-02T13:58:12.7275995Z     [7m18[0m   afterEach(() => {
+2026-04-02T13:58:12.7276265Z     [7m  [0m [91m  ~~~~~~~~~[0m
+2026-04-02T13:58:12.7277934Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m32[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7277947Z 
+2026-04-02T13:58:12.7278528Z     [7m32[0m   test("recognizes appendTraceLine-style execStatus as a final success", async () => {
+2026-04-02T13:58:12.7278791Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7279640Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m48[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7279652Z 
+2026-04-02T13:58:12.7280020Z     [7m48[0m     expect(result.status).toBe("SUCCEEDED");
+2026-04-02T13:58:12.7280299Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7281074Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m49[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7281082Z 
+2026-04-02T13:58:12.7281441Z     [7m49[0m     expect(result.entries).toHaveLength(1);
+2026-04-02T13:58:12.7281712Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7282529Z     [96msrc/__tests__/unit/automation-log.service.test.ts[0m:[93m50[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7282538Z 
+2026-04-02T13:58:12.7283018Z     [7m50[0m     expect(result.entries[0]?.message).toContain("execStatus=DONE");
+2026-04-02T13:58:12.7283279Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7283308Z 
+2026-04-02T13:58:12.7283562Z FAIL src/__tests__/unit/utils.test.ts
+2026-04-02T13:58:12.7283825Z   ● Test suite failed to run
+2026-04-02T13:58:12.7283832Z 
+2026-04-02T13:58:12.7285423Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m3[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7285519Z 
+2026-04-02T13:58:12.7285862Z     [7m3[0m describe("Utility Functions", () => {
+2026-04-02T13:58:12.7286121Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7287713Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m4[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7287722Z 
+2026-04-02T13:58:12.7288051Z     [7m4[0m   describe("convertNumber", () => {
+2026-04-02T13:58:12.7288320Z     [7m [0m [91m  ~~~~~~~~[0m
+2026-04-02T13:58:12.7289863Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m5[0m:[93m5[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7289875Z 
+2026-04-02T13:58:12.7290289Z     [7m5[0m     it("should convert a valid string to a number", () => {
+2026-04-02T13:58:12.7290541Z     [7m [0m [91m    ~~[0m
+2026-04-02T13:58:12.7291216Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m10[0m:[93m7[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7291225Z 
+2026-04-02T13:58:12.7291538Z     [7m10[0m       expect(result).toBe(123);
+2026-04-02T13:58:12.7291814Z     [7m  [0m [91m      ~~~~~~[0m
+2026-04-02T13:58:12.7293411Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m13[0m:[93m5[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7293420Z 
+2026-04-02T13:58:12.7293936Z     [7m13[0m     it("should return the fallback value if the input is invalid", () => {
+2026-04-02T13:58:12.7294218Z     [7m  [0m [91m    ~~[0m
+2026-04-02T13:58:12.7294896Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m19[0m:[93m7[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7294904Z 
+2026-04-02T13:58:12.7295248Z     [7m19[0m       expect(result).toBe(fallbackValue);
+2026-04-02T13:58:12.7295524Z     [7m  [0m [91m      ~~~~~~[0m
+2026-04-02T13:58:12.7297234Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m22[0m:[93m5[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7297246Z 
+2026-04-02T13:58:12.7297843Z     [7m22[0m     it("should throw an error if the input is invalid and no fallback value is set", () => {
+2026-04-02T13:58:12.7298118Z     [7m  [0m [91m    ~~[0m
+2026-04-02T13:58:12.7298784Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m25[0m:[93m7[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7298792Z 
+2026-04-02T13:58:12.7299202Z     [7m25[0m       expect(() => convertNumber(value)).toThrowError(
+2026-04-02T13:58:12.7299484Z     [7m  [0m [91m      ~~~~~~[0m
+2026-04-02T13:58:12.7301089Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m31[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7301099Z 
+2026-04-02T13:58:12.7301443Z     [7m31[0m   describe("diffTimeInSeconds", () => {
+2026-04-02T13:58:12.7301702Z     [7m  [0m [91m  ~~~~~~~~[0m
+2026-04-02T13:58:12.7303313Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m32[0m:[93m5[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7303448Z 
+2026-04-02T13:58:12.7303924Z     [7m32[0m     it("should calculate the time difference in seconds", () => {
+2026-04-02T13:58:12.7304194Z     [7m  [0m [91m    ~~[0m
+2026-04-02T13:58:12.7304874Z     [96msrc/__tests__/unit/utils.test.ts[0m:[93m37[0m:[93m7[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7304894Z 
+2026-04-02T13:58:12.7305229Z     [7m37[0m       expect(result).toBeGreaterThan(0);
+2026-04-02T13:58:12.7305507Z     [7m  [0m [91m      ~~~~~~[0m
+2026-04-02T13:58:12.7305515Z 
+2026-04-02T13:58:12.7305828Z FAIL src/__tests__/unit/sync-timeout.util.test.ts
+2026-04-02T13:58:12.7306087Z   ● Test suite failed to run
+2026-04-02T13:58:12.7306096Z 
+2026-04-02T13:58:12.7307738Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m6[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7307754Z 
+2026-04-02T13:58:12.7308082Z     [7m6[0m describe("sync-timeout util", () => {
+2026-04-02T13:58:12.7308356Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7309990Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m7[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7309999Z 
+2026-04-02T13:58:12.7310413Z     [7m7[0m   test("returns configured positive timeout", () => {
+2026-04-02T13:58:12.7310657Z     [7m [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7311398Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m8[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7311407Z 
+2026-04-02T13:58:12.7311655Z     [7m8[0m     expect(
+2026-04-02T13:58:12.7311916Z     [7m [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7313762Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m13[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7313780Z 
+2026-04-02T13:58:12.7314246Z     [7m13[0m   test("falls back to default timeout for invalid values", () => {
+2026-04-02T13:58:12.7314510Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7315267Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m14[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7315280Z 
+2026-04-02T13:58:12.7315514Z     [7m14[0m     expect(
+2026-04-02T13:58:12.7315788Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7316523Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m17[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7316531Z 
+2026-04-02T13:58:12.7316775Z     [7m17[0m     expect(
+2026-04-02T13:58:12.7317042Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7318664Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m22[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7318673Z 
+2026-04-02T13:58:12.7319120Z     [7m22[0m   test("normalizes decimal values down to an integer", () => {
+2026-04-02T13:58:12.7319477Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7320225Z     [96msrc/__tests__/unit/sync-timeout.util.test.ts[0m:[93m23[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7320233Z 
+2026-04-02T13:58:12.7320482Z     [7m23[0m     expect(
+2026-04-02T13:58:12.7320755Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7320763Z 
+2026-04-02T13:58:12.7321031Z FAIL src/__tests__/unit/server.test.ts
+2026-04-02T13:58:12.7321306Z   ● Test suite failed to run
+2026-04-02T13:58:12.7321314Z 
+2026-04-02T13:58:12.7322954Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m4[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7322978Z 
+2026-04-02T13:58:12.7323317Z     [7m4[0m describe("Express server tests", () => {
+2026-04-02T13:58:12.7323602Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7324303Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m8[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeAll'.
+2026-04-02T13:58:12.7324312Z 
+2026-04-02T13:58:12.7324608Z     [7m8[0m   beforeAll(async () => {
+2026-04-02T13:58:12.7324872Z     [7m [0m [91m  ~~~~~~~~~[0m
+2026-04-02T13:58:12.7325569Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m14[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'afterAll'.
+2026-04-02T13:58:12.7325577Z 
+2026-04-02T13:58:12.7325848Z     [7m14[0m   afterAll(() => {
+2026-04-02T13:58:12.7335187Z     [7m  [0m [91m  ~~~~~~~~[0m
+2026-04-02T13:58:12.7337031Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m18[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7337063Z 
+2026-04-02T13:58:12.7337513Z     [7m18[0m   test("Health endpoint should return UP", async () => {
+2026-04-02T13:58:12.7337783Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7338481Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m20[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7338491Z 
+2026-04-02T13:58:12.7338830Z     [7m20[0m     expect(res.statusCode).toBe(200);
+2026-04-02T13:58:12.7339297Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7339978Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m21[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7340002Z 
+2026-04-02T13:58:12.7340423Z     [7m21[0m     expect(res.headers["content-type"]).toMatch(/json/);
+2026-04-02T13:58:12.7340692Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7341375Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m22[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7341388Z 
+2026-04-02T13:58:12.7341764Z     [7m22[0m     expect(res.body).toEqual({ status: "UP" });
+2026-04-02T13:58:12.7342122Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7343715Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m25[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7343724Z 
+2026-04-02T13:58:12.7344150Z     [7m25[0m   test("Ready endpoint should return UP", async () => {
+2026-04-02T13:58:12.7344424Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7345090Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m27[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7345111Z 
+2026-04-02T13:58:12.7345572Z     [7m27[0m     expect(res.statusCode).toBe(200);
+2026-04-02T13:58:12.7345844Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7346599Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m28[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7346608Z 
+2026-04-02T13:58:12.7347030Z     [7m28[0m     expect(res.headers["content-type"]).toMatch(/json/);
+2026-04-02T13:58:12.7347310Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7347996Z     [96msrc/__tests__/unit/server.test.ts[0m:[93m29[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7348004Z 
+2026-04-02T13:58:12.7348380Z     [7m29[0m     expect(res.body).toEqual({ status: "UP" });
+2026-04-02T13:58:12.7348644Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7348663Z 
+2026-04-02T13:58:12.7348932Z FAIL src/__tests__/unit/sample.ut.test.ts
+2026-04-02T13:58:12.7349193Z   ● Test suite failed to run
+2026-04-02T13:58:12.7349202Z 
+2026-04-02T13:58:12.7350820Z     [96msrc/__tests__/unit/sample.ut.test.ts[0m:[93m1[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7350828Z 
+2026-04-02T13:58:12.7351154Z     [7m1[0m describe("Sample scenario", () => {
+2026-04-02T13:58:12.7351966Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7355438Z     [96msrc/__tests__/unit/sample.ut.test.ts[0m:[93m2[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7355452Z 
+2026-04-02T13:58:12.7355797Z     [7m2[0m   test("adds 1 + 2 equals 3", () => {
+2026-04-02T13:58:12.7356056Z     [7m [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7356743Z     [96msrc/__tests__/unit/sample.ut.test.ts[0m:[93m3[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7356752Z 
+2026-04-02T13:58:12.7357031Z     [7m3[0m     expect(1 + 2).toBe(3);
+2026-04-02T13:58:12.7357305Z     [7m [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7357313Z 
+2026-04-02T13:58:12.7357610Z FAIL src/__tests__/unit/icons.routes.test.ts
+2026-04-02T13:58:12.7357869Z   ● Test suite failed to run
+2026-04-02T13:58:12.7357996Z 
+2026-04-02T13:58:12.7359615Z     [96msrc/__tests__/unit/icons.routes.test.ts[0m:[93m4[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7359634Z 
+2026-04-02T13:58:12.7359944Z     [7m4[0m describe("icons routes", () => {
+2026-04-02T13:58:12.7360212Z     [7m [0m [91m~~~~~~~~[0m
+2026-04-02T13:58:12.7360934Z     [96msrc/__tests__/unit/icons.routes.test.ts[0m:[93m7[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeAll'.
+2026-04-02T13:58:12.7360943Z 
+2026-04-02T13:58:12.7361226Z     [7m7[0m   beforeAll(async () => {
+2026-04-02T13:58:12.7361512Z     [7m [0m [91m  ~~~~~~~~~[0m
+2026-04-02T13:58:12.7363199Z     [96msrc/__tests__/unit/icons.routes.test.ts[0m:[93m12[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7363209Z 
+2026-04-02T13:58:12.7363750Z     [7m12[0m   test("GET /icons/favicon-32x32.png returns png without auth", async () => {
+2026-04-02T13:58:12.7364022Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7364730Z     [96msrc/__tests__/unit/icons.routes.test.ts[0m:[93m14[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7364851Z 
+2026-04-02T13:58:12.7365178Z     [7m14[0m     expect(res.status).toBe(200);
+2026-04-02T13:58:12.7365464Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7366186Z     [96msrc/__tests__/unit/icons.routes.test.ts[0m:[93m15[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7366194Z 
+2026-04-02T13:58:12.7366649Z     [7m15[0m     expect(res.headers["content-type"]).toContain("image/png");
+2026-04-02T13:58:12.7366925Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7368533Z     [96msrc/__tests__/unit/icons.routes.test.ts[0m:[93m18[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+2026-04-02T13:58:12.7368546Z 
+2026-04-02T13:58:12.7368981Z     [7m18[0m   test("GET /icons/invalid.png returns 404", async () => {
+2026-04-02T13:58:12.7369254Z     [7m  [0m [91m  ~~~~[0m
+2026-04-02T13:58:12.7369952Z     [96msrc/__tests__/unit/icons.routes.test.ts[0m:[93m20[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+2026-04-02T13:58:12.7369961Z 
+2026-04-02T13:58:12.7370282Z     [7m20[0m     expect(res.status).toBe(404);
+2026-04-02T13:58:12.7370557Z     [7m  [0m [91m    ~~~~~~[0m
+2026-04-02T13:58:12.7370565Z 
+2026-04-02T13:58:12.7370575Z 
+2026-04-02T13:58:12.7370841Z Test Suites: 25 failed, 25 total
+2026-04-02T13:58:12.7371052Z Tests:       0 total
+2026-04-02T13:58:12.7371275Z Snapshots:   0 total
+2026-04-02T13:58:12.7371488Z Time:        5.781 s
+2026-04-02T13:58:12.7371686Z Ran all test suites.
+2026-04-02T13:58:12.7460668Z ##[error]Process completed with exit code 1.
+2026-04-02T13:58:12.7543859Z ##[group]Run echo "## Resultado dos Testes Unitários" >> $GITHUB_STEP_SUMMARY
+2026-04-02T13:58:12.7544243Z [36;1mecho "## Resultado dos Testes Unitários" >> $GITHUB_STEP_SUMMARY[0m
+2026-04-02T13:58:12.7544452Z [36;1mif [[ failure == "success" ]];[0m
+2026-04-02T13:58:12.7544640Z [36;1mthen[0m
+2026-04-02T13:58:12.7545092Z [36;1m  echo ":white_check_mark: Testes Unitários realizados com sucesso" >> $GITHUB_STEP_SUMMARY[0m
+2026-04-02T13:58:12.7545265Z [36;1melse[0m
+2026-04-02T13:58:12.7546077Z [36;1m  echo -e ":x: Erro durante execução de testes unitários. O "npm run test" detectou falhas a serem corrigidas." >> $GITHUB_STEP_SUMMARY[0m
+2026-04-02T13:58:12.7546705Z [36;1m  echo -e "> [!IMPORTANT]\n> Por favor, verifique a seção de Annotations logo abaixo para consultar o log completo." >> $GITHUB_STEP_SUMMARY[0m
+2026-04-02T13:58:12.7546889Z [36;1m  exit 1[0m
+2026-04-02T13:58:12.7547072Z [36;1mfi[0m
+2026-04-02T13:58:12.7550218Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-04-02T13:58:12.7550401Z env:
+2026-04-02T13:58:12.7550631Z   REPO_NAME: psc-sre-automacao-controller
+2026-04-02T13:58:12.7550831Z   TECNOLOGIA: npm
+2026-04-02T13:58:12.7551029Z   BRANCH_NAME: main
+2026-04-02T13:58:12.7551418Z   NPM_RESOLVE_URL: https://binarios.intranet.bb.com.br/artifactory/api/npm/npm/
+2026-04-02T13:58:12.7551824Z   NPM_RELEASE_URL: https://binarios.intranet.bb.com.br/artifactory/api/npm/npm-bb-local/
+2026-04-02T13:58:12.7552322Z   NPM_DEV_URL: https://binarios.intranet.bb.com.br/artifactory/api/npm/npm-bb-dev-local/
+2026-04-02T13:58:12.7552561Z   BINARIOS_HOST: binarios.intranet.bb.com.br
+2026-04-02T13:58:12.7552909Z   DOCKER_RELEASE_REGISTRY: docker-bb-local.binarios.intranet.bb.com.br
+2026-04-02T13:58:12.7553254Z   DOCKER_DEV_REGISTRY: docker-bb-dev-local.binarios.intranet.bb.com.br
+2026-04-02T13:58:12.7553539Z   DOCKER_RESOLVE_REGISTRY: docker.binarios.intranet.bb.com.br
+2026-04-02T13:58:12.7553746Z   CI_READER: aic-actions-user-temp
+2026-04-02T13:58:12.7553960Z   CI_PUBLISHER: aic-actions-user-temp
+2026-04-02T13:58:12.7554158Z   HADOLINT_CONTINUE_ON_ERROR: false
+2026-04-02T13:58:12.7554457Z   GIT_LFS: false
+2026-04-02T13:58:12.7554663Z   AUTO_VERSIONAMENTO: false
+2026-04-02T13:58:12.7554842Z   VERSAO: 3.8.0
+2026-04-02T13:58:12.7555039Z   TIPO_VERSAO: fechada
+2026-04-02T13:58:12.7555227Z   EXIST_TAG: false
+2026-04-02T13:58:12.7555401Z   SIGLA: psc
+2026-04-02T13:58:12.7555588Z   VERSAO_NODE: 22 <23
+2026-04-02T13:58:12.7555792Z   NODE_OPTS: --max-old-space-size=4096
+2026-04-02T13:58:12.7556224Z   SASS_BINARY_SITE: https://binarios.intranet.bb.com.br/artifactory/generic-node-sass-remote
+2026-04-02T13:58:12.7556694Z   PUPPETEER_DOWNLOAD_HOST: https://binarios.intranet.bb.com.br/artifactory/generic-puppeteer-remote
+2026-04-02T13:58:12.7557110Z   PUPPETEER_DOWNLOAD_BASE_URL: https://binarios.intranet.bb.com.br/artifactory/puppeteer
+2026-04-02T13:58:12.7557538Z   PUPPETEER_CHROME_DOWNLOAD_BASE_URL: https://binarios.intranet.bb.com.br/artifactory/puppeteer
+2026-04-02T13:58:12.7558033Z   PUPPETEER_CHROME_HEADLESS_SHELL_DOWNLOAD_BASE_URL: https://binarios.intranet.bb.com.br/artifactory/puppeteer
+2026-04-02T13:58:12.7558502Z   CHROMEDRIVER_CDNURL: https://binarios.intranet.bb.com.br/artifactory/generic-chromedriver-remote
+2026-04-02T13:58:12.7558696Z   GATSBY_TELEMETRY_DISABLED: 1
+2026-04-02T13:58:12.7558878Z   HUSKY: 0
+2026-04-02T13:58:12.7559382Z   npm_config_appd_cdn_base_url: https://binarios.intranet.bb.com.br/artifactory/generic-appdynamics-node-remote/
+2026-04-02T13:58:12.7559826Z   npm_config_sharp_binary_host: https://binarios.intranet.bb.com.br/artifactory/generic-sharp-remote
+2026-04-02T13:58:12.7560345Z   npm_config_sharp_libvips_binary_host: https://binarios.intranet.bb.com.br/artifactory/generic-sharp-libvips-remote
+2026-04-02T13:58:12.7560859Z   ELECTRON_MIRROR: https://binarios.intranet.bb.com.br/artifactory/generic-bb-binarios-aic-local/publico/electron/
+2026-04-02T13:58:12.7561326Z   CANVAS_BINARY_HOST_MIRROR: https://binarios.intranet.bb.com.br/artifactory/generic-node-canvas-remote/
+2026-04-02T13:58:12.7561804Z   canvas_binary_host_mirror: https://binarios.intranet.bb.com.br/artifactory/generic-node-canvas-remote/
+2026-04-02T13:58:12.7561993Z   NG_CLI_ANALYTICS: ci
+2026-04-02T13:58:12.7562572Z   PHANTOMJS_CDNURL: https://binarios.intranet.bb.com.br/artifactory/generic-bb-binarios-ptn-local/publico/phantomjs
+2026-04-02T13:58:12.7563016Z   NPM_CONFIG_DIST_URL: https://binarios.intranet.bb.com.br/artifactory/generic-nodejsdist-remote
+2026-04-02T13:58:12.7563452Z   NPM_CONFIG_DISTURL: https://binarios.intranet.bb.com.br/artifactory/generic-nodejsdist-remote
+2026-04-02T13:58:12.7563971Z   NODEJS_ORG_MIRROR: https://binarios.intranet.bb.com.br/artifactory/generic-nodejsdist-remote
+2026-04-02T13:58:12.7564446Z   APPD_CDN_BASE_URL: https://binarios.intranet.bb.com.br/artifactory/generic-appdynamics-node-remote/
+2026-04-02T13:58:12.7564841Z   COREPACK_NPM_REGISTRY: https://binarios.intranet.bb.com.br/artifactory/api/npm/npm
+2026-04-02T13:58:12.7565249Z   IBM_DB_INSTALLER_URL: https://binarios.intranet.bb.com.br/artifactory/generic-ibm-remote
+2026-04-02T13:58:12.7565695Z   MQIJS_LOCAL_URL: https://binarios.intranet.bb.com.br/artifactory/generic-ibm-mqclient-remote/
+2026-04-02T13:58:12.7566032Z   NPM_CONFIG_USERCONFIG: /opt/github/actions-runner/_work/_temp/.npmrc
+2026-04-02T13:58:12.7566246Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+2026-04-02T13:58:12.7566440Z ##[endgroup]
+2026-04-02T13:58:12.7659049Z ##[error]Process completed with exit code 1.
+2026-04-02T13:58:12.8233057Z Post job cleanup.
+2026-04-02T13:58:12.8332505Z Post job cleanup.
+2026-04-02T13:58:12.8416634Z Post job cleanup.
+2026-04-02T13:58:12.9571226Z [command]/usr/bin/git version
+2026-04-02T13:58:12.9662309Z git version 2.47.3
+2026-04-02T13:58:12.9698217Z Copying '/opt/github/runner/.gitconfig' to '/opt/github/actions-runner/_work/_temp/f55de66a-0069-4e9c-9472-ef9404adaba2/.gitconfig'
+2026-04-02T13:58:12.9708823Z Temporarily overriding HOME='/opt/github/actions-runner/_work/_temp/f55de66a-0069-4e9c-9472-ef9404adaba2' before making global git config changes
+2026-04-02T13:58:12.9710633Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-02T13:58:12.9737885Z [command]/usr/bin/git config --global --add safe.directory /opt/github/actions-runner/_work/psc-sre-automacao-controller/psc-sre-automacao-controller
+2026-04-02T13:58:12.9847362Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-02T13:58:12.9916655Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-02T13:58:13.0847193Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-02T13:58:13.0933049Z http.https://github.com/.extraheader
+2026-04-02T13:58:13.0950286Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-02T13:58:13.1083373Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-02T13:58:13.2150007Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-02T13:58:13.2248588Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-02T13:58:13.3570236Z A job completed hook has been configured by the self-hosted runner administrator
+2026-04-02T13:58:13.3592892Z ##[group]Run '/opt/github/post-job.sh'
+2026-04-02T13:58:13.3596719Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-04-02T13:58:13.3597532Z ##[endgroup]
+2026-04-02T13:58:13.3706950Z Running post-job cleanup v1.0.2
+2026-04-02T13:58:13.3707786Z Removing checked-out code directories...
+2026-04-02T13:58:13.3890235Z Deleting directory: /opt/github/actions-runner/_work/psc-sre-automacao-controller
+2026-04-02T13:58:15.2697195Z Stopping and removing Docker containers...
+2026-04-02T13:58:15.3073842Z Post-job cleanup completed
+2026-04-02T13:58:15.3161310Z Evaluate and set job outputs
+2026-04-02T13:58:15.3191431Z Set output 'versao_projeto'
+2026-04-02T13:58:15.3194338Z Set output 'sigla_projeto'
+2026-04-02T13:58:15.3195756Z Set output 'tipo_versao'
+2026-04-02T13:58:15.3196642Z Set output 'matricula_solicitante'
+2026-04-02T13:58:15.3197584Z Set output 'publicar_docker'
+2026-04-02T13:58:15.3198466Z Set output 'versao_node'
+2026-04-02T13:58:15.3199328Z Set output 'publicar_versao'
+2026-04-02T13:58:15.3200208Z Set output 'gerenciador_pacotes'
+2026-04-02T13:58:15.3201150Z Set output 'ref'
+2026-04-02T13:58:15.3202696Z Cleaning up orphan processes
+2026-04-02T13:58:15.3906754Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
