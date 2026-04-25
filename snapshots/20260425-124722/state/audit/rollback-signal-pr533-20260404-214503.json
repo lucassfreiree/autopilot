@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 533,
+  "branch": "claude/autopilot-versioning-agents-Uw6g2",
+  "mergeSha": "061f67e7d4ad4f4105894c42f7b000a51344e7fb",
+  "timestamp": "2026-04-04T21:45:03Z",
+  "runId": "23988223522",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
