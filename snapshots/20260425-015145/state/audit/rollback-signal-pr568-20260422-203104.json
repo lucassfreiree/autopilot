@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 568,
+  "branch": "codex/fix-apply-branch-outputs",
+  "mergeSha": "9dc1fef364f5326d057e94f2ec5b9faff7591f6b",
+  "timestamp": "2026-04-22T20:31:04Z",
+  "runId": "24801087268",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
