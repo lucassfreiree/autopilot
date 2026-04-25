@@ -1,0 +1,12 @@
+{
+  "type": "rollback-signal",
+  "prNumber": 581,
+  "branch": "codex/harden-autopilot-apply-validation",
+  "mergeSha": "814bdca16e8afb0185eb556b2ccdac0a1f1be83e",
+  "timestamp": "2026-04-24T20:54:53Z",
+  "runId": "24911410891",
+  "reason": "post-merge health check degraded",
+  "details": "state-branch:ok main-branch:ok recent-failures:HIGH(5) ",
+  "status": "pending-review",
+  "note": "Manual review required before executing rollback"
+}
